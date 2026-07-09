@@ -1,0 +1,76 @@
+:root {
+  --bg: #f8f9fb;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-alt: #f1f5f9;
+  --text: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --text-label: #374151;
+  --border: #e2e8f0;
+  --border-input: #d1d5db;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-subtle: #eff6ff;
+  --accent-badge: #e8f0fe;
+  --accent-text: #1e40af;
+  --error: #dc2626;
+  --error-bg: #fef2f2;
+  --error-border: #fecaca;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.12);
+  --hero-gradient: linear-gradient(155deg, #f0f7ff 0%, #f8f9fb 45%, #faf5ff 100%);
+  --preview-bg: #ffffff;
+  --preview-bar: #f1f5f9;
+  --preview-border: #e2e8f0;
+  --preview-progress-bg: #e8edf5;
+  --cta-from: #1d4ed8;
+  --cta-to: #4f46e5;
+  --footer-bg: #0f172a;
+  --footer-text: #94a3b8;
+}
+
+[data-theme="dark"] {
+  --bg: #0d1117;
+  --bg-card: #161b27;
+  --bg-input: #1e2435;
+  --bg-alt: #111620;
+  --text: #e2e8f0;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --text-label: #cbd5e1;
+  --border: #2a3042;
+  --border-input: #384060;
+  --accent: #3b82f6;
+  --accent-hover: #2563eb;
+  --accent-subtle: rgba(59, 130, 246, 0.1);
+  --accent-badge: #1e3a5f;
+  --accent-text: #93c5fd;
+  --error: #f87171;
+  --error-bg: #2d1515;
+  --error-border: rgba(127, 29, 29, 0.4);
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.55);
+  --hero-gradient: linear-gradient(155deg, #0a0e1a 0%, #0d1117 45%, #0f0d1e 100%);
+  --preview-bg: #1a1f2e;
+  --preview-bar: #111520;
+  --preview-border: #2a3042;
+  --preview-progress-bg: #2a3042;
+  --cta-from: #1e3a8a;
+  --cta-to: #312e81;
+  --footer-bg: #090d14;
+  --footer-text: #64748b;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  background: var(--bg);
+  color: var(--text);
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+#root { min-height: 100vh; }
