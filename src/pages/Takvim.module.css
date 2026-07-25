@@ -1,0 +1,190 @@
+.page {
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(360px, 3fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+/* ---------- Calendar ---------- */
+.calHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-5);
+}
+
+.month {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  text-transform: capitalize;
+}
+
+.navGroup { display: flex; gap: var(--space-2); }
+
+.navBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.navBtn:hover { background: var(--bg-alt); color: var(--accent); border-color: var(--accent); }
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  padding-bottom: var(--space-3);
+}
+
+.cell {
+  aspect-ratio: 1.35;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 4px;
+  padding: var(--space-2);
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.cell:hover { background: var(--bg-alt); }
+.cellEmpty { cursor: default; }
+.cellEmpty:hover { background: transparent; }
+
+.cellToday { font-weight: 700; color: var(--accent); }
+
+.cellSelected {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  font-weight: 700;
+}
+
+.dots { display: flex; gap: 3px; }
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+
+/* ---------- Agenda rail ---------- */
+.agendaDate {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.agendaCount {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin: 3px 0 var(--space-5);
+}
+
+.agendaList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+/* Grid rather than flex: only the text column is allowed to collapse, so the
+   badge can never ride over the student name. */
+.event {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--bg-alt);
+  padding: var(--space-3) var(--space-4);
+}
+
+.eventTime {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.eventBody { min-width: 0; }
+.eventName {
+  /* Must be block — ellipsis truncation has no effect on an inline span. */
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.eventNote {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.eventDelete {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 3px;
+  display: flex;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+
+.eventDelete:hover { color: var(--danger); background: var(--danger-bg); }
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-5);
+}
+
+.formTitle { font-size: 0.85rem; font-weight: 700; color: var(--text); margin: 0; }
+.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+.formActions { display: flex; gap: var(--space-3); }
+.formActions > * { flex: 1; }
+
+@media (max-width: 1100px) {
+  .page { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .cell { aspect-ratio: 1; padding: 4px; font-size: 0.74rem; }
+  .formRow { grid-template-columns: 1fr; }
+}

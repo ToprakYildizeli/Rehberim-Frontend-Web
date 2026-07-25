@@ -1,0 +1,255 @@
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import {
+  Card, Button, Avatar, Badge, Field, Input, Select, EmptyState, Spinner,
+} from '../components/ui';
+import { listAppointments, createAppointment, deleteAppointment } from '../api/appointments';
+import { listStudents } from '../api/students';
+import s from './Takvim.module.css';
+
+const WEEKDAYS = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+const MONTHS = [
+  'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+  'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık',
+];
+
+/** Local YYYY-MM-DD — avoids the UTC shift that toISOString() introduces. */
+const toKey = (y, m, d) =>
+  `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+/** Monday-first offset for the 1st of the month. */
+const leadingBlanks = (y, m) => (new Date(y, m, 1).getDay() + 6) % 7;
+
+const CATEGORY_TONE = { Toplantı: 'accent', Görüşme: 'violet' };
+
+export default function Takvim() {
+  // The seeded fixtures live in June 2026 — open there so the view isn't empty.
+  const [cursor, setCursor] = useState({ year: 2026, month: 5 });
+  const [selected, setSelected] = useState('2026-06-29');
+  const [items, setItems] = useState(null);
+  const [students, setStudents] = useState([]);
+  const [form, setForm] = useState({ time: '', studentId: '', category: 'Toplantı', note: '' });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    Promise.all([listAppointments(), listStudents()]).then(([ap, st]) => {
+      if (!alive) return;
+      setItems(ap);
+      setStudents(st);
+      setForm((f) => ({ ...f, studentId: String(st[0]?.id ?? '') }));
+    });
+    return () => { alive = false; };
+  }, []);
+
+  const byDate = useMemo(() => {
+    const map = new Map();
+    (items ?? []).forEach((a) => {
+      if (!map.has(a.date)) map.set(a.date, []);
+      map.get(a.date).push(a);
+    });
+    map.forEach((list) => list.sort((a, b) => a.time.localeCompare(b.time)));
+    return map;
+  }, [items]);
+
+  const dayCount = new Date(cursor.year, cursor.month + 1, 0).getDate();
+  const blanks = leadingBlanks(cursor.year, cursor.month);
+  const todayKey = toKey(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
+  const selectedItems = byDate.get(selected) ?? [];
+
+  function shiftMonth(delta) {
+    setCursor(({ year, month }) => {
+      const next = month + delta;
+      if (next < 0) return { year: year - 1, month: 11 };
+      if (next > 11) return { year: year + 1, month: 0 };
+      return { year, month: next };
+    });
+  }
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!form.time || !form.studentId) return;
+    setSaving(true);
+    try {
+      const created = await createAppointment({ ...form, date: selected });
+      setItems((prev) => [...prev, created]);
+      setForm((f) => ({ ...f, time: '', note: '' }));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id) {
+    await deleteAppointment(id);
+    setItems((prev) => prev.filter((x) => x.id !== id));
+  }
+
+  if (!items) {
+    return <div style={{ display: 'grid', placeItems: 'center', padding: 60 }}><Spinner size={24} /></div>;
+  }
+
+  const selectedLabel = (() => {
+    const [y, m, d] = selected.split('-').map(Number);
+    return `${d} ${MONTHS[m - 1]} ${y}`;
+  })();
+
+  return (
+    <div className={s.page}>
+      <Card>
+        <div className={s.calHead}>
+          <h2 className={s.month}>{MONTHS[cursor.month]} {cursor.year}</h2>
+          <div className={s.navGroup}>
+            <button type="button" className={s.navBtn} onClick={() => shiftMonth(-1)} aria-label="Önceki ay">
+              <ChevronLeft size={16} />
+            </button>
+            <button type="button" className={s.navBtn} onClick={() => shiftMonth(1)} aria-label="Sonraki ay">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+
+        <div className={s.grid}>
+          {WEEKDAYS.map((d) => (
+            <span className={s.weekday} key={d}>{d}</span>
+          ))}
+
+          {Array.from({ length: blanks }, (_, i) => (
+            <span className={`${s.cell} ${s.cellEmpty}`} key={`blank-${i}`} />
+          ))}
+
+          {Array.from({ length: dayCount }, (_, i) => {
+            const day = i + 1;
+            const key = toKey(cursor.year, cursor.month, day);
+            const dayItems = byDate.get(key) ?? [];
+            return (
+              <button
+                type="button"
+                key={key}
+                className={[
+                  s.cell,
+                  key === selected ? s.cellSelected : '',
+                  key === todayKey ? s.cellToday : '',
+                ].join(' ')}
+                onClick={() => setSelected(key)}
+                aria-pressed={key === selected}
+              >
+                {day}
+                <span className={s.dots}>
+                  {dayItems.slice(0, 3).map((a) => (
+                    <span
+                      className={s.dot}
+                      key={a.id}
+                      style={{
+                        background:
+                          a.category === 'Görüşme' ? 'var(--violet)' : 'var(--accent)',
+                      }}
+                    />
+                  ))}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+
+      <Card>
+        <h2 className={s.agendaDate}>{selectedLabel}</h2>
+        <p className={s.agendaCount}>
+          {selectedItems.length > 0 ? `${selectedItems.length} etkinlik` : 'Etkinlik yok'}
+        </p>
+
+        {selectedItems.length === 0 ? (
+          <EmptyState text="Bu gün için planlanmış bir etkinlik yok." />
+        ) : (
+          <div className={s.agendaList}>
+            {selectedItems.map((a) => (
+              <div
+                className={s.event}
+                key={a.id}
+                style={{
+                  borderLeftColor:
+                    a.category === 'Görüşme' ? 'var(--violet)' : 'var(--accent)',
+                }}
+              >
+                <span className={s.eventTime}>{a.time}</span>
+                <Avatar name={a.student?.name ?? ''} color={a.student?.color} size="sm" />
+                <span className={s.eventBody}>
+                  <span className={s.eventName}>{a.student?.name}</span>
+                  <p className={s.eventNote}>{a.note}</p>
+                </span>
+                <Badge className={s.eventBadge} tone={CATEGORY_TONE[a.category] ?? 'neutral'}>
+                  {a.category}
+                </Badge>
+                <button
+                  type="button"
+                  className={s.eventDelete}
+                  onClick={() => handleDelete(a.id)}
+                  aria-label={`${a.time} etkinliğini sil`}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <form className={s.form} onSubmit={handleSave}>
+          <h3 className={s.formTitle}>Etkinlik Ekle</h3>
+
+          <div className={s.formRow}>
+            <Field label="Saat">
+              <Input
+                type="time"
+                required
+                value={form.time}
+                onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+              />
+            </Field>
+            <Field label="Tür">
+              <Select
+                value={form.category}
+                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+              >
+                <option>Toplantı</option>
+                <option>Görüşme</option>
+              </Select>
+            </Field>
+          </div>
+
+          <Field label="Öğrenci">
+            <Select
+              value={form.studentId}
+              onChange={(e) => setForm((f) => ({ ...f, studentId: e.target.value }))}
+            >
+              {students.map((st) => (
+                <option value={st.id} key={st.id}>
+                  {st.name} · {st.grade}
+                </option>
+              ))}
+            </Select>
+          </Field>
+
+          <Field label="Not">
+            <Input
+              placeholder="Örn. Haftalık değerlendirme"
+              value={form.note}
+              onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+            />
+          </Field>
+
+          <div className={s.formActions}>
+            <Button
+              variant="ghost"
+              onClick={() => setForm((f) => ({ ...f, time: '', note: '' }))}
+            >
+              İptal
+            </Button>
+            <Button type="submit" disabled={saving || !form.time}>
+              <Plus size={14} /> {saving ? 'Kaydediliyor…' : 'Kaydet'}
+            </Button>
+          </div>
+        </form>
+      </Card>
+    </div>
+  );
+}

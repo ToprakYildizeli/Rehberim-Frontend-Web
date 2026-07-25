@@ -1,0 +1,373 @@
+.page { display: flex; flex-direction: column; gap: var(--space-5); }
+
+/* ---------- Net comparison chart ---------- */
+.chartHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-6);
+}
+
+.chartControls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.benchmarkKey {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.benchmarkDash {
+  width: 22px;
+  border-top: 1.5px dashed var(--accent);
+}
+
+.chart {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-around;
+  gap: var(--space-3);
+  height: 240px;
+  padding-top: 26px;
+  /* Room at the right for the benchmark label so it can't sit on the last bar. */
+  padding-right: 68px;
+}
+
+.benchmarkLine {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1.5px dashed var(--accent);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.benchmarkLabel {
+  position: absolute;
+  right: 0;
+  top: -8px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--bg-card);
+  padding: 0 4px;
+}
+
+.bar {
+  flex: 1;
+  max-width: 64px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.barCol {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 1;
+  gap: 6px;
+}
+
+.barValue {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.barFill {
+  width: 100%;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  transition: height 0.45s ease, filter 0.15s;
+  min-height: 4px;
+}
+
+.bar:hover .barFill { filter: brightness(1.08); }
+
+/* ---------- Widget row ---------- */
+/* minmax(0, 1fr) rather than 1fr: grid items default to min-width:auto, which
+   would let the student table force the whole page to scroll horizontally. */
+.widgetRow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.countBadge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-alt);
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.countDanger { background: var(--danger-bg); color: var(--danger-text); }
+
+.liveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--success-text);
+  background: var(--success-bg);
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+}
+
+.liveDot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--success);
+}
+
+/* Aksiyon Bekleyenler */
+.actionList { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.actionItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.actionItem:last-child { border-bottom: none; }
+
+.actionIcon {
+  width: 30px; height: 30px;
+  border-radius: var(--radius-md);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.actionText {
+  flex: 1;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  min-width: 0;
+}
+
+/* Kırmızı Alarm */
+.alertList { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.alertRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: filter 0.15s;
+}
+
+.alertRow:hover { filter: brightness(0.97); }
+.alertDanger { background: var(--danger-bg); }
+.alertWarning { background: var(--warning-bg); }
+
+.alertBody { flex: 1; min-width: 0; }
+
+.alertName {
+  font-size: 0.83rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+
+.alertReason {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  margin: 2px 0 0;
+}
+
+.alertChevron { color: var(--text-muted); flex-shrink: 0; display: flex; }
+
+/* Hızlı Akış */
+.feedList { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.feedItem { display: flex; gap: var(--space-3); }
+
+.feedDot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.feedName { font-size: 0.8rem; font-weight: 700; color: var(--text); margin: 0; }
+.feedText { font-size: 0.75rem; color: var(--text-secondary); margin: 2px 0 0; line-height: 1.4; }
+.feedTime { font-size: 0.68rem; color: var(--text-muted); margin: 3px 0 0; }
+
+/* ---------- Bottom split ---------- */
+.bottomRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.table { width: 100%; border-collapse: collapse; }
+
+.table th {
+  text-align: left;
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0 var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.table tbody tr { cursor: pointer; transition: background 0.15s; }
+.table tbody tr:hover { background: var(--bg-alt); }
+.table tbody tr:last-child td { border-bottom: none; }
+
+.cellStudent { display: flex; align-items: center; gap: var(--space-3); }
+.cellName { font-weight: 600; white-space: nowrap; }
+
+.cellCompliance { display: flex; align-items: center; gap: var(--space-3); min-width: 120px; }
+.compliancePct { font-size: 0.78rem; font-weight: 600; color: var(--text-secondary); }
+
+.tableScroll { overflow-x: auto; }
+
+.eyeBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  border-radius: var(--radius-sm);
+}
+
+.eyeBtn:hover { color: var(--accent); background: var(--accent-subtle); }
+
+/* AI rail */
+.aiHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.aiMark {
+  width: 30px; height: 30px;
+  border-radius: var(--radius-md);
+  background: var(--violet-bg);
+  color: var(--violet);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.aiTitle { font-size: 0.95rem; font-weight: 700; color: var(--text); margin: 0; }
+.aiSub { font-size: 0.72rem; color: var(--text-muted); margin: 2px 0 0; }
+
+.aiList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  max-height: 520px;
+  overflow-y: auto;
+}
+
+.aiCard {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.aiCard:hover { background: var(--bg-alt); }
+.aiCardDanger { border-left-color: var(--danger); }
+.aiCardSuccess { border-left-color: var(--success); }
+.aiCardAccent { border-left-color: var(--accent); }
+
+.aiCardHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.aiCardName { flex: 1; font-size: 0.82rem; font-weight: 700; color: var(--text); min-width: 0; }
+.aiCardGrade { font-size: 0.68rem; color: var(--text-muted); }
+.aiCardBody { font-size: 0.76rem; line-height: 1.55; color: var(--text-secondary); margin: 0 0 var(--space-3); }
+
+.aiCardCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1280px) {
+  .bottomRow { grid-template-columns: minmax(0, 1fr); }
+  .aiList { max-height: none; }
+}
+
+@media (max-width: 1024px) {
+  .widgetRow { grid-template-columns: minmax(0, 1fr); }
+  .chart { height: 200px; }
+}
+
+@media (max-width: 640px) {
+  .chart { height: 170px; gap: 4px; padding-right: 0; }
+  .barValue { font-size: 0.62rem; }
+  /* The pill group is the widest thing on the page at this size — let it scroll
+     on its own rather than widening the document. */
+  .chartControls { width: 100%; overflow-x: auto; }
+  .benchmarkLabel { display: none; }
+}
