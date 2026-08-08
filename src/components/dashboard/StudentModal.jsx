@@ -16,7 +16,7 @@ export default function StudentModal({ student, open, onClose, onModifySchedule 
         <div className={s.headText}>
           <h2 className={s.name} id="student-modal-title">{student.name}</h2>
           <p className={s.meta}>
-            {student.grade} · Haftalık Uyum %{student.compliance}
+            {student.grade}{student.compliance != null ? ` · Haftalık Uyum %${student.compliance}` : ''}
           </p>
         </div>
         <Badge tone={trend.tone}>
@@ -27,11 +27,11 @@ export default function StudentModal({ student, open, onClose, onModifySchedule 
       <div className={s.stats}>
         <div className={s.stat}>
           <span className={s.statLabel}>Son Deneme Neti</span>
-          <span className={s.statValue}>{student.lastNet}</span>
+          <span className={s.statValue}>{student.lastNet ?? '—'}</span>
         </div>
         <div className={s.stat}>
           <span className={s.statLabel}>Haftalık Uyum</span>
-          <span className={s.statValue}>%{student.compliance}</span>
+          <span className={s.statValue}>{student.compliance != null ? `%${student.compliance}` : '—'}</span>
         </div>
         <div className={s.stat}>
           <span className={s.statLabel}>Trend</span>
@@ -41,18 +41,20 @@ export default function StudentModal({ student, open, onClose, onModifySchedule 
         </div>
       </div>
 
-      <section className={s.section}>
-        <h3 className={s.sectionTitle}>Ders Performansı</h3>
-        <div className={s.subjectList}>
-          {Object.entries(student.subjects).map(([key, pct]) => (
-            <div className={s.subjectRow} key={key}>
-              <span className={s.subjectName}>{SUBJECT_MAP[key]?.name ?? key}</span>
-              <ProgressBar value={pct} color={SUBJECT_MAP[key]?.color} />
-              <span className={s.subjectPct}>%{pct}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      {Object.keys(student.subjects ?? {}).length > 0 && (
+        <section className={s.section}>
+          <h3 className={s.sectionTitle}>Ders Performansı</h3>
+          <div className={s.subjectList}>
+            {Object.entries(student.subjects).map(([key, pct]) => (
+              <div className={s.subjectRow} key={key}>
+                <span className={s.subjectName}>{SUBJECT_MAP[key]?.name ?? key}</span>
+                <ProgressBar value={pct} color={SUBJECT_MAP[key]?.color} />
+                <span className={s.subjectPct}>%{pct}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className={s.section}>
         <h3 className={s.sectionTitle}>
@@ -70,7 +72,10 @@ export default function StudentModal({ student, open, onClose, onModifySchedule 
 }
 
 function buildAnalysis(student) {
-  const entries = Object.entries(student.subjects);
+  const entries = Object.entries(student.subjects ?? {});
+  if (entries.length === 0) {
+    return 'Bu öğrenci için henüz yeterli veri yok. Deneme sonuçları ve program girildikçe analiz burada oluşacak.';
+  }
   const weakest = entries.reduce((a, b) => (b[1] < a[1] ? b : a));
   const strongest = entries.reduce((a, b) => (b[1] > a[1] ? b : a));
   const weakName = SUBJECT_MAP[weakest[0]]?.name ?? weakest[0];

@@ -1,13 +1,12 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Calendar, CalendarDays, Settings,
-  GraduationCap, Bell, PanelLeftClose, PanelLeftOpen, Menu,
-  User as UserIcon, Presentation,
+  GraduationCap, PanelLeftClose, PanelLeftOpen, Menu, Moon, Sun, LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
-import { useRole } from '../../context/useRole';
-import { Avatar, SearchInput, ThemeToggle, EmptyState } from '../ui';
+import { useTheme } from '../../context/ThemeContext';
+import { Avatar, SearchInput } from '../ui';
 import s from './layout.module.css';
 
 const NAV = [
@@ -26,31 +25,59 @@ const TITLES = {
   '/ayarlar': 'Ayarlar',
 };
 
-function RoleSwitcher() {
-  const { role, setRole } = useRole();
+/** Avatar → tema geçişi + çıkış tek bir menüde toplanır (üst bar dağınık durmasın). */
+function ProfileMenu({ displayName }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  const { clearSession } = useAuth();
+  const { theme, toggle } = useTheme();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+
+  async function handleLogout() {
+    setOpen(false);
+    await clearSession();
+    navigate('/giris', { replace: true });
+  }
+
   return (
-    <div className={s.switcherBar}>
-      <div className={s.switcher} role="tablist" aria-label="Görünüm">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={role === 'ogrenci'}
-          className={`${s.switcherBtn} ${role === 'ogrenci' ? s.switcherActive : ''}`}
-          onClick={() => setRole('ogrenci')}
-        >
-          <UserIcon size={14} /> Öğrenci
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={role === 'ogretmen'}
-          className={`${s.switcherBtn} ${role === 'ogretmen' ? s.switcherActive : ''}`}
-          onClick={() => setRole('ogretmen')}
-        >
-          <Presentation size={14} /> Öğretmen
-        </button>
-      </div>
-      <ThemeToggle />
+    <div className={s.profileWrap} ref={ref}>
+      <button
+        type="button"
+        className={s.profileBtn}
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={displayName}
+      >
+        <Avatar name={displayName} size="sm" color="var(--violet)" />
+      </button>
+      {open && (
+        <div className={s.menu} role="menu">
+          <div className={s.menuHeader}>
+            <span className={s.menuName}>{displayName}</span>
+            <span className={s.menuRole}>Rehber</span>
+          </div>
+          <button type="button" className={s.menuItem} role="menuitem" onClick={toggle}>
+            {theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}
+            {theme === 'light' ? 'Koyu tema' : 'Açık tema'}
+          </button>
+          <button
+            type="button"
+            className={`${s.menuItem} ${s.menuDanger}`}
+            role="menuitem"
+            onClick={handleLogout}
+          >
+            <LogOut size={15} /> Çıkış Yap
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -58,7 +85,6 @@ function RoleSwitcher() {
 export default function DashboardLayout() {
   const location = useLocation();
   const { user } = useAuth();
-  const { role } = useRole();
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebarCollapsed') === '1'
   );
@@ -73,12 +99,10 @@ export default function DashboardLayout() {
 
   const title = TITLES[location.pathname] ?? 'Panel';
   const displayName =
-    [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'Öğretmen';
+    [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'Rehber';
 
   return (
     <div className={s.shell}>
-      <RoleSwitcher />
-
       <div
         className={`${s.scrim} ${mobileOpen ? s.scrimOpen : ''}`}
         onClick={() => setMobileOpen(false)}
@@ -145,26 +169,12 @@ export default function DashboardLayout() {
 
           <div className={s.topbarRight}>
             <SearchInput className={s.topSearch} placeholder="Öğrenci ara..." aria-label="Öğrenci ara" />
-            <button type="button" className={s.iconBtn} aria-label="Bildirimler">
-              <Bell size={18} />
-              <span className={s.badgeDot}>3</span>
-            </button>
-            <button type="button" className={s.profileBtn} aria-label={displayName}>
-              <Avatar name={displayName} size="sm" color="var(--violet)" />
-            </button>
+            <ProfileMenu displayName={displayName} />
           </div>
         </header>
 
         <main className={s.canvas}>
-          {role === 'ogrenci' ? (
-            <EmptyState
-              icon={<UserIcon size={22} />}
-              title="Öğrenci görünümü yakında"
-              text="Öğrenciler şimdilik mobil uygulamayı kullanıyor. Web arayüzü hazırlanıyor — Öğretmen görünümüne dönmek için yukarıdaki anahtarı kullanın."
-            />
-          ) : (
-            <Outlet />
-          )}
+          <Outlet />
         </main>
       </div>
       </div>

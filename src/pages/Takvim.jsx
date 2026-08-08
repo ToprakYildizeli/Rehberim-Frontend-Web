@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import {
   Card, Button, Avatar, Badge, Field, Input, Select, EmptyState, Spinner,
 } from '../components/ui';
+import WheelPicker from '../components/ui/WheelPicker';
 import { listAppointments, createAppointment, deleteAppointment } from '../api/appointments';
 import { listStudents } from '../api/students';
 import s from './Takvim.module.css';
@@ -20,15 +21,25 @@ const toKey = (y, m, d) =>
 /** Monday-first offset for the 1st of the month. */
 const leadingBlanks = (y, m) => (new Date(y, m, 1).getDay() + 6) % 7;
 
-const CATEGORY_TONE = { Toplantı: 'accent', Görüşme: 'violet' };
+const CATEGORY_TONE = { Toplantı: 'accent', Görüşme: 'violet', Deneme: 'warning', Diğer: 'neutral' };
+const catColor = (c) =>
+  (c === 'Görüşme' ? 'var(--violet)' : c === 'Deneme' ? 'var(--warning)' : 'var(--accent)');
+
+const TODAY = new Date();
+const pad2 = (n) => String(n).padStart(2, '0');
+const isoDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+
+// 24-saat formatında saat (08–23) / dakika seçenekleri (AM/PM yok)
+const HOUR_OPTS = Array.from({ length: 16 }, (_, i) => pad2(i + 8));
+const MIN_OPTS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 
 export default function Takvim() {
-  // The seeded fixtures live in June 2026 — open there so the view isn't empty.
-  const [cursor, setCursor] = useState({ year: 2026, month: 5 });
-  const [selected, setSelected] = useState('2026-06-29');
+  // Etkinlikler backend'den geliyor; takvimi içinde bulunduğumuz ay/günde aç.
+  const [cursor, setCursor] = useState({ year: TODAY.getFullYear(), month: TODAY.getMonth() });
+  const [selected, setSelected] = useState(isoDate(TODAY));
   const [items, setItems] = useState(null);
   const [students, setStudents] = useState([]);
-  const [form, setForm] = useState({ time: '', studentId: '', category: 'Toplantı', note: '' });
+  const [form, setForm] = useState({ time: '09:00', studentId: '', category: 'Toplantı', note: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -68,12 +79,12 @@ export default function Takvim() {
 
   async function handleSave(e) {
     e.preventDefault();
-    if (!form.time || !form.studentId) return;
+    if (!form.time) return;  // öğrenci opsiyonel → kişisel etkinlik olabilir
     setSaving(true);
     try {
       const created = await createAppointment({ ...form, date: selected });
       setItems((prev) => [...prev, created]);
-      setForm((f) => ({ ...f, time: '', note: '' }));
+      setForm((f) => ({ ...f, time: '09:00', note: '' }));
     } finally {
       setSaving(false);
     }
@@ -139,10 +150,7 @@ export default function Takvim() {
                     <span
                       className={s.dot}
                       key={a.id}
-                      style={{
-                        background:
-                          a.category === 'Görüşme' ? 'var(--violet)' : 'var(--accent)',
-                      }}
+                      style={{ background: catColor(a.category) }}
                     />
                   ))}
                 </span>
@@ -166,17 +174,23 @@ export default function Takvim() {
               <div
                 className={s.event}
                 key={a.id}
-                style={{
-                  borderLeftColor:
-                    a.category === 'Görüşme' ? 'var(--violet)' : 'var(--accent)',
-                }}
+                style={{ borderLeftColor: catColor(a.category) }}
               >
                 <span className={s.eventTime}>{a.time}</span>
-                <Avatar name={a.student?.name ?? ''} color={a.student?.color} size="sm" />
-                <span className={s.eventBody}>
-                  <span className={s.eventName}>{a.student?.name}</span>
-                  <p className={s.eventNote}>{a.note}</p>
-                </span>
+                {a.student ? (
+                  <>
+                    <Avatar name={a.student.name} color={a.student.color} size="sm" />
+                    <span className={s.eventBody}>
+                      <span className={s.eventName}>{a.student.name}</span>
+                      <p className={s.eventNote}>{a.note}</p>
+                    </span>
+                  </>
+                ) : (
+                  <span className={s.eventBody}>
+                    <span className={s.eventName}>{a.note || 'Kişisel etkinlik'}</span>
+                    <p className={s.eventNote}>Kişisel</p>
+                  </span>
+                )}
                 <Badge className={s.eventBadge} tone={CATEGORY_TONE[a.category] ?? 'neutral'}>
                   {a.category}
                 </Badge>
@@ -196,31 +210,42 @@ export default function Takvim() {
         <form className={s.form} onSubmit={handleSave}>
           <h3 className={s.formTitle}>Etkinlik Ekle</h3>
 
-          <div className={s.formRow}>
-            <Field label="Saat">
-              <Input
-                type="time"
-                required
-                value={form.time}
-                onChange={(e) => setForm((f) => ({ ...f, time: e.target.value }))}
+          <Field label="Saat">
+            <div className={s.timePicker}>
+              <WheelPicker
+                ariaLabel="Saat"
+                options={HOUR_OPTS}
+                value={form.time.split(':')[0]}
+                onChange={(hh) => setForm((f) => ({ ...f, time: `${hh}:${f.time.split(':')[1]}` }))}
               />
-            </Field>
-            <Field label="Tür">
-              <Select
-                value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-              >
-                <option>Toplantı</option>
-                <option>Görüşme</option>
-              </Select>
-            </Field>
-          </div>
+              <span className={s.timeSep}>:</span>
+              <WheelPicker
+                ariaLabel="Dakika"
+                options={MIN_OPTS}
+                value={form.time.split(':')[1]}
+                onChange={(mm) => setForm((f) => ({ ...f, time: `${f.time.split(':')[0]}:${mm}` }))}
+              />
+            </div>
+          </Field>
+
+          <Field label="Tür">
+            <Select
+              value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+            >
+              <option>Toplantı</option>
+              <option>Görüşme</option>
+              <option>Deneme</option>
+              <option>Diğer</option>
+            </Select>
+          </Field>
 
           <Field label="Öğrenci">
             <Select
               value={form.studentId}
               onChange={(e) => setForm((f) => ({ ...f, studentId: e.target.value }))}
             >
+              <option value="">Kişisel (öğrencisiz)</option>
               {students.map((st) => (
                 <option value={st.id} key={st.id}>
                   {st.name} · {st.grade}
@@ -240,7 +265,7 @@ export default function Takvim() {
           <div className={s.formActions}>
             <Button
               variant="ghost"
-              onClick={() => setForm((f) => ({ ...f, time: '', note: '' }))}
+              onClick={() => setForm((f) => ({ ...f, time: '09:00', note: '' }))}
             >
               İptal
             </Button>

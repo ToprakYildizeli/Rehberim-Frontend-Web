@@ -74,8 +74,8 @@
   display: flex;
   flex-direction: column;
   position: sticky;
-  top: var(--switcher-h);
-  height: calc(100vh - var(--switcher-h));
+  top: 0;
+  height: 100vh;
   transition: width 0.2s ease, background 0.2s;
 }
 
@@ -178,7 +178,7 @@
   gap: var(--space-5);
   padding: 0 var(--space-6);
   position: sticky;
-  top: var(--switcher-h);
+  top: 0;
   z-index: var(--z-sticky);
   transition: background 0.2s, border-color 0.2s;
 }
@@ -231,6 +231,8 @@
   border: 2px solid var(--topbar-bg);
 }
 
+.profileWrap { position: relative; }
+
 .profileBtn {
   background: transparent;
   border: none;
@@ -239,6 +241,49 @@
   border-radius: 50%;
   display: flex;
 }
+
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 190px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.14));
+  padding: 6px;
+  z-index: 40;
+}
+
+.menuHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.menuName { font-size: 0.85rem; font-weight: 600; color: var(--text); }
+.menuRole { font-size: 0.72rem; color: var(--text-muted); }
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+}
+.menuItem:hover { background: var(--bg-alt); color: var(--text); }
+.menuDanger { color: var(--danger); }
+.menuDanger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
 
 .canvas {
   flex: 1;

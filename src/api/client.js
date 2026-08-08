@@ -17,4 +17,51 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+function forceLogout() {
+  localStorage.removeItem('access');
+  localStorage.removeItem('refresh');
+  localStorage.removeItem('user');
+  if (!window.location.pathname.startsWith('/giris')) {
+    window.location.assign('/giris');
+  }
+}
+
+// Aynı anda birden çok istek 401 alırsa tek bir refresh isteği yapılır;
+// diğerleri o promise'i bekler.
+let refreshing = null;
+
+// Access token süresi dolduğunda (401) refresh token ile otomatik yenile ve
+// isteği bir kez tekrar dene. Refresh de geçersizse oturumu kapat, login'e dön.
+api.interceptors.response.use(
+  (res) => res,
+  async (error) => {
+    const { response, config } = error;
+    const isAuthCall = config?.url?.includes('/auth/');
+    if (response?.status !== 401 || config?._retry || isAuthCall) {
+      return Promise.reject(error);
+    }
+    const refresh = localStorage.getItem('refresh');
+    if (!refresh) {
+      forceLogout();
+      return Promise.reject(error);
+    }
+    config._retry = true;
+    try {
+      if (!refreshing) {
+        // İnterceptor döngüsüne girmemek için ham axios kullan.
+        refreshing = axios.post(`${baseURL}/auth/refresh/`, { refresh });
+      }
+      const { data } = await refreshing;
+      refreshing = null;
+      localStorage.setItem('access', data.access);
+      config.headers.Authorization = `Bearer ${data.access}`;
+      return api(config);
+    } catch (e) {
+      refreshing = null;
+      forceLogout();
+      return Promise.reject(e);
+    }
+  }
+);
+
 export default api;

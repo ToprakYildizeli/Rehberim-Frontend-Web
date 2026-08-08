@@ -177,6 +177,10 @@
 
 .formTitle { font-size: 0.85rem; font-weight: 700; color: var(--text); margin: 0; }
 .formRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+
+.timePicker { display: flex; align-items: center; gap: 6px; }
+.timePicker select { flex: 1; }
+.timeSep { color: var(--text-muted); font-weight: 700; }
 .formActions { display: flex; gap: var(--space-3); }
 .formActions > * { flex: 1; }
 
