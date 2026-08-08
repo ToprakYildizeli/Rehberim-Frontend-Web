@@ -1,24 +1,23 @@
-import { generalSchedule, studentLibraries, curriculumNeeds } from '../mocks/data';
+import { studentLibraries, curriculumNeeds } from '../mocks/data';
 import { delay } from './mockDelay';
+import { getStudentProgram, persistStudentSchedule } from './programs';
 
-// Per-scope schedules ('genel' or a student id), mutable for the session.
-const store = new Map([['genel', [...generalSchedule]]]);
+// "Genel Program" modu backend'siz → oturum-içi mock store. Öğrenciye özel mod
+// gerçek /api/programs/'a bağlanır (programs.js).
+const store = new Map();
 
-const scopeKey = (studentId) => (studentId ? String(studentId) : 'genel');
-
-export async function getSchedule(studentId) {
+export async function getSchedule(scope) {
+  // scope bir öğrenci id ise gerçek program; değilse (genel) mock.
+  if (scope) return getStudentProgram(scope);
   await delay();
-  const key = scopeKey(studentId);
-  if (!store.has(key)) {
-    // A student without a saved schedule starts from the general template.
-    store.set(key, generalSchedule.map((b) => ({ ...b, id: `${key}-${b.id}` })));
-  }
-  return store.get(key);
+  if (!store.has('genel')) store.set('genel', []);
+  return store.get('genel');
 }
 
-export async function saveSchedule(studentId, blocks) {
+export async function saveSchedule(scope, blocks) {
+  if (scope) return persistStudentSchedule(scope, blocks);
   await delay(60);
-  store.set(scopeKey(studentId), blocks);
+  store.set('genel', blocks);
   return blocks;
 }
 
