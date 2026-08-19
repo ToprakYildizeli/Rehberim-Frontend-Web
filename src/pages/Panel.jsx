@@ -1,295 +1,314 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FileText, CalendarCheck, BarChart3, ChevronRight,
-  Sparkles, ArrowRight, Eye, SlidersHorizontal,
+  Users, CalendarClock, CalendarPlus, TrendingDown, TrendingUp, Minus, Target, ChevronRight,
+  ClipboardList, Gauge, BarChart3, LineChart,
 } from 'lucide-react';
 import {
-  Card, CardHeader, Button, Avatar, Badge, ProgressBar, PillGroup, Spinner,
+  Card, CardHeader, Button, Avatar, Badge, ProgressBar, PillGroup, Select, EmptyState, Spinner,
 } from '../components/ui';
-import StudentModal from '../components/dashboard/StudentModal';
-import { trendMeta } from '../components/dashboard/trend';
-import { getNetComparison, listStudents } from '../api/students';
-import {
-  getPendingActions, getRedAlerts, getActivityFeed, getAiInsights,
-} from '../api/dashboard';
+import { getDashboard } from '../api/dashboard';
 import s from './Panel.module.css';
 
-const RANGES = [
-  { value: 'son-deneme', label: 'Son Deneme' },
-  { value: 'son-1-ay', label: 'Son 1 Ay' },
-  { value: 'son-3-ay', label: 'Son 3 Ay' },
+const MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+const fmtDay = (iso) => { const [, m, d] = iso.split('-').map(Number); return `${d} ${MONTHS[m - 1]}`; };
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+
+const METRICS = [
+  { value: 'avgNet', label: 'Deneme Ort.', unit: 'net', max: 120 },   // TYT üzerinden
+  { value: 'avgLevel', label: 'Konu Puanı', unit: '', max: 5 },
+  { value: 'weeklyHours', label: 'Haftalık Saat', unit: 'sa', max: 40 },
 ];
+const NET_TYPES = [{ value: 'tyt', label: 'TYT' }, { value: 'ayt', label: 'AYT' }];
 
-const ACTION_ICONS = { file: FileText, calendar: CalendarCheck, chart: BarChart3 };
-
-/** At or above the class average reads as healthy; well below it is a red flag. */
-function barColor(net, average) {
-  if (net >= average) return 'var(--subj-matematik)';
-  if (net < average * 0.8) return 'var(--danger)';
-  return 'var(--warning)';
-}
+const complianceColor = (c) => (c >= 80 ? 'var(--success)' : c >= 60 ? 'var(--warning)' : 'var(--danger)');
+const levelTone = (l) => (l >= 4 ? 'success' : l >= 3 ? 'accent' : l >= 2 ? 'warning' : 'danger');
 
 export default function Panel() {
   const navigate = useNavigate();
-  const [range, setRange] = useState('son-deneme');
-  const [comparison, setComparison] = useState(null);
-  const [students, setStudents] = useState([]);
-  const [actions, setActions] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [feed, setFeed] = useState([]);
-  const [insights, setInsights] = useState([]);
-  const [selected, setSelected] = useState(null);
+  const [data, setData] = useState(null);
+  const [metric, setMetric] = useState('avgNet');
+  const [netExam, setNetExam] = useState('tyt');   // "Deneme Ort." kıyası: TYT/AYT
+  const [netGroup, setNetGroup] = useState('total'); // ve ders grubu (sınava göre)
+  const [netType, setNetType] = useState('tyt');
+  const [hidden, setHidden] = useState(() => new Set());
 
   useEffect(() => {
     let alive = true;
-    Promise.all([
-      listStudents(), getPendingActions(), getRedAlerts(), getActivityFeed(), getAiInsights(),
-    ]).then(([st, ac, al, fd, ai]) => {
-      if (!alive) return;
-      setStudents(st);
-      setActions(ac);
-      setAlerts(al);
-      setFeed(fd);
-      setInsights(ai);
-    });
+    getDashboard().then((d) => { if (alive) setData(d); }).catch(() => { if (alive) setData({ error: true }); });
     return () => { alive = false; };
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    setComparison(null);
-    getNetComparison(range).then((d) => { if (alive) setComparison(d); });
-    return () => { alive = false; };
-  }, [range]);
+  const openStudent = (id) => navigate(`/ogrenciler/${id}`);
+  const toggle = (id) => setHidden((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
 
-  // Headroom above the tallest bar so value labels never clip.
-  const chartMax = useMemo(() => {
-    if (!comparison) return 100;
-    return Math.max(...comparison.items.map((i) => i.net), comparison.classAverage) * 1.15;
-  }, [comparison]);
+  // Kıyas değeri: "Deneme Ort."ta seçili tür+grup neti; diğer metriklerde alanın kendisi
+  const dimKey = `${netExam}_${netGroup}`;
+  const metricVal = (st) => (metric === 'avgNet' ? (st.netDims?.[dimKey] ?? null) : st[metric]);
+  const ranked = useMemo(() => {
+    if (!data?.students) return [];
+    const val = (st) => (metric === 'avgNet' ? (st.netDims?.[dimKey] ?? null) : st[metric]);
+    return data.students.filter((st) => val(st) != null).sort((a, b) => val(b) - val(a));
+  }, [data, metric, dimKey]);
+
+  if (!data) return <div className={s.center}><Spinner size={24} /></div>;
+
+  const { kpis, upcoming, needProgram, complianceRanked, netChanges, konuRanked, netSeries, netDimGroups } = data;
+  const metricDef = METRICS.find((x) => x.value === metric);
+  const groupOpts = (netDimGroups && netDimGroups[netExam]) || [];
+  const dimDef = groupOpts.find((d) => d.key === netGroup) || groupOpts[0] || { max: 120 };
+  const rankMax = metric === 'avgNet' ? dimDef.max : metricDef.max;
+  const rankUnit = metric === 'avgNet' ? 'net' : metricDef.unit;
+  const available = netSeries[netType] || [];
+  const visible = available.filter((se) => !hidden.has(se.id));
 
   return (
     <div className={s.page}>
-      {/* ── Net Kıyaslama ── */}
+      {/* ── KPI şeridi ── */}
+      <div className={s.kpiRow}>
+        <KpiCard icon={<Users size={18} />} value={kpis.count} label="Öğrenci" tone="accent" />
+        <KpiCard icon={<CalendarPlus size={18} />} value={kpis.withoutProgram}
+          label="Bu hafta programsız" tone={kpis.withoutProgram ? 'danger' : 'success'} />
+        <KpiCard icon={<CalendarClock size={18} />} value={kpis.upcoming} label="Yaklaşan görüşme" tone="violet" />
+        <KpiCard icon={<Gauge size={18} />} value={kpis.avgNet ?? '—'} label="Ort. net" tone="cyan" />
+      </div>
+
+      {/* ── Öğrenci net grafiği (çok çizgili, seçilebilir) ── */}
       <Card>
-        <div className={s.chartHead}>
+        <div className={s.cmpHead}>
           <div>
-            <h2 style={{ fontSize: '0.98rem', fontWeight: 700, margin: 0 }}>Net Kıyaslama</h2>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '3px 0 0' }}>
-              Öğrencilerinizin son deneme netleri — sınıf ortalamasıyla karşılaştırmalı
-            </p>
+            <h2 className={s.cmpTitle}><LineChart size={16} /> Öğrenci Net Grafiği</h2>
+            <p className={s.cmpSub}>Deneme başına net; öğrenci ve sınav türünü seç</p>
           </div>
-          <div className={s.chartControls}>
-            <PillGroup options={RANGES} value={range} onChange={setRange} />
-            <span className={s.benchmarkKey}>
-              <span className={s.benchmarkDash} />
-              Sınıf Ort. {comparison?.classAverage ?? '—'} net
-            </span>
+          <PillGroup options={NET_TYPES} value={netType} onChange={setNetType} />
+        </div>
+        <div className={s.netChips}>
+          {available.map((se) => (
+            <button key={se.id} type="button"
+              className={`${s.chip} ${hidden.has(se.id) ? s.chipOff : ''}`} onClick={() => toggle(se.id)}>
+              <span className={s.chipDot} style={{ background: se.color }} />
+              {se.name.split(' ')[0]}
+            </button>
+          ))}
+        </div>
+        <MultiLineChart series={visible} />
+      </Card>
+
+      {/* ── Aksiyon satırı ── */}
+      <div className={s.widgetRow}>
+        <Card className={s.wCard}>
+          <CardHeader title="Yaklaşan Görüşmeler" actions={<span className={s.countBadge}>{upcoming.length}</span>} />
+          {upcoming.length === 0 ? (
+            <EmptyState icon={<CalendarClock size={20} />} text="Yaklaşan görüşme yok." />
+          ) : (
+            <div className={s.list}>
+              {upcoming.map((a) => (
+                <button key={a.id} type="button" className={s.row}
+                  onClick={() => (a.studentId ? openStudent(a.studentId) : navigate('/takvim'))}>
+                  <span className={s.dateChip}>
+                    <span className={s.dateChipDay}>{a.date === todayIso() ? 'Bugün' : fmtDay(a.date)}</span>
+                    <span className={s.dateChipTime}>{a.time || '—'}</span>
+                  </span>
+                  <span className={s.rowMain}>
+                    <span className={s.rowName}>{a.student?.name || 'Kişisel'}</span>
+                    <span className={s.rowSub}>{a.category}</span>
+                  </span>
+                  <ChevronRight size={16} className={s.rowChevron} />
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card className={s.wCard}>
+          <CardHeader title="Program Gerekenler" actions={<span className={`${s.countBadge} ${needProgram.length ? s.countDanger : ''}`}>{needProgram.length}</span>} />
+          {needProgram.length === 0 ? (
+            <EmptyState icon={<ClipboardList size={20} />} text="Herkesin bu hafta programı var." />
+          ) : (
+            <div className={s.list}>
+              {needProgram.map((st) => (
+                <div key={st.id} className={s.row}>
+                  <Avatar name={st.name} color={st.color} size="sm" />
+                  <span className={s.rowMain}>
+                    <span className={s.rowName}>{st.name}</span>
+                    <span className={s.rowSub}>{st.grade}</span>
+                  </span>
+                  <Button variant="soft" size="sm" onClick={() => navigate(`/ders-programi?ogrenci=${st.id}`)}>
+                    Program yap
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card className={s.wCard}>
+          <CardHeader title="Net Değişimi (son denemeye göre)" actions={<span className={s.countBadge}>{netChanges.length}</span>} />
+          {netChanges.length === 0 ? (
+            <EmptyState icon={<TrendingDown size={20} />} text="Karşılaştırılacak deneme yok." />
+          ) : (
+            <div className={s.list}>
+              {netChanges.map((st) => {
+                const up = st.netDelta > 0; const flat = st.netDelta === 0;
+                const tone = flat ? 'neutral' : up ? 'success' : 'danger';
+                const Icon = flat ? Minus : up ? TrendingUp : TrendingDown;
+                return (
+                  <button key={st.id} type="button" className={s.row} onClick={() => openStudent(st.id)}>
+                    <Avatar name={st.name} color={st.color} size="sm" />
+                    <span className={s.rowMain}>
+                      <span className={s.rowName}>{st.name}</span>
+                      <span className={s.rowSub}>{st.lastNet} net (son deneme)</span>
+                    </span>
+                    <Badge tone={tone}><Icon size={12} /> {up ? '+' : ''}{st.netDelta}</Badge>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* ── Uyum (sıralı %) + Konu takibi (ort. seviye) ── */}
+      <div className={s.pairRow}>
+        <Card className={s.wCard}>
+          <CardHeader title="Program Uyumu" actions={<span className={s.countBadge}>{complianceRanked.length}</span>} />
+          {complianceRanked.length === 0 ? (
+            <EmptyState icon={<Gauge size={20} />} text="Bu hafta programlı öğrenci yok." />
+          ) : (
+            <div className={s.list}>
+              {complianceRanked.map((st) => (
+                <button key={st.id} type="button" className={s.row} onClick={() => openStudent(st.id)}>
+                  <Avatar name={st.name} color={st.color} size="sm" />
+                  <span className={s.rowMain}>
+                    <span className={s.rowName}>{st.name}</span>
+                    <ProgressBar value={st.compliance} color={complianceColor(st.compliance)} />
+                  </span>
+                  <span className={s.rowStat}>%{st.compliance}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
+
+        <Card className={s.wCard}>
+          <CardHeader title="Konu Takibi — Ortalama Seviye" actions={<span className={s.countBadge}>{konuRanked.length}</span>} />
+          {konuRanked.length === 0 ? (
+            <EmptyState icon={<Target size={20} />} text="Konu ilerlemesi işaretlenmemiş." />
+          ) : (
+            <div className={s.list}>
+              {konuRanked.map((st) => (
+                <button key={st.id} type="button" className={s.row} onClick={() => openStudent(st.id)}>
+                  <Avatar name={st.name} color={st.color} size="sm" />
+                  <span className={s.rowMain}>
+                    <span className={s.rowName}>{st.name}</span>
+                    <span className={s.rowSub}>{st.weakCount} zayıf konu</span>
+                  </span>
+                  <Badge tone={levelTone(st.avgLevel)}>{st.avgLevel} / 5</Badge>
+                </button>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* ── Ortalama üzerinden kıyaslama ── */}
+      <Card>
+        <div className={s.cmpHead}>
+          <div>
+            <h2 className={s.cmpTitle}><BarChart3 size={16} /> Öğrenci Kıyaslama</h2>
+            <p className={s.cmpSub}>Ortalamalar üzerinden (deneme bazlı değil)</p>
+          </div>
+          <div className={s.cmpControls}>
+            <PillGroup options={METRICS} value={metric} onChange={setMetric} />
+            {metric === 'avgNet' && (
+              <span className={s.netDimCtl}>
+                <PillGroup
+                  options={NET_TYPES}
+                  value={netExam}
+                  onChange={(v) => { setNetExam(v); setNetGroup('total'); }}
+                />
+                <Select className={s.dimSelect} value={netGroup} onChange={(e) => setNetGroup(e.target.value)} aria-label="Ders grubu">
+                  {groupOpts.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
+                </Select>
+              </span>
+            )}
           </div>
         </div>
-
-        {!comparison ? (
-          <div style={{ height: 240, display: 'grid', placeItems: 'center' }}>
-            <Spinner size={22} />
-          </div>
+        {ranked.length === 0 ? (
+          <EmptyState text="Bu metrik için veri yok." />
         ) : (
-          <div className={s.chart}>
-            <div
-              className={s.benchmarkLine}
-              style={{ bottom: `${(comparison.classAverage / chartMax) * 100}%` }}
-            >
-              <span className={s.benchmarkLabel}>Ort. {comparison.classAverage}</span>
-            </div>
-
-            {comparison.items.map((item) => (
-              <button
-                key={item.studentId}
-                type="button"
-                className={s.bar}
-                onClick={() => setSelected(item.student)}
-                title={`${item.student.name} — ${item.net} net`}
-              >
-                <span className={s.barCol}>
-                  <span className={s.barValue}>{item.net}</span>
-                  <span
-                    className={s.barFill}
-                    style={{
-                      height: `${(item.net / chartMax) * 100}%`,
-                      background: barColor(item.net, comparison.classAverage),
-                    }}
-                  />
+          <div className={s.rankList}>
+            {ranked.map((st) => (
+              <button key={st.id} type="button" className={s.rankRow} onClick={() => openStudent(st.id)}>
+                <Avatar name={st.name} color={st.color} size="xs" />
+                <span className={s.rankName}>{st.name}</span>
+                <span className={s.rankTrack}>
+                  <span className={s.rankFill} style={{ width: `${Math.min(100, (metricVal(st) / rankMax) * 100)}%`, background: st.color || 'var(--accent)' }} />
                 </span>
-                <Avatar name={item.student.name} color={item.student.color} size="xs" />
+                <span className={s.rankValue}>{metricVal(st)} / {rankMax}{rankUnit ? ` ${rankUnit}` : ''}</span>
               </button>
             ))}
           </div>
         )}
       </Card>
-
-      {/* ── Üç widget ── */}
-      <div className={s.widgetRow}>
-        <Card>
-          <CardHeader
-            title="Aksiyon Bekleyenler"
-            actions={<span className={s.countBadge}>{actions.length}</span>}
-          />
-          <div className={s.actionList}>
-            {actions.map((a) => {
-              const Icon = ACTION_ICONS[a.icon] ?? FileText;
-              return (
-                <div className={s.actionItem} key={a.id}>
-                  <span className={s.actionIcon}><Icon size={15} /></span>
-                  <span className={s.actionText}>{a.text}</span>
-                  <Button variant="soft" size="sm">{a.cta}</Button>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader
-            title="Kırmızı Alarm"
-            actions={<span className={`${s.countBadge} ${s.countDanger}`}>{alerts.length}</span>}
-          />
-          <div className={s.alertList}>
-            {alerts.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                className={`${s.alertRow} ${a.tone === 'warning' ? s.alertWarning : s.alertDanger}`}
-                onClick={() => setSelected(a.student)}
-              >
-                <Avatar name={a.student.name} color={a.student.color} size="sm" />
-                <span className={s.alertBody}>
-                  <span className={s.alertName}>{a.student.name}</span>
-                  <p className={s.alertReason}>{a.reason}</p>
-                </span>
-                <span className={s.alertChevron}><ChevronRight size={16} /></span>
-              </button>
-            ))}
-          </div>
-        </Card>
-
-        <Card>
-          <CardHeader
-            title="Hızlı Akış"
-            actions={<span className={s.liveBadge}><span className={s.liveDot} /> Canlı</span>}
-          />
-          <div className={s.feedList}>
-            {feed.map((f) => (
-              <div className={s.feedItem} key={f.id}>
-                <span className={s.feedDot} style={{ background: `var(--${f.tone})` }} />
-                <div>
-                  <p className={s.feedName}>{f.student.name}</p>
-                  <p className={s.feedText}>{f.text}</p>
-                  <p className={s.feedTime}>{f.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      {/* ── Öğrenci listesi + AI ── */}
-      <div className={s.bottomRow}>
-        <Card>
-          <CardHeader
-            title="Öğrenci Listesi"
-            actions={
-              <Button variant="ghost" size="sm" onClick={() => navigate('/ogrenciler')}>
-                <SlidersHorizontal size={13} /> Filtrele
-              </Button>
-            }
-          />
-          <div className={s.tableScroll}>
-            <table className={s.table}>
-              <thead>
-                <tr>
-                  <th>Öğrenci</th>
-                  <th>Sınıf</th>
-                  <th>Haftalık Uyum</th>
-                  <th>Son Deneme</th>
-                  <th>Trend</th>
-                  <th aria-label="İşlem" />
-                </tr>
-              </thead>
-              <tbody>
-                {students.map((st) => {
-                  const t = trendMeta(st.trend);
-                  return (
-                    <tr key={st.id} onClick={() => setSelected(st)}>
-                      <td>
-                        <span className={s.cellStudent}>
-                          <Avatar name={st.name} color={st.color} size="sm" />
-                          <span className={s.cellName}>{st.name}</span>
-                        </span>
-                      </td>
-                      <td><Badge>{st.grade}</Badge></td>
-                      <td>
-                        <span className={s.cellCompliance}>
-                          <ProgressBar
-                            value={st.compliance}
-                            color={
-                              st.compliance >= 80 ? 'var(--success)'
-                                : st.compliance >= 60 ? 'var(--warning)'
-                                : 'var(--danger)'
-                            }
-                          />
-                          <span className={s.compliancePct}>%{st.compliance}</span>
-                        </span>
-                      </td>
-                      <td>{st.lastNet} net</td>
-                      <td><Badge tone={t.tone}><t.Icon size={12} /></Badge></td>
-                      <td><span className={s.eyeBtn}><Eye size={15} /></span></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-
-        <Card>
-          <div className={s.aiHead}>
-            <span className={s.aiMark}><Sparkles size={16} /></span>
-            <div>
-              <h3 className={s.aiTitle}>AI Asistanı</h3>
-              <p className={s.aiSub}>Haftalık öğrenci analiz raporları</p>
-            </div>
-          </div>
-          <div className={s.aiList}>
-            {insights.map((ins) => (
-              <button
-                key={ins.id}
-                type="button"
-                className={`${s.aiCard} ${
-                  ins.tone === 'danger' ? s.aiCardDanger
-                    : ins.tone === 'success' ? s.aiCardSuccess
-                    : s.aiCardAccent
-                }`}
-                onClick={() => setSelected(ins.student)}
-              >
-                <span className={s.aiCardHead}>
-                  <Avatar name={ins.student.name} color={ins.student.color} size="xs" />
-                  <span className={s.aiCardName}>{ins.student.name}</span>
-                  <Badge tone={ins.tone}>{ins.tag}</Badge>
-                </span>
-                <p className={s.aiCardBody}>{ins.body}</p>
-                <span className={s.aiCardCta}>{ins.cta} <ArrowRight size={12} /></span>
-              </button>
-            ))}
-          </div>
-        </Card>
-      </div>
-
-      <StudentModal
-        student={selected}
-        open={!!selected}
-        onClose={() => setSelected(null)}
-        onModifySchedule={(st) => navigate(`/ders-programi?ogrenci=${st.id}`)}
-      />
     </div>
+  );
+}
+
+function KpiCard({ icon, value, label, tone }) {
+  return (
+    <Card className={s.kpiCard}>
+      <span className={`${s.kpiIcon} ${s[`kpi_${tone}`]}`}>{icon}</span>
+      <span className={s.kpiValue}>{value}</span>
+      <span className={s.kpiLabel}>{label}</span>
+    </Card>
+  );
+}
+
+/** Çok çizgili net grafiği — her öğrenci kendi renginde (SVG, tek eksen).
+ *  Büyük viewBox + non-scaling-stroke → çizgi/nokta ekranda ince ve net kalır. */
+function MultiLineChart({ series }) {
+  if (!series.length) return <EmptyState icon={<LineChart size={20} />} text="Görüntülenecek öğrenci seç." />;
+  const W = 760; const H = 300; const padL = 42; const padR = 20; const padT = 18; const padB = 38;
+  const maxX = Math.max(...series.map((se) => se.points.length));
+  const allNet = series.flatMap((se) => se.points.map((p) => p.net));
+  const lo = Math.min(...allNet); const hi = Math.max(...allNet);
+  const min = Math.floor(lo - (hi - lo || 4) * 0.15);
+  const max = Math.ceil(hi + (hi - lo || 4) * 0.15);
+  const xs = (x) => padL + (maxX <= 1 ? (W - padL - padR) / 2 : (x * (W - padL - padR)) / (maxX - 1));
+  const ys = (v) => padT + (1 - (v - min) / ((max - min) || 1)) * (H - padT - padB);
+  const grids = [min, Math.round((min + max) / 2), max];
+  return (
+    <svg className={s.trendSvg} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMinYMid meet"
+      role="img" aria-label="Öğrenci net grafiği">
+      {grids.map((g) => (
+        <g key={g}>
+          <line x1={padL} y1={ys(g)} x2={W - padR} y2={ys(g)} className={s.grid} vectorEffect="non-scaling-stroke" />
+          <text x={padL - 8} y={ys(g) + 4} className={s.axisTxt} textAnchor="end">{g}</text>
+        </g>
+      ))}
+      {Array.from({ length: maxX }).map((_, i) => (
+        <text key={i} x={xs(i)} y={H - 12} className={s.axisTxt} textAnchor="middle">D{i + 1}</text>
+      ))}
+      {series.map((se) => {
+        const line = se.points.map((p, i) => `${i ? 'L' : 'M'}${xs(p.x).toFixed(1)},${ys(p.net).toFixed(1)}`).join(' ');
+        return (
+          <g key={se.id}>
+            <path d={line} fill="none" stroke={se.color} strokeWidth="2" strokeLinejoin="round"
+              strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            {se.points.map((p) => (
+              <circle key={p.x} cx={xs(p.x)} cy={ys(p.net)} r="3" fill="var(--bg-card)"
+                stroke={se.color} strokeWidth="2" vectorEffect="non-scaling-stroke">
+                <title>{se.name} — {p.label}: {p.net} net</title>
+              </circle>
+            ))}
+          </g>
+        );
+      })}
+    </svg>
   );
 }
