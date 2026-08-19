@@ -30,12 +30,12 @@
 /* ---------- Layout ---------- */
 .layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 272px;
   gap: var(--space-4);
   align-items: start;
 }
 
-.gridCard { padding: var(--space-4); overflow-x: auto; }
+.gridCard { padding: var(--space-3); overflow-x: auto; }
 
 .rail { display: flex; flex-direction: column; gap: var(--space-4); }
 
@@ -44,7 +44,7 @@
 .catToggle button { flex: 1; text-align: center; }
 
 /* ---------- Program ağırlığı özeti ---------- */
-.wSection { margin-top: var(--space-4); }
+.wSection { margin-top: var(--space-3); }
 .wSecLabel {
   display: block;
   font-size: 0.68rem;
@@ -77,7 +77,7 @@
 
 /* Ders ağırlığı: donut grafiği + legend */
 .pieWrap { display: flex; align-items: center; gap: var(--space-4); margin-top: var(--space-2); }
-.pie { width: 104px; height: 104px; border-radius: 50%; flex-shrink: 0; position: relative; }
+.pie { width: 84px; height: 84px; border-radius: 50%; flex-shrink: 0; position: relative; }
 .pieHole { position: absolute; inset: 28%; background: var(--bg-card); border-radius: 50%; }
 .pieLegend {
   list-style: none;
@@ -96,8 +96,8 @@
 /* ---------- Timetable grid ---------- */
 .grid {
   display: grid;
-  grid-template-columns: 54px repeat(7, minmax(96px, 1fr));
-  min-width: 760px;
+  grid-template-columns: 46px repeat(7, minmax(0, 1fr));
+  min-width: 600px;
 }
 
 .corner { border-bottom: 1px solid var(--border); }
@@ -115,8 +115,8 @@
   font-size: 0.68rem;
   color: var(--text-muted);
   text-align: right;
-  padding: 0 var(--space-3) 0 0;
-  height: 46px;
+  padding: 0 var(--space-2) 0 0;
+  height: 38px;
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
@@ -124,7 +124,7 @@
 }
 
 .cell {
-  height: 46px;
+  height: 38px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
   position: relative;
@@ -300,4 +300,143 @@
 
 @media (max-width: 1180px) {
   .layout { grid-template-columns: 1fr; }
+}
+
+/* ---------- Şablon menüsü + atama modalı ---------- */
+.tplMenu { position: relative; }
+.tplList {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 30;
+  width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 5px;
+}
+.tplEmpty { font-size: 0.78rem; color: var(--text-muted); margin: 0; padding: 10px; text-align: center; }
+.tplItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px 8px;
+  border-radius: var(--radius-md);
+}
+.tplItem:hover { background: var(--bg-alt); }
+.tplName {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.82rem;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tplActions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.tplBtn {
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 3px 9px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.tplBtn:hover { background: var(--accent-subtle); border-color: var(--accent); }
+.tplDel {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+.tplDel:hover { color: var(--error); background: var(--error-bg); }
+
+.modalTitle { font-size: 1rem; font-weight: 700; color: var(--text); margin: 0 0 var(--space-4); }
+.assignForm { display: flex; flex-direction: column; gap: var(--space-3); }
+.assignWeek { font-size: 0.85rem; font-weight: 600; color: var(--accent); margin: 0; }
+.assignHint { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
+.assignError { font-size: 0.78rem; color: var(--error); margin: 0; }
+.assignActions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
+
+/* Düzenlenen şablon göstergesi */
+.tplBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 4px 8px 4px 10px;
+  max-width: 220px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.tplBadgeX {
+  display: grid;
+  place-items: center;
+  width: 16px; height: 16px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.tplBadgeX:hover { color: var(--error); }
+
+/* ---------- Alt yatay özet çubuğu (geçen hafta · şu anki · toplam) ---------- */
+.sumBar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+.sumCol {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.sumColActive { border-color: var(--accent); box-shadow: var(--shadow); }
+.sumTitle {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.sumEmpty { font-size: 0.78rem; color: var(--text-muted); }
+.sumBody { display: flex; align-items: center; gap: var(--space-4); min-width: 0; }
+.sumPie { width: 72px; height: 72px; border-radius: 50%; flex-shrink: 0; position: relative; }
+.sumPieHole { position: absolute; inset: 30%; background: var(--bg-card); border-radius: 50%; }
+.sumInfo { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.sumTotal { font-size: 1rem; font-weight: 800; color: var(--text); }
+.sumSplitTxt { font-size: 0.72rem; color: var(--text-secondary); }
+.sumLegend { list-style: none; margin: 2px 0 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.sumLegItem { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-secondary); min-width: 0; }
+.sumLegName { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sumLegPct { color: var(--text-muted); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+
+@media (max-width: 900px) {
+  .sumBar { grid-template-columns: 1fr; }
 }

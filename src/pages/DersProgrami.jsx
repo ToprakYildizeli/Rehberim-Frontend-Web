@@ -4,17 +4,22 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core';
-import { X, Trash2, RotateCcw } from 'lucide-react';
+import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown } from 'lucide-react';
 import {
-  Card, Button, Field, Select, PillGroup, Spinner,
+  Card, Button, Field, Select, Input, PillGroup, Spinner, Modal,
 } from '../components/ui';
 import { listStudents } from '../api/students';
 import { getSchedule, saveSchedule } from '../api/schedule';
+import { suggestNextWeekStart, getStudentPrograms } from '../api/programs';
+import {
+  listTemplates, createTemplate, updateTemplate, deleteTemplate, templateToBlocks,
+  assignBoard, assignTemplate,
+} from '../api/templates';
 import { listSubjects, listTaskTypes, listTopics, listBooks } from '../api/catalog';
 import { DAYS, HOURS } from '../mocks/data';
 import s from './DersProgrami.module.css';
 
-const ROW_H = 46;
+const ROW_H = 38;
 const MODES = [
   { value: 'genel', label: 'Genel Program' },
   { value: 'ogrenci', label: 'Öğrenciye Özel' },
@@ -57,6 +62,12 @@ export default function DersProgrami() {
   const [blocks, setBlocks] = useState(null);
   const [library, setLibrary] = useState([]);
   const [activeDrag, setActiveDrag] = useState(null);
+
+  // Şablonlar + atama
+  const [templates, setTemplates] = useState([]);
+  const [assignSource, setAssignSource] = useState(null); // {type:'board'} | {type:'template',id,name}
+  const [loadedTemplate, setLoadedTemplate] = useState(null); // {id,name} — düzenlenen şablon
+  const [history, setHistory] = useState([]); // öğrencinin tüm programları (geçen hafta + toplam özeti)
 
   // Gerçek backend katalogları
   const [subjects, setSubjects] = useState([]);
@@ -169,6 +180,60 @@ export default function DersProgrami() {
     [scope]
   );
 
+  // Öğrenci geçmişi (alttaki özet çubuğu: geçen hafta + toplam)
+  useEffect(() => {
+    if (mode === 'ogrenci' && studentId) {
+      getStudentPrograms(studentId).then(setHistory).catch(() => setHistory([]));
+    } else {
+      setHistory([]);
+    }
+  }, [mode, studentId]);
+
+  // Şablonları yükle
+  useEffect(() => { listTemplates().then(setTemplates).catch(() => {}); }, []);
+  const reloadTemplates = () => listTemplates().then(setTemplates).catch(() => {});
+
+  async function handleSaveTemplate() {
+    // Bir şablon yüklüyse: aynı objeyi güncelle (adı korunur). İstersen yeni olarak da kaydet.
+    if (loadedTemplate) {
+      const update = window.confirm(
+        `"${loadedTemplate.name}" şablonunu güncelle?\n(İptal: yeni şablon olarak kaydet)`
+      );
+      if (update) {
+        try {
+          await updateTemplate(loadedTemplate.id, loadedTemplate.name, blocks || []);
+          await reloadTemplates();
+          window.alert(`"${loadedTemplate.name}" güncellendi.`);
+        } catch {
+          window.alert('Şablon güncellenemedi.');
+        }
+        return;
+      }
+    }
+    const name = window.prompt('Şablon adı (ör. "Sayısal 1 default"):');
+    if (!name || !name.trim()) return;
+    try {
+      const created = await createTemplate(name.trim(), blocks || []);
+      await reloadTemplates();
+      setLoadedTemplate({ id: created.id, name: created.name });   // artık bu şablonu düzenliyoruz
+      window.alert(`"${name.trim()}" şablonu kaydedildi.`);
+    } catch {
+      window.alert('Şablon kaydedilemedi (aynı isim olabilir).');
+    }
+  }
+
+  function handleLoadTemplate(tpl) {
+    commit(templateToBlocks(tpl));   // tahtaya yükle (mode'a göre kaydedilir)
+    setLoadedTemplate({ id: tpl.id, name: tpl.name });   // düzenlenen şablon = bu obje
+  }
+
+  async function handleDeleteTemplate(id) {
+    if (!window.confirm('Şablon silinsin mi?')) return;
+    await deleteTemplate(id);
+    if (loadedTemplate?.id === id) setLoadedTemplate(null);
+    reloadTemplates();
+  }
+
   const totalHours = useMemo(
     () => (blocks ?? []).reduce((sum, b) => sum + b.duration, 0),
     [blocks]
@@ -209,6 +274,7 @@ export default function DersProgrami() {
   function clearAll() {
     lastWeek.current = blocks;
     commit([]);
+    setLoadedTemplate(null);   // boş board = artık bir şablon düzenlenmiyor
   }
 
   function loadLastWeek() {
@@ -238,6 +304,7 @@ export default function DersProgrami() {
 
   function switchMode(next) {
     setMode(next);
+    setLoadedTemplate(null);   // mod değişince şablon düzenleme bağlamı biter
     if (next === 'genel') {
       setParams({}, { replace: true });
       // Genel modda kitap yok → Kitap türündeysek TYT'ye dön.
@@ -318,17 +385,37 @@ export default function DersProgrami() {
               ))}
             </Select>
           )}
+          {loadedTemplate && (
+            <span className={s.tplBadge} title="Şablon Kaydet bu şablonu günceller">
+              <Bookmark size={12} /> {loadedTemplate.name}
+              <button type="button" className={s.tplBadgeX} onClick={() => setLoadedTemplate(null)} aria-label="Şablon bağını kaldır">
+                <X size={11} />
+              </button>
+            </span>
+          )}
         </div>
 
         <div className={s.toolbarRight}>
           <span className={s.totalPill}>Toplam: {totalHours} saat</span>
+          <Button variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
+            <Bookmark size={13} /> Şablon Kaydet
+          </Button>
+          <TemplateMenu
+            templates={templates}
+            onLoad={handleLoadTemplate}
+            onAssign={(tpl) => setAssignSource({ type: 'template', id: tpl.id, name: tpl.name })}
+            onDelete={handleDeleteTemplate}
+          />
+          <Button variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
+            <Send size={13} /> Ata
+          </Button>
           {mode === 'ogrenci' && (
-            <Button variant="ghost" size="sm" onClick={loadLastWeek}>
-              <RotateCcw size={13} /> Geçen Haftayı Yükle
+            <Button variant="ghost" size="sm" onClick={loadLastWeek} title="Geçen haftanın programını yükle">
+              <RotateCcw size={13} /> Geçen Hafta
             </Button>
           )}
-          <Button variant="danger" size="sm" onClick={clearAll}>
-            <Trash2 size={13} /> Tümünü Temizle
+          <Button variant="danger" size="sm" onClick={clearAll} title="Tümünü temizle">
+            <Trash2 size={13} /> Temizle
           </Button>
         </div>
       </div>
@@ -524,31 +611,16 @@ export default function DersProgrami() {
                 </>
               )}
 
-              {mode === 'ogrenci' && activeStudent && (
-                <div className={s.library}>
-                  <h3 className={s.libraryTitle}>{activeStudent.name} Kütüphanesi</h3>
-                  <p className={s.librarySub}>
-                    Programa eklemek için yukarıda Tür = Kitap seç.
-                  </p>
-                  {library.length === 0 ? (
-                    <p className={s.librarySub}>Kayıtlı kaynak yok.</p>
-                  ) : (
-                    <div className={s.chips}>
-                      {library.map((bk) => (
-                        <span className={s.chip} key={bk.id} title={bk.label}>
-                          <span className={s.chipDot} style={{ background: bk.color }} />
-                          {bk.label}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
             </Card>
-
-            <WeightSummary blocks={blocks} subjectMap={subjectMap} />
             </div>
           </div>
+
+          <SummaryBar
+            current={blocks}
+            history={history}
+            subjectMap={subjectMap}
+            inStudent={mode === 'ogrenci'}
+          />
 
           <DragOverlay dropAnimation={null}>
             {activeDrag && (
@@ -559,95 +631,213 @@ export default function DersProgrami() {
           </DragOverlay>
         </DndContext>
       )}
+
+      {assignSource && (
+        <AssignModal
+          source={assignSource}
+          students={students}
+          defaultStudentId={mode === 'ogrenci' ? studentId : ''}
+          blocks={blocks || []}
+          onClose={() => setAssignSource(null)}
+        />
+      )}
     </div>
   );
 }
 
-/** Programdaki blokların TYT/AYT ve ders bazlı saat ağırlığını gösterir. */
-function WeightSummary({ blocks, subjectMap }) {
-  const total = blocks.reduce((sum, b) => sum + b.duration, 0);
+/** Kayıtlı şablonlar dropdown'ı — yükle / ata / sil. */
+function TemplateMenu({ templates, onLoad, onAssign, onDelete }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [open]);
+  return (
+    <div className={s.tplMenu} ref={ref}>
+      <Button variant="soft" size="sm" onClick={() => setOpen((o) => !o)}>
+        <FolderOpen size={13} /> Şablonlar <ChevronDown size={12} />
+      </Button>
+      {open && (
+        <div className={s.tplList} role="menu">
+          {templates.length === 0 ? (
+            <p className={s.tplEmpty}>Kayıtlı şablon yok.</p>
+          ) : templates.map((tpl) => (
+            <div className={s.tplItem} key={tpl.id}>
+              <span className={s.tplName} title={tpl.name}>{tpl.name}</span>
+              <span className={s.tplActions}>
+                <button type="button" className={s.tplBtn} onClick={() => { onLoad(tpl); setOpen(false); }}>Yükle</button>
+                <button type="button" className={s.tplBtn} onClick={() => { onAssign(tpl); setOpen(false); }}>Ata</button>
+                <button type="button" className={s.tplDel} onClick={() => onDelete(tpl.id)} aria-label="Sil"><X size={12} /></button>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Atama modalı — öğrenci + sıradaki boş hafta (değiştirilebilir) seçilir. */
+function AssignModal({ source, students, defaultStudentId, blocks, onClose }) {
+  const [studentId, setStudentId] = useState(defaultStudentId || String(students[0]?.id || ''));
+  const [date, setDate] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!studentId) return undefined;
+    let alive = true;
+    suggestNextWeekStart(studentId).then((d) => { if (alive) setDate(d); }).catch(() => {});
+    return () => { alive = false; };
+  }, [studentId]);
+
+  async function confirm() {
+    if (!studentId) return;
+    setBusy(true); setError('');
+    try {
+      const prog = source.type === 'template'
+        ? await assignTemplate(source.id, studentId, date || undefined)
+        : await assignBoard(studentId, blocks, date || undefined);
+      setResult(prog);
+    } catch {
+      setError('Atama başarısız oldu.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const title = source.type === 'template' ? `Şablonu ata: ${source.name}` : 'Programı ata';
+  const noBoard = source.type === 'board' && blocks.length === 0;
+
+  return (
+    <Modal open onClose={onClose} width={430} labelledBy="assign-title">
+      <h2 id="assign-title" className={s.modalTitle}>{title}</h2>
+      {result ? (
+        <div className={s.assignForm}>
+          <p><strong>{result.student_name}</strong> için program atandı.</p>
+          <p className={s.assignWeek}>{result.start_date} – {result.end_date} haftası · {result.tasks?.length || 0} görev</p>
+          <Button block onClick={onClose}>Kapat</Button>
+        </div>
+      ) : (
+        <div className={s.assignForm}>
+          <Field label="Öğrenci">
+            <Select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
+              {students.map((st) => <option key={st.id} value={st.id}>{st.name} · {st.grade}</option>)}
+            </Select>
+          </Field>
+          <Field label="Başlangıç (görüşme günü)">
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </Field>
+          <p className={s.assignHint}>
+            Sıradaki boş hafta önerildi; dilersen değiştir. Dolu haftaya denk gelirse otomatik bir sonrakine kayar.
+          </p>
+          {noBoard && <p className={s.assignHint}>Board boş — önce blok ekleyin.</p>}
+          {error && <p className={s.assignError}>{error}</p>}
+          <div className={s.assignActions}>
+            <Button variant="ghost" onClick={onClose}>Vazgeç</Button>
+            <Button onClick={confirm} disabled={busy || !studentId || noBoard}>
+              {busy ? 'Atanıyor…' : 'Ata'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+/** Bloklardan saat ağırlığı özeti üretir (toplam, TYT/AYT %, ders donut'u). */
+function computeWeights(blocks, subjectMap) {
+  const total = (blocks || []).reduce((sum, b) => sum + b.duration, 0);
   const cat = { tyt: 0, ayt: 0 };
   const bySub = {};
-  blocks.forEach((b) => {
+  (blocks || []).forEach((b) => {
     const c = subjectMap[String(b.subject)]?.category;
     if (c === 'tyt' || c === 'ayt') cat[c] += b.duration;
     const label = b.subjectLabel ?? 'Diğer';
     if (!bySub[label]) bySub[label] = { hours: 0, color: b.subjectColor };
     bySub[label].hours += b.duration;
   });
-
-  // Sınav ağırlığı tamamlayıcı: TYT + AYT = %100 (topla oynama yüzdesi gibi).
   const examTotal = cat.tyt + cat.ayt;
   const tytPct = examTotal ? Math.round((cat.tyt / examTotal) * 100) : 0;
   const aytPct = examTotal ? 100 - tytPct : 0;
 
-  // Ders dağılımı: en çok saatliden sırala; 6'dan fazlaysa kalanı "Diğer".
   let subs = Object.entries(bySub)
     .map(([label, v]) => ({ label, hours: v.hours, color: v.color }))
     .sort((a, b) => b.hours - a.hours);
-  const MAX = 6;
+  const MAX = 5;
   if (subs.length > MAX) {
     const rest = subs.slice(MAX).reduce((sum, x) => sum + x.hours, 0);
     subs = [...subs.slice(0, MAX), { label: 'Diğer', hours: rest, color: 'var(--subj-genel)' }];
   }
-
-  // Donut için conic-gradient stopları (kesin oranlar).
   let acc = 0;
   const stops = subs.map((x) => {
-    const start = (acc / total) * 100;
+    const start = total ? (acc / total) * 100 : 0;
     acc += x.hours;
-    const end = (acc / total) * 100;
+    const end = total ? (acc / total) * 100 : 0;
     return `${x.color} ${start}% ${end}%`;
   });
-  const pieStyle = { background: `conic-gradient(${stops.join(', ')})` };
-  const pctOf = (h) => Math.round((h / total) * 100);
+  return { total, tytPct, aytPct, subs, pieStyle: { background: `conic-gradient(${stops.join(', ')})` } };
+}
 
+/** Alttaki yatay özet çubuğunun tek sütunu (geçen hafta / şu anki / toplam). */
+function SummaryColumn({ title, blocks, subjectMap, accent }) {
+  const w = computeWeights(blocks, subjectMap);
+  const pctOf = (h) => (w.total ? Math.round((h / w.total) * 100) : 0);
   return (
-    <Card>
-      <h2 className={s.railTitle}>Program Ağırlığı</h2>
-      <p className={s.railSub}>Toplam {total} saat</p>
-      {total === 0 ? (
-        <p className={s.librarySub}>Blok ekledikçe ağırlık burada görünür.</p>
+    <div className={`${s.sumCol} ${accent ? s.sumColActive : ''}`}>
+      <span className={s.sumTitle}>{title}</span>
+      {w.total === 0 ? (
+        <span className={s.sumEmpty}>Kayıt yok</span>
       ) : (
-        <>
-          <div className={s.wSection}>
-            <span className={s.wSecLabel}>Sınav Ağırlığı</span>
+        <div className={s.sumBody}>
+          <div className={s.sumPie} style={w.pieStyle}><div className={s.sumPieHole} /></div>
+          <div className={s.sumInfo}>
+            <span className={s.sumTotal}>{w.total} saat</span>
             <div className={s.split}>
-              {tytPct > 0 && (
-                <div className={s.splitSeg} style={{ width: `${tytPct}%`, background: 'var(--accent)' }} />
-              )}
-              {aytPct > 0 && (
-                <div className={s.splitSeg} style={{ width: `${aytPct}%`, background: 'var(--violet)' }} />
-              )}
+              {w.tytPct > 0 && <div className={s.splitSeg} style={{ width: `${w.tytPct}%`, background: 'var(--accent)' }} />}
+              {w.aytPct > 0 && <div className={s.splitSeg} style={{ width: `${w.aytPct}%`, background: 'var(--violet)' }} />}
             </div>
-            <div className={s.splitLegend}>
-              <span className={s.splitItem}>
-                <span className={s.wDot} style={{ background: 'var(--accent)' }} /> TYT %{tytPct}
-              </span>
-              <span className={s.splitItem}>
-                AYT %{aytPct} <span className={s.wDot} style={{ background: 'var(--violet)' }} />
-              </span>
-            </div>
+            <span className={s.sumSplitTxt}>TYT %{w.tytPct} · AYT %{w.aytPct}</span>
+            <ul className={s.sumLegend}>
+              {w.subs.slice(0, 4).map((x) => (
+                <li className={s.sumLegItem} key={x.label}>
+                  <span className={s.wDot} style={{ background: x.color }} />
+                  <span className={s.sumLegName} title={x.label}>{x.label}</span>
+                  <span className={s.sumLegPct}>%{pctOf(x.hours)}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-
-          <div className={s.wSection}>
-            <span className={s.wSecLabel}>Ders Ağırlığı</span>
-            <div className={s.pieWrap}>
-              <div className={s.pie} style={pieStyle}><div className={s.pieHole} /></div>
-              <ul className={s.pieLegend}>
-                {subs.map((x) => (
-                  <li className={s.pieItem} key={x.label}>
-                    <span className={s.wDot} style={{ background: x.color }} />
-                    <span className={s.pieName} title={x.label}>{x.label}</span>
-                    <span className={s.piePct}>%{pctOf(x.hours)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </>
+        </div>
       )}
-    </Card>
+    </div>
+  );
+}
+
+/** Program ağırlığı — alt yatay çubuk: geçen hafta · şu anki plan · toplam. */
+function SummaryBar({ current, history, subjectMap, inStudent }) {
+  const curIdx = Math.max(0, history.findIndex((p) => p.isCurrent));
+  const lastWeek = history[curIdx + 1] || null;
+  const totalBlocks = history.flatMap((p) => p.blocks || []);
+
+  if (!inStudent) {
+    // Genel modda geçen hafta/toplam kavramı yok → yalnız şu anki plan.
+    return (
+      <div className={s.sumBar}>
+        <SummaryColumn title="Bu Genel Plan" blocks={current || []} subjectMap={subjectMap} accent />
+      </div>
+    );
+  }
+  return (
+    <div className={s.sumBar}>
+      <SummaryColumn title="Geçen Hafta" blocks={lastWeek?.blocks || []} subjectMap={subjectMap} />
+      <SummaryColumn title="Şu Anki Plan" blocks={current || []} subjectMap={subjectMap} accent />
+      <SummaryColumn title="Toplam (tüm haftalar)" blocks={totalBlocks} subjectMap={subjectMap} />
+    </div>
   );
 }
 
