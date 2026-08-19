@@ -27,6 +27,15 @@
 .name { font-size: 0.9rem; font-weight: 700; color: var(--text); margin: 0; }
 .grade { font-size: 0.74rem; color: var(--text-muted); margin: 2px 0 0; }
 
+.nextMeeting {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
 .netPill {
   font-size: 0.75rem;
   font-weight: 600;

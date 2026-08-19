@@ -68,6 +68,32 @@ export async function getStudentProgram(studentId) {
   return blocks.map((b) => ({ ...b }));
 }
 
+/** Öğrencinin TÜM programlarını (geçmiş dahil) salt-okunur döndürür.
+ *  Detay sayfasının "Ders Programı" sekmesi için; en yeni başta sıralı. */
+export async function getStudentPrograms(studentId) {
+  const { data } = await api.get('/programs/');
+  const today = isoDate(new Date());
+  return data
+    .filter((p) => String(p.student) === String(studentId))
+    .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))
+    .map((p) => ({
+      id: p.id,
+      startDate: p.start_date,
+      endDate: p.end_date,
+      isCurrent: p.start_date <= today && today <= p.end_date,
+      blocks: (p.tasks || []).map(mapTaskToBlock),
+    }));
+}
+
+/** Atama için önerilen sıradaki boş hafta başlangıcı (en son program end+1, yoksa bugün). */
+export async function suggestNextWeekStart(studentId) {
+  const progs = await getStudentPrograms(studentId);   // en yeni başta
+  if (!progs.length) return isoDate(new Date());
+  const d = parseDate(progs[0].endDate);
+  d.setDate(d.getDate() + 1);
+  return isoDate(d);
+}
+
 /** Board değişikliklerini backend'e yazar; reconcile edilmiş blokları döndürür. */
 export async function persistStudentSchedule(studentId, nextBlocks) {
   const key = String(studentId);

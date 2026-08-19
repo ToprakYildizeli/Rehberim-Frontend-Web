@@ -97,7 +97,9 @@ export default function DashboardLayout() {
   // Close the mobile drawer on navigation.
   useEffect(() => setMobileOpen(false), [location.pathname]);
 
-  const title = TITLES[location.pathname] ?? 'Panel';
+  const title =
+    TITLES[location.pathname] ??
+    (location.pathname.startsWith('/ogrenciler/') ? 'Öğrenci Detayı' : 'Panel');
   const displayName =
     [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'Rehber';
 

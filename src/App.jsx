@@ -8,6 +8,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Panel from './pages/Panel';
 import Ogrenciler from './pages/Ogrenciler';
+import OgrenciDetay from './pages/OgrenciDetay';
 import Takvim from './pages/Takvim';
 import DersProgrami from './pages/DersProgrami';
 import Ayarlar from './pages/Ayarlar';
@@ -42,6 +43,7 @@ export default function App() {
               >
                 <Route path="/panel" element={<Panel />} />
                 <Route path="/ogrenciler" element={<Ogrenciler />} />
+                <Route path="/ogrenciler/:id" element={<OgrenciDetay />} />
                 <Route path="/takvim" element={<Takvim />} />
                 <Route path="/ders-programi" element={<DersProgrami />} />
                 <Route path="/ayarlar" element={<Ayarlar />} />

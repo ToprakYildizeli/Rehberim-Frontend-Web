@@ -22,6 +22,7 @@ export async function listSubjects() {
     name: x.name,
     label: x.label,        // "TYT Matematik" gibi gösterim etiketi
     category: x.category,
+    questionCount: x.question_count ?? 0,   // sınavdaki soru sayısı (maks. net)
     color: subjectColor(x.label || x.name),
   }));
 }
@@ -32,11 +33,16 @@ export async function listTaskTypes() {
   return data.map((x) => ({ id: x.id, name: x.name }));
 }
 
-/** GET /api/topics/?subject=<id> → seçilen dersin konu kataloğu [{ id, name }]. */
-export async function listTopics(subjectId) {
+/** GET /api/topics/?subject=<id>[&grade=&curriculum=] → dersin konu kataloğu.
+ *  Ders Programı yalnızca `subjectId` verir ({ id, name } yeterli). Konu Takibi
+ *  ayrıca grade/curriculum geçip sıralı tam objeyi kullanır. */
+export async function listTopics(subjectId, { grade, curriculum } = {}) {
   if (!subjectId) return [];
-  const { data } = await api.get('/topics/', { params: { subject: subjectId } });
-  return data.map((x) => ({ id: x.id, name: x.name }));
+  const params = { subject: subjectId };
+  if (grade) params.grade = grade;
+  if (curriculum) params.curriculum = curriculum;
+  const { data } = await api.get('/topics/', { params });
+  return data.map((x) => ({ id: x.id, name: x.name, grade: x.grade, order: x.order }));
 }
 
 /** GET /api/books/?student=<id> → öğrencinin kütüphanesi. Ders Programı'nda
