@@ -20,6 +20,12 @@ export function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify(userData));
   }, []);
 
+  /** Oturumu bozmadan yalnızca kullanıcı objesini tazeler (profil kaydedince). */
+  const updateUser = useCallback((userData) => {
+    setUser(userData);
+    localStorage.setItem('user', JSON.stringify(userData));
+  }, []);
+
   const clearSession = useCallback(async () => {
     if (refreshToken && accessToken) {
       try { await apiLogout(refreshToken, accessToken); } catch (_) {}
@@ -33,7 +39,9 @@ export function AuthProvider({ children }) {
   }, [accessToken, refreshToken]);
 
   return (
-    <AuthContext.Provider value={{ user, accessToken, saveSession, clearSession, isLoggedIn: !!accessToken }}>
+    <AuthContext.Provider
+      value={{ user, accessToken, saveSession, updateUser, clearSession, isLoggedIn: !!accessToken }}
+    >
       {children}
     </AuthContext.Provider>
   );

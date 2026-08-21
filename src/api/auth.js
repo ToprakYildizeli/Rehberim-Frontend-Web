@@ -25,3 +25,10 @@ export function getMe(accessToken) {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 }
+
+/** PATCH /api/auth/me/ — ad/soyad/e-posta günceller, güncel kullanıcı objesini döner.
+ *  Kısmi: yalnızca gönderilen alanlar değişir (auth-contract §5.4b). */
+export async function updateMe(fields) {
+  const { data } = await api.patch('/auth/me/', fields);
+  return data;
+}

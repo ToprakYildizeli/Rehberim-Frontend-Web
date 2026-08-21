@@ -36,8 +36,11 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const { response, config } = error;
-    const isAuthCall = config?.url?.includes('/auth/');
-    if (response?.status !== 401 || config?._retry || isAuthCall) {
+    // Yalnızca kimlik uçları hariç tutulur (yenileme döngüsüne girmemek için).
+    // /auth/me/ sıradan bir kaynak çağrısıdır; onun 401'i yenilenebilmeli.
+    const isCredentialCall = ['/auth/login/', '/auth/refresh/', '/auth/logout/']
+      .some((path) => config?.url?.includes(path));
+    if (response?.status !== 401 || config?._retry || isCredentialCall) {
       return Promise.reject(error);
     }
     const refresh = localStorage.getItem('refresh');
