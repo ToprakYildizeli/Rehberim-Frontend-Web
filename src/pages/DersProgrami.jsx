@@ -4,7 +4,7 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core';
-import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown } from 'lucide-react';
+import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat } from 'lucide-react';
 import {
   Card, Button, Field, Select, Input, PillGroup, Spinner, Modal,
 } from '../components/ui';
@@ -13,7 +13,7 @@ import { getSchedule, saveSchedule } from '../api/schedule';
 import { suggestNextWeekStart, getStudentPrograms } from '../api/programs';
 import {
   listTemplates, createTemplate, updateTemplate, deleteTemplate, templateToBlocks,
-  assignBoard, assignTemplate,
+  assignBoard, assignTemplate, setRoutine, clearRoutine,
 } from '../api/templates';
 import { listSubjects, listTaskTypes, listTopics, listBooks } from '../api/catalog';
 import { DAYS, HOURS } from '../mocks/data';
@@ -234,6 +234,18 @@ export default function DersProgrami() {
     reloadTemplates();
   }
 
+  /** Şablonu seçili öğrencinin rutini yapar / rutini kapatır.
+   *  Hata TemplateMenu'de yakalanır (ör. öğrencinin zaten rutini varsa). */
+  async function handleToggleRoutine(tpl) {
+    if (tpl.auto_apply) {
+      await clearRoutine(tpl.id);
+    } else {
+      if (!activeStudent) return;
+      await setRoutine(tpl.id, activeStudent.id);
+    }
+    await reloadTemplates();
+  }
+
   const totalHours = useMemo(
     () => (blocks ?? []).reduce((sum, b) => sum + b.duration, 0),
     [blocks]
@@ -402,9 +414,11 @@ export default function DersProgrami() {
           </Button>
           <TemplateMenu
             templates={templates}
+            activeStudent={activeStudent}
             onLoad={handleLoadTemplate}
             onAssign={(tpl) => setAssignSource({ type: 'template', id: tpl.id, name: tpl.name })}
             onDelete={handleDeleteTemplate}
+            onToggleRoutine={handleToggleRoutine}
           />
           <Button variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
             <Send size={13} /> Ata
@@ -646,8 +660,9 @@ export default function DersProgrami() {
 }
 
 /** Kayıtlı şablonlar dropdown'ı — yükle / ata / sil. */
-function TemplateMenu({ templates, onLoad, onAssign, onDelete }) {
+function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, onToggleRoutine }) {
   const [open, setOpen] = useState(false);
+  const [error, setError] = useState('');
   const ref = useRef(null);
   useEffect(() => {
     if (!open) return undefined;
@@ -655,6 +670,19 @@ function TemplateMenu({ templates, onLoad, onAssign, onDelete }) {
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
+  useEffect(() => { if (!open) setError(''); }, [open]);
+
+  async function toggleRoutine(tpl) {
+    setError('');
+    try {
+      await onToggleRoutine(tpl);
+    } catch (err) {
+      const data = err?.response?.data;
+      const first = data && typeof data === 'object' ? Object.values(data)[0] : null;
+      setError(Array.isArray(first) ? first[0] : 'Rutin ayarlanamadı.');
+    }
+  }
+
   return (
     <div className={s.tplMenu} ref={ref}>
       <Button variant="soft" size="sm" onClick={() => setOpen((o) => !o)}>
@@ -664,16 +692,43 @@ function TemplateMenu({ templates, onLoad, onAssign, onDelete }) {
         <div className={s.tplList} role="menu">
           {templates.length === 0 ? (
             <p className={s.tplEmpty}>Kayıtlı şablon yok.</p>
-          ) : templates.map((tpl) => (
-            <div className={s.tplItem} key={tpl.id}>
-              <span className={s.tplName} title={tpl.name}>{tpl.name}</span>
-              <span className={s.tplActions}>
-                <button type="button" className={s.tplBtn} onClick={() => { onLoad(tpl); setOpen(false); }}>Yükle</button>
-                <button type="button" className={s.tplBtn} onClick={() => { onAssign(tpl); setOpen(false); }}>Ata</button>
-                <button type="button" className={s.tplDel} onClick={() => onDelete(tpl.id)} aria-label="Sil"><X size={12} /></button>
-              </span>
-            </div>
-          ))}
+          ) : templates.map((tpl) => {
+            const isRoutine = tpl.auto_apply;
+            // Rutin bir öğrenciye bağlanır; kapatmak için seçim gerekmez.
+            const canToggle = isRoutine || Boolean(activeStudent);
+            const title = isRoutine
+              ? `${tpl.student_name} rutini — kapatmak için tıkla`
+              : activeStudent
+                ? `${activeStudent.name} için rutin yap`
+                : 'Rutin yapmak için önce bir öğrenci seç';
+            return (
+              <div className={s.tplItem} key={tpl.id}>
+                <span className={s.tplNameWrap}>
+                  <span className={s.tplName} title={tpl.name}>{tpl.name}</span>
+                  {isRoutine && <span className={s.tplRoutineTag}>{tpl.student_name} rutini</span>}
+                </span>
+                <span className={s.tplActions}>
+                  <button
+                    type="button"
+                    className={isRoutine ? s.tplRoutineOn : s.tplBtn}
+                    disabled={!canToggle}
+                    title={title}
+                    aria-pressed={isRoutine}
+                    onClick={() => toggleRoutine(tpl)}
+                  >
+                    <Repeat size={12} />
+                  </button>
+                  <button type="button" className={s.tplBtn} onClick={() => { onLoad(tpl); setOpen(false); }}>Yükle</button>
+                  <button type="button" className={s.tplBtn} onClick={() => { onAssign(tpl); setOpen(false); }}>Ata</button>
+                  <button type="button" className={s.tplDel} onClick={() => onDelete(tpl.id)} aria-label="Sil"><X size={12} /></button>
+                </span>
+              </div>
+            );
+          })}
+          {error && <p className={s.tplError}>{error}</p>}
+          <p className={s.tplHint}>
+            <Repeat size={11} /> Rutin: yeni hafta açıldığında görevler o haftaya kendiliğinden düşer.
+          </p>
         </div>
       )}
     </div>

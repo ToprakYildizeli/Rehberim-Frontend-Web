@@ -68,6 +68,25 @@ export async function deleteTemplate(id) {
   await api.delete(`/program-templates/${id}/`);
 }
 
+/** Şablonu bir öğrencinin rutini yapar: yeni hafta açıldığında görevleri
+ *  kendiliğinden o haftaya düşer. Öğrenci başına tek rutin olabilir. */
+export async function setRoutine(id, studentId) {
+  const { data } = await api.patch(`/program-templates/${id}/`, {
+    student: Number(studentId),
+    auto_apply: true,
+  });
+  return data;
+}
+
+/** Rutini kapatır; şablon genel şablon olarak kalır. */
+export async function clearRoutine(id) {
+  const { data } = await api.patch(`/program-templates/${id}/`, {
+    student: null,
+    auto_apply: false,
+  });
+  return data;
+}
+
 /** Board'daki planı öğrenciye atar. startDate verilmezse backend sıradaki boş haftayı seçer. */
 export async function assignBoard(studentId, blocks, startDate) {
   const body = { student: Number(studentId), tasks: blocks.map(blockToTask) };
