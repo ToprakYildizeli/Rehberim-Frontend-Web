@@ -1,16 +1,62 @@
-# React + Vite
+# rehberim_koc — Rehber web arayüzü
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Rehberin (koç/danışman) kullandığı web uygulaması. React + Vite. Backend'e
+`/api/` üzerinden bağlanır; tek başına anlamlı değildir, önce backend çalışmalıdır.
 
-Currently, two official plugins are available:
+> Web **yalnızca rehber** içindir. Öğrenci ve veli mobil uygulamalarını kullanır.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Çalıştırma
 
-## React Compiler
+Node 18+ gerekir.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+cp .env.example .env      # VITE_API_BASE_URL hazır gelir
+npm install
+npm run dev               # → http://localhost:5173/
+npm run build             # prod derleme → dist/
+```
 
-## Expanding the Oxlint configuration
+Backend adresi `.env` içindeki `VITE_API_BASE_URL` ile ayarlanır (varsayılan
+`http://127.0.0.1:8000/api`). **Koda gömülü adres yok.**
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+Backend'in CORS listesinde `localhost:5173` ve `localhost:3000` var; başka bir
+portta çalıştırırsan backend `settings.py`'daki `CORS_ALLOWED_ORIGINS`'e eklemen
+gerekir.
+
+## Ekranlar
+
+| Rota | Ne yapar |
+|---|---|
+| `/panel` | Bekleyen aksiyonlar, kırmızı alarmlar, aktivite akışı — hepsi gerçek veriden türetilir |
+| `/ogrenciler` | Öğrenci listesi + rehberin **davet kodu** (öğrenci bununla bağlanır) |
+| `/ogrenciler/:id` | Öğrenci detayı — Kitaplar · Denemeler · Ders Programı (geçmiş dahil) · Konu Takibi |
+| `/ders-programi` | Haftalık program tahtası: sürükle-bırak bloklar, şablon kaydetme, öğrenciye atama, **rutin** |
+| `/takvim` | Görüşme, veli toplantısı ve sınav takvimi |
+| `/ayarlar` | Profil düzenleme, tema, çıkış |
+
+## Yapı
+
+```
+src/
+├── api/            # backend uçlarına karşılık gelen modüller (client.js = axios + JWT)
+├── components/     # ui/ (tasarım sistemi), layout/, dashboard/
+├── context/        # AuthContext (oturum), ThemeContext
+├── pages/          # yukarıdaki ekranlar
+└── mocks/data.js   # tahtanın sabitleri (SUBJECTS, DAYS, HOURS) — mock veri DEĞİL
+```
+
+**`api/client.js`** her isteğe JWT ekler ve 401'de refresh token ile bir kez yeniden
+dener; refresh de geçersizse oturumu kapatıp `/giris`'e atar.
+
+## Kurallar
+
+- **Katalog verisi backend'den gelir.** Ders, konu, çalışma metodu, yayınevi ve
+  kitap seçimleri serbest metin değil, ilgili uçtan beslenen listelerdir
+  (`/api/subjects/`, `/api/topics/?subject=`, `/api/task-types/`, `/api/publishers/`,
+  `/api/books/?student=`). Konu ve yayınevi PDF'leri `../docs/` altındadır ama
+  referanstır — koda gömülmez.
+- **Ekranlar birbirine bağlıdır.** Takvimde açılan bir toplantı, Öğrenciler
+  kartında "sonraki toplantı" olarak görünmelidir.
+- Uç ya da alan adı değişecekse önce backend'deki sözleşme güncellenir.
+
+Yol haritası: `Rehberim-Backend/docs/roadmap.md`.
