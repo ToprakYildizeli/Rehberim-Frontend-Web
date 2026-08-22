@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, CalendarDays } from 'lucide-react';
+import { ChevronRight, CalendarDays, Copy, Check } from 'lucide-react';
 import {
-  Card, Avatar, Badge, SearchInput, EmptyState, Spinner,
+  Card, Avatar, Badge, SearchInput, EmptyState, Spinner, Button,
 } from '../components/ui';
 import { trendMeta } from '../components/dashboard/trend';
 import { listStudents } from '../api/students';
 import { listAppointments } from '../api/appointments';
+import { useAuth } from '../context/AuthContext';
 import s from './Ogrenciler.module.css';
 
 const MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -62,6 +63,8 @@ export default function Ogrenciler() {
 
   return (
     <div className={s.page}>
+      <InviteCodeCard />
+
       <SearchInput
         className={s.toolbar}
         placeholder="Öğrenci ara..."
@@ -85,6 +88,44 @@ export default function Ogrenciler() {
         </div>
       )}
     </div>
+  );
+}
+
+/** Rehberin davet kodu. Öğrenci mobil uygulamada bu kodu girerek rehbere bağlanır.
+ *  Kod hesap açılırken bir kez üretilir ve değişmez (`/auth/me/` → profile). */
+function InviteCodeCard() {
+  const { user } = useAuth();
+  const code = user?.profile?.invite_code;
+  const [copied, setCopied] = useState(false);
+
+  if (!code) return null;
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch {
+      // Pano izni yoksa kullanıcı kodu elle okuyabilir; sessizce geç.
+    }
+  }
+
+  return (
+    <Card className={s.inviteCard}>
+      <div className={s.inviteText}>
+        <p className={s.inviteLabel}>Davet Kodun</p>
+        <p className={s.inviteHint}>
+          Öğrencin mobil uygulamada kayıt olduktan sonra bu kodu girerek sana bağlanır.
+        </p>
+      </div>
+      <div className={s.inviteActions}>
+        <code className={s.inviteCode}>{code}</code>
+        <Button variant="soft" size="sm" onClick={copy} aria-label="Davet kodunu kopyala">
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? 'Kopyalandı' : 'Kopyala'}
+        </Button>
+      </div>
+    </Card>
   );
 }
 
