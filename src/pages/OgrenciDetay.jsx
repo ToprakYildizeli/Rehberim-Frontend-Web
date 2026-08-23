@@ -9,7 +9,7 @@ import {
 import { getStudent } from '../api/students';
 import { listStudentBooks, getBook } from '../api/books';
 import { listStudentExams } from '../api/exams';
-import { getStudentPrograms, windowDays, fmtMin, fmtDuration } from '../api/programs';
+import { getStudentPrograms, windowDays, fmtMin } from '../api/programs';
 import { listSubjects, listTopics, blockLabel } from '../api/catalog';
 import { getTopicLevels, setTopicLevel } from '../api/topicProgress';
 import s from './OgrenciDetay.module.css';
@@ -627,7 +627,7 @@ function WeekBoard({ program }) {
             ) : (
               items.map((b) => (
                 <div className={s.block} key={b.id} style={{ borderLeftColor: b.subjectColor }}>
-                  <span className={s.blockTime}>{fmtMin(b.startMin)} · {fmtDuration(b.durationMin)}</span>
+                  <span className={s.blockTime}>{fmtMin(b.startMin)}</span>
                   <span className={s.blockSubject}>{blockLabel(b)}</span>
                   {b.kind !== 'external' && b.topic && <span className={s.blockTopic}>{b.topic}</span>}
                   {b.bookLabel && <span className={s.blockBook}>{b.bookLabel}</span>}

@@ -540,7 +540,8 @@
   border-radius: var(--radius);
 }
 
-.windowField { min-width: 140px; margin: 0; }
+.windowField { min-width: 180px; margin: 0; }
+.windowDays { width: 84px; margin: 0; }
 
 .windowRange {
   display: flex;
@@ -572,7 +573,7 @@
 
 .totalOutside { color: var(--text-muted); font-weight: 400; }
 
-.assignWindow { display: grid; grid-template-columns: 1fr 110px; gap: var(--space-3); }
+.assignWindow { display: grid; grid-template-columns: 1fr 84px; gap: var(--space-3); }
 
 /* ---------- Dış meşguliyet blokları (A3) ---------- */
 /* Çalışma saatine sayılmadıkları için çizgili zemin ve soluk metinle ayrışırlar. */
@@ -584,38 +585,6 @@
   );
 }
 
-/* ---------- Serbest süre girişi (A4) ---------- */
-.durationRow { display: flex; align-items: center; gap: 6px; }
-.durationInput { width: 90px; }
-.durationUnit { font-size: 0.75rem; color: var(--text-muted); }
-
-.durationPresets {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  margin-top: 6px;
-}
-
-.durationPreset {
-  border: 1px solid var(--border);
-  background: var(--bg-card);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: 0.66rem;
-  padding: 3px 7px;
-  border-radius: var(--radius-pill);
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.durationPreset:hover { border-color: var(--accent); color: var(--accent); }
-
-.durationPresetOn {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  font-weight: 600;
-}
 
 /* Kısa bloklar (45 dk altı) tek satıra sığmalı; saat aralığı gizlenir. */
 .blockShort {
@@ -674,9 +643,7 @@
 
 .chipBlock:active { cursor: grabbing; }
 
-.chipTime { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
 .chipLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chipDur { margin-left: auto; color: var(--text-muted); white-space: nowrap; }
 
 .chipRemove {
   position: absolute;

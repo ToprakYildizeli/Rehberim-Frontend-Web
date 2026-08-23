@@ -64,16 +64,8 @@ export const minutesOf = (t) =>
   (t ? parseInt(t.slice(0, 2), 10) * 60 + parseInt(t.slice(3, 5), 10) : 0);
 export const fmtMin = (m) => `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`;
 
-/** 90 → "1s 30dk" · 60 → "1 saat" · 20 → "20 dk" */
-export function fmtDuration(min) {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h === 0) return `${m} dk`;
-  if (m === 0) return h === 1 ? '1 saat' : `${h} saat`;
-  return `${h}s ${m}dk`;
-}
-
-/** Toplam dakikayı okunur saate çevirir: 255 → "4,25 saat" */
+/** Haftalık toplamı saate çevirir: 255 → "4,25 saat".
+ *  Tek blokların süresi dakika olarak gösterilir; yalnız toplamlarda saat kullanılır. */
 export function fmtHours(min) {
   const h = min / 60;
   return `${(Math.round(h * 100) / 100).toString().replace('.', ',')} saat`;

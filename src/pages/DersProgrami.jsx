@@ -8,12 +8,13 @@ import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat }
 import {
   Card, Button, Field, Select, Input, PillGroup, Spinner, Modal,
 } from '../components/ui';
+import DateField from '../components/ui/DateField';
 import { listStudents } from '../api/students';
 import { getSchedule, saveSchedule, setGeneralWindow } from '../api/schedule';
 import {
   suggestNextWeekStart, getStudentPrograms, updateProgramWindow,
   windowDays, windowRangeText, studyMinutes, externalMinutes,
-  addDays, fmtMin, fmtDuration, fmtHours, SLOT_MIN, DEFAULT_DAY_COUNT,
+  addDays, fmtMin, fmtHours, SLOT_MIN, DEFAULT_DAY_COUNT,
 } from '../api/programs';
 import {
   listTemplates, createTemplate, updateTemplate, deleteTemplate, templateToBlocks,
@@ -35,17 +36,35 @@ const CATEGORIES = [
   { value: 'tyt', label: 'TYT' },
   { value: 'ayt', label: 'AYT' },
 ];
-/** Program uzunluğu seçenekleri (backend 1-31 kabul eder). */
-const DAY_COUNTS = [3, 5, 7, 10, 14];
+/** Program uzunluğu: en az 1, en çok 7 gün. */
+const MIN_DAYS = 1;
+const MAX_DAYS = 7;
 /** Tahta düzeni: satırlar saat ya da ders (yol haritası A2). */
 const VIEWS = [
   { value: 'hours', label: 'Saat satırlı' },
   { value: 'subjects', label: 'Ders satırlı' },
 ];
-/** Sık kullanılan süreler — serbest dakika girişinin yanındaki kısayollar. */
-const DURATION_PRESETS = [15, 20, 30, 45, 60, 90, 120];
 const MIN_DURATION = 5;
 const MAX_DURATION = 12 * 60;
+
+/** Sayı girildiyse 1-7 arasına sıkıştırır; alan boş/geçersizse varsayılana döner. */
+const clampDays = (n) =>
+  (Number.isFinite(n)
+    ? Math.min(MAX_DAYS, Math.max(MIN_DAYS, Math.round(n)))
+    : DEFAULT_DAY_COUNT);
+
+/** Bir başlangıç tarihinin seçilemez olup olmadığını söyleyen fonksiyon üretir.
+ *
+ *  Programlar örtüşemediğinden, `dayCount` günlük pencere mevcut bir programın
+ *  aralığına değiyorsa o başlangıç kapalıdır. Kapalı günler dağınık aralıklar
+ *  hâlinde olduğu için native date girdisinin min/max'ı yetmiyor. */
+function makeStartBlocker(busyRanges, dayCount) {
+  if (!busyRanges.length) return undefined;
+  return (iso) => {
+    const end = addDays(iso, Math.max(1, dayCount) - 1);
+    return busyRanges.some((r) => iso <= r.end && r.start <= end);
+  };
+}
 
 /** Backend hata gövdesinden ilk okunabilir mesajı çıkarır. */
 function apiMessage(err, fallback) {
@@ -369,6 +388,19 @@ export default function DersProgrami() {
     [win.startDate, win.dayCount]
   );
 
+  // Öğrencinin dolu tarih aralıkları — düzenlenen programın kendisi hariç.
+  // Programlar örtüşemediği için bu aralıklara denk gelen başlangıçlar seçilemez.
+  const busyRanges = useMemo(
+    () => history
+      .filter((p) => p.id !== programId)
+      .map((p) => ({ start: p.startDate, end: p.endDate })),
+    [history, programId]
+  );
+  const isStartBlocked = useMemo(
+    () => makeStartBlocker(busyRanges, win.dayCount),
+    [busyRanges, win.dayCount]
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
   );
@@ -604,22 +636,29 @@ export default function DersProgrami() {
       {win.startDate && (
         <div className={s.windowBar}>
           <Field label="Başlangıç" className={s.windowField}>
-            <Input
-              type="date"
+            <DateField
               value={win.startDate}
-              onChange={(e) => e.target.value && changeWindow({ startDate: e.target.value })}
+              onChange={(iso) => changeWindow({ startDate: iso })}
+              isDisabled={isStartBlocked}
+              disabledHint={busyRanges.length
+                ? 'Üstü çizili günler öğrencinin mevcut bir programıyla çakışıyor.'
+                : undefined}
+              ariaLabel="Program başlangıç tarihi"
             />
           </Field>
-          <Field label="Gün sayısı" className={s.windowField}>
-            <Select
+          <Field label="Gün sayısı" className={s.windowDays}>
+            <Input
+              type="number"
+              min={MIN_DAYS}
+              max={MAX_DAYS}
               value={win.dayCount}
-              onChange={(e) => changeWindow({ dayCount: Number(e.target.value) })}
-            >
-              {DAY_COUNTS.map((n) => <option key={n} value={n}>{n} gün</option>)}
-              {!DAY_COUNTS.includes(win.dayCount) && (
-                <option value={win.dayCount}>{win.dayCount} gün</option>
-              )}
-            </Select>
+              onChange={(e) => {
+                const n = Number(e.target.value);
+                if (n >= MIN_DAYS && n <= MAX_DAYS) changeWindow({ dayCount: n });
+              }}
+              onBlur={(e) => changeWindow({ dayCount: clampDays(Number(e.target.value)) })}
+              aria-label="Gün sayısı"
+            />
           </Field>
           <span className={s.windowRange}>
             {windowRangeText(win.startDate, win.dayCount)}
@@ -824,43 +863,25 @@ export default function DersProgrami() {
                     </>
                     )}
 
-                    <Field label={`Süre — ${fmtDuration(draft.durationMin)}`}>
-                      <div className={s.durationRow}>
-                        <Input
-                          type="number"
-                          className={s.durationInput}
-                          value={draft.durationMin}
-                          min={MIN_DURATION}
-                          max={MAX_DURATION}
-                          step={5}
-                          onChange={(e) => {
-                            // Yazarken boş/yarım değere izin ver; sınırlama blur'da.
-                            const n = Number(e.target.value);
-                            setDraft((d) => ({ ...d, durationMin: Number.isNaN(n) ? d.durationMin : n }));
-                          }}
-                          onBlur={(e) => {
-                            const n = Number(e.target.value);
-                            const clamped = Math.min(MAX_DURATION,
-                              Math.max(MIN_DURATION, Number.isFinite(n) && n > 0 ? Math.round(n) : 60));
-                            setDraft((d) => ({ ...d, durationMin: clamped }));
-                          }}
-                          aria-label="Süre (dakika)"
-                        />
-                        <span className={s.durationUnit}>dk</span>
-                      </div>
-                      <div className={s.durationPresets}>
-                        {DURATION_PRESETS.map((n) => (
-                          <button
-                            key={n}
-                            type="button"
-                            className={`${s.durationPreset} ${draft.durationMin === n ? s.durationPresetOn : ''}`}
-                            aria-pressed={draft.durationMin === n}
-                            onClick={() => setDraft((d) => ({ ...d, durationMin: n }))}
-                          >
-                            {n < 60 ? n : fmtDuration(n)}
-                          </button>
-                        ))}
-                      </div>
+                    <Field label="Süre (dakika)">
+                      <Input
+                        type="number"
+                        value={draft.durationMin}
+                        min={MIN_DURATION}
+                        max={MAX_DURATION}
+                        onChange={(e) => {
+                          // Yazarken ara değerlere izin ver; sınırlama blur'da.
+                          const n = Number(e.target.value);
+                          setDraft((d) => ({ ...d, durationMin: Number.isNaN(n) ? d.durationMin : n }));
+                        }}
+                        onBlur={(e) => {
+                          const n = Number(e.target.value);
+                          const clamped = Math.min(MAX_DURATION,
+                            Math.max(MIN_DURATION, Number.isFinite(n) && n > 0 ? Math.round(n) : 60));
+                          setDraft((d) => ({ ...d, durationMin: clamped }));
+                        }}
+                        aria-label="Süre (dakika)"
+                      />
                     </Field>
                   </div>
 
@@ -1034,9 +1055,25 @@ function AssignModal({ source, students, defaultStudentId, blocks, boardStart, b
   const [studentId, setStudentId] = useState(defaultStudentId || String(students[0]?.id || ''));
   const [date, setDate] = useState('');
   const [dayCount, setDayCount] = useState(boardDayCount || DEFAULT_DAY_COUNT);
+  const [ranges, setRanges] = useState([]);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  // Seçilen öğrencinin dolu aralıkları: hem öneriyi hem kapalı günleri belirler.
+  useEffect(() => {
+    if (!studentId) return undefined;
+    let alive = true;
+    getStudentPrograms(studentId)
+      .then((progs) => {
+        if (!alive) return;
+        setRanges(progs.map((p) => ({ start: p.startDate, end: p.endDate })));
+      })
+      .catch(() => { if (alive) setRanges([]); });
+    return () => { alive = false; };
+  }, [studentId]);
+
+  const isBlocked = useMemo(() => makeStartBlocker(ranges, dayCount), [ranges, dayCount]);
 
   useEffect(() => {
     if (!studentId) return undefined;
@@ -1084,20 +1121,31 @@ function AssignModal({ source, students, defaultStudentId, blocks, boardStart, b
           </Field>
           <div className={s.assignWindow}>
             <Field label="Başlangıç (görüşme günü)">
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              <DateField
+                value={date}
+                onChange={setDate}
+                isDisabled={isBlocked}
+                disabledHint={ranges.length
+                  ? 'Üstü çizili günler öğrencinin mevcut bir programıyla çakışıyor.'
+                  : undefined}
+                ariaLabel="Program başlangıç tarihi"
+              />
             </Field>
             <Field label="Gün sayısı">
-              <Select value={dayCount} onChange={(e) => setDayCount(Number(e.target.value))}>
-                {DAY_COUNTS.map((n) => <option key={n} value={n}>{n} gün</option>)}
-              </Select>
+              <Input
+                type="number"
+                min={MIN_DAYS}
+                max={MAX_DAYS}
+                value={dayCount}
+                onChange={(e) => setDayCount(Number(e.target.value))}
+                onBlur={(e) => setDayCount(clampDays(Number(e.target.value)))}
+                aria-label="Gün sayısı"
+              />
             </Field>
           </div>
           <p className={s.assignHint}>
-            {date
-              ? `Bitiş: ${addDays(date, dayCount - 1)}. `
-              : ''}
-            Program atanmamış ilk gün önerildi; dilersen değiştir. Aralık öğrencinin
-            mevcut bir programıyla çakışamaz.
+            {date ? `Bitiş: ${addDays(date, dayCount - 1)}. ` : ''}
+            Program atanmamış ilk gün önerildi; dilersen değiştir.
           </p>
           {noBoard && <p className={s.assignHint}>Board boş — önce blok ekleyin.</p>}
           {error && <p className={s.assignError}>{error}</p>}
@@ -1113,37 +1161,38 @@ function AssignModal({ source, students, defaultStudentId, blocks, boardStart, b
   );
 }
 
-/** Bloklardan saat ağırlığı özeti üretir (toplam, TYT/AYT %, ders donut'u).
+/** Bloklardan ağırlık özeti üretir (toplam dk, TYT/AYT %, ders donut'u).
  *  Dış meşguliyet blokları çalışma saati olmadığı için tamamen dışarıda bırakılır;
- *  genel denemeler kapsamlarına (TYT/AYT) sayılır. */
+ *  genel denemeler kapsamlarına (TYT/AYT) sayılır. Süreler dakika cinsindendir;
+ *  yalnız gösterimde saate çevrilir. */
 function computeWeights(allBlocks, subjectMap) {
   const blocks = (allBlocks || []).filter((b) => b.kind !== 'external');
-  const total = blocks.reduce((sum, b) => sum + b.duration, 0);
+  const total = studyMinutes(blocks);
   const cat = { tyt: 0, ayt: 0 };
   const bySub = {};
   blocks.forEach((b) => {
     const c = b.examScope || subjectMap[String(b.subject)]?.category;
-    if (c === 'tyt' || c === 'ayt') cat[c] += b.duration;
+    if (c === 'tyt' || c === 'ayt') cat[c] += b.durationMin;
     const label = blockLabel(b);
-    if (!bySub[label]) bySub[label] = { hours: 0, color: b.subjectColor };
-    bySub[label].hours += b.duration;
+    if (!bySub[label]) bySub[label] = { minutes: 0, color: b.subjectColor };
+    bySub[label].minutes += b.durationMin;
   });
   const examTotal = cat.tyt + cat.ayt;
   const tytPct = examTotal ? Math.round((cat.tyt / examTotal) * 100) : 0;
   const aytPct = examTotal ? 100 - tytPct : 0;
 
   let subs = Object.entries(bySub)
-    .map(([label, v]) => ({ label, hours: v.hours, color: v.color }))
-    .sort((a, b) => b.hours - a.hours);
+    .map(([label, v]) => ({ label, minutes: v.minutes, color: v.color }))
+    .sort((a, b) => b.minutes - a.minutes);
   const MAX = 5;
   if (subs.length > MAX) {
-    const rest = subs.slice(MAX).reduce((sum, x) => sum + x.hours, 0);
-    subs = [...subs.slice(0, MAX), { label: 'Diğer', hours: rest, color: 'var(--subj-genel)' }];
+    const rest = subs.slice(MAX).reduce((sum, x) => sum + x.minutes, 0);
+    subs = [...subs.slice(0, MAX), { label: 'Diğer', minutes: rest, color: 'var(--subj-genel)' }];
   }
   let acc = 0;
   const stops = subs.map((x) => {
     const start = total ? (acc / total) * 100 : 0;
-    acc += x.hours;
+    acc += x.minutes;
     const end = total ? (acc / total) * 100 : 0;
     return `${x.color} ${start}% ${end}%`;
   });
@@ -1153,7 +1202,7 @@ function computeWeights(allBlocks, subjectMap) {
 /** Alttaki yatay özet çubuğunun tek sütunu (geçen hafta / şu anki / toplam). */
 function SummaryColumn({ title, blocks, subjectMap, accent }) {
   const w = computeWeights(blocks, subjectMap);
-  const pctOf = (h) => (w.total ? Math.round((h / w.total) * 100) : 0);
+  const pctOf = (min) => (w.total ? Math.round((min / w.total) * 100) : 0);
   return (
     <div className={`${s.sumCol} ${accent ? s.sumColActive : ''}`}>
       <span className={s.sumTitle}>{title}</span>
@@ -1163,7 +1212,7 @@ function SummaryColumn({ title, blocks, subjectMap, accent }) {
         <div className={s.sumBody}>
           <div className={s.sumPie} style={w.pieStyle}><div className={s.sumPieHole} /></div>
           <div className={s.sumInfo}>
-            <span className={s.sumTotal}>{w.total} saat</span>
+            <span className={s.sumTotal}>{fmtHours(w.total)}</span>
             <div className={s.split}>
               {w.tytPct > 0 && <div className={s.splitSeg} style={{ width: `${w.tytPct}%`, background: 'var(--accent)' }} />}
               {w.aytPct > 0 && <div className={s.splitSeg} style={{ width: `${w.aytPct}%`, background: 'var(--violet)' }} />}
@@ -1174,7 +1223,7 @@ function SummaryColumn({ title, blocks, subjectMap, accent }) {
                 <li className={s.sumLegItem} key={x.label}>
                   <span className={s.wDot} style={{ background: x.color }} />
                   <span className={s.sumLegName} title={x.label}>{x.label}</span>
-                  <span className={s.sumLegPct}>%{pctOf(x.hours)}</span>
+                  <span className={s.sumLegPct}>%{pctOf(x.minutes)}</span>
                 </li>
               ))}
             </ul>
@@ -1382,6 +1431,12 @@ function SubjectCell({ dayIndex, rowKey, items, onRemove }) {
   );
 }
 
+/** Ders satırlı görünümde bloğun içinde yazan tek şey: KONU.
+ *  Satır zaten dersi söylüyor; saat ve süre bu ekranda gösterilmiyor. */
+function chipText(b) {
+  return b.topic || b.bookLabel || b.typeName || '—';
+}
+
 function SubjectChip({ block, onRemove }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
@@ -1401,15 +1456,13 @@ function SubjectChip({ block, onRemove }) {
       {...listeners}
       {...attributes}
     >
-      <span className={s.chipTime}>{fmtMin(block.startMin)}</span>
-      <span className={s.chipLabel}>{blockLabel(block)}</span>
-      <span className={s.chipDur}>{fmtDuration(block.durationMin)}</span>
+      <span className={s.chipLabel}>{chipText(block)}</span>
       <button
         type="button"
         className={s.chipRemove}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => onRemove(block.id)}
-        aria-label={`${blockLabel(block)} bloğunu kaldır`}
+        aria-label={`${blockLabel(block)} — ${chipText(block)} bloğunu kaldır`}
       >
         <X size={10} />
       </button>
@@ -1503,7 +1556,7 @@ function DraftBlock({ fields, durationMin }) {
         {fields.kind === 'external' ? '🚫 ' : fields.book ? '📖 ' : ''}{blockLabel(fields)}
       </span>
       <span className={s.previewMeta}>
-        {meta ? `${meta} · ` : ''}{fmtDuration(durationMin)}
+        {meta ? `${meta} · ` : ''}{durationMin} dk
       </span>
     </div>
   );
