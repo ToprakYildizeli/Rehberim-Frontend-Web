@@ -6,7 +6,7 @@ import {
 } from '@dnd-kit/core';
 import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil } from 'lucide-react';
 import {
-  Card, Button, Field, Select, Input, PillGroup, Spinner, Modal,
+  Card, Button, Field, Select, Input, NumberInput, PillGroup, Spinner, Modal,
 } from '../components/ui';
 import DateField from '../components/ui/DateField';
 import { listStudents } from '../api/students';
@@ -46,12 +46,6 @@ const VIEWS = [
 ];
 const MIN_DURATION = 5;
 const MAX_DURATION = 12 * 60;
-
-/** Sayı girildiyse 1-7 arasına sıkıştırır; alan boş/geçersizse varsayılana döner. */
-const clampDays = (n) =>
-  (Number.isFinite(n)
-    ? Math.min(MAX_DAYS, Math.max(MIN_DAYS, Math.round(n)))
-    : DEFAULT_DAY_COUNT);
 
 /* Ders satırı tercihleri yalnız bir görünüm ayarı; sunucuya yazılmıyor (yol
    haritası A2 kararı), ama her açılışta sıfırlanmasın diye tarayıcıda saklanıyor. */
@@ -712,7 +706,7 @@ export default function DersProgrami() {
                 <RotateCcw size={13} /> Geçen Hafta
               </Button>
             )}
-            <Button className={s.action} variant="soft" size="sm" onClick={clearAll} title="Tümünü temizle">
+            <Button className={s.action} variant="danger" size="sm" onClick={clearAll} title="Tümünü temizle">
               <Trash2 size={13} /> Temizle
             </Button>
             <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
@@ -736,16 +730,11 @@ export default function DersProgrami() {
             />
           </Field>
           <Field label="Gün sayısı" className={s.windowDays}>
-            <Input
-              type="number"
+            <NumberInput
+              value={win.dayCount}
               min={MIN_DAYS}
               max={MAX_DAYS}
-              value={win.dayCount}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (n >= MIN_DAYS && n <= MAX_DAYS) changeWindow({ dayCount: n });
-              }}
-              onBlur={(e) => changeWindow({ dayCount: clampDays(Number(e.target.value)) })}
+              onCommit={(n) => changeWindow({ dayCount: n })}
               aria-label="Gün sayısı"
             />
           </Field>
@@ -1000,22 +989,11 @@ export default function DersProgrami() {
                     )}
 
                     <Field label="Süre (dakika)">
-                      <Input
-                        type="number"
+                      <NumberInput
                         value={draft.durationMin}
                         min={MIN_DURATION}
                         max={MAX_DURATION}
-                        onChange={(e) => {
-                          // Yazarken ara değerlere izin ver; sınırlama blur'da.
-                          const n = Number(e.target.value);
-                          setDraft((d) => ({ ...d, durationMin: Number.isNaN(n) ? d.durationMin : n }));
-                        }}
-                        onBlur={(e) => {
-                          const n = Number(e.target.value);
-                          const clamped = Math.min(MAX_DURATION,
-                            Math.max(MIN_DURATION, Number.isFinite(n) && n > 0 ? Math.round(n) : 60));
-                          setDraft((d) => ({ ...d, durationMin: clamped }));
-                        }}
+                        onCommit={(n) => setDraft((d) => ({ ...d, durationMin: n }))}
                         aria-label="Süre (dakika)"
                       />
                     </Field>
@@ -1268,13 +1246,11 @@ function AssignModal({ source, students, defaultStudentId, blocks, boardStart, b
               />
             </Field>
             <Field label="Gün sayısı">
-              <Input
-                type="number"
+              <NumberInput
+                value={dayCount}
                 min={MIN_DAYS}
                 max={MAX_DAYS}
-                value={dayCount}
-                onChange={(e) => setDayCount(Number(e.target.value))}
-                onBlur={(e) => setDayCount(clampDays(Number(e.target.value)))}
+                onCommit={setDayCount}
                 aria-label="Gün sayısı"
               />
             </Field>

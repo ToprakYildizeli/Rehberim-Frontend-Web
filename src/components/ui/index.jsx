@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Moon, Sun, X, Search, Inbox } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { initialsOf, colorFor } from './avatarUtils';
+import { nextNumberState } from './numberInput';
 import s from './ui.module.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -78,6 +79,38 @@ export function Field({ label, error, children, className }) {
 
 export function Input({ className, ...rest }) {
   return <input className={cx(s.control, className)} {...rest} />;
+}
+
+/**
+ * Sayı girdisi — alanı boşaltmaya izin verir.
+ *
+ * Doğrudan `value={sayı}` + `onChange={Number(...)}` yazmak sinir bozucu bir hata
+ * üretiyor: alan silinince `Number('')` 0 olduğu için kutuda "0" kalıyor ve
+ * üstüne yazınca "0120" gibi değerler çıkıyor. Burada görünen metin bileşenin
+ * kendi durumu; boş bırakılabiliyor, yalnız geçerli bir sayıya dönüştüğünde
+ * `onCommit` çağrılıyor ve odak çıkınca metin son geçerli değere dönüyor.
+ */
+export function NumberInput({ value, onCommit, min, max, className, ...rest }) {
+  const [text, setText] = useState(String(value ?? ''));
+
+  // Dışarıdan değer değişirse (ör. sunucudan gelen program) metni eşitle.
+  useEffect(() => { setText(String(value ?? '')); }, [value]);
+
+  return (
+    <input
+      type="text"
+      inputMode="numeric"
+      className={cx(s.control, className)}
+      value={text}
+      onChange={(e) => {
+        const { text: next, commit } = nextNumberState(e.target.value, min, max);
+        setText(next);
+        if (commit !== null) onCommit(commit);
+      }}
+      onBlur={() => setText(String(value ?? ''))}  // yarım kalan giriş geri alınır
+      {...rest}
+    />
+  );
 }
 
 export function Select({ className, children, ...rest }) {
