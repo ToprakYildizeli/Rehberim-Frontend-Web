@@ -703,3 +703,16 @@
 
 .rowAddSelect { max-width: 220px; }
 .rowToolsHint { font-size: 0.68rem; color: var(--text-muted); }
+
+/* Sürükleme sırasında bloğun ait olmadığı ders satırları matlaşır: bir blok
+   yalnız kendi satırına bırakılabilir. */
+.rowMuted { opacity: 0.35; }
+
+.cellMuted {
+  opacity: 0.35;
+  background: repeating-linear-gradient(
+    45deg,
+    var(--bg-alt) 0 5px,
+    transparent 5px 10px
+  );
+}

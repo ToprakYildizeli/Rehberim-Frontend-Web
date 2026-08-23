@@ -445,11 +445,13 @@ export default function DersProgrami() {
     const dayIndex = Number(parts[0]);
 
     let startMin;
-    let rowFields = null;
     if (parts[1] === 'row') {
+      // Ders düzeninde satır = dersin kendisi. Bir blok yalnız kendi satırına
+      // bırakılabilir; başka bir dersin satırına bırakmak dersini değiştirmek
+      // olurdu, bu da istenmiyor.
+      if (parts.slice(2).join(':') !== payload.rowKey) return;
       startMin = firstFreeSlot(blocks, dayIndex, durationMin, payload.blockId);
       if (startMin === null) return;                       // o güne sığmıyor
-      rowFields = subjectRowFields(parts.slice(2).join(':'), subjects);
     } else {
       startMin = Number(parts[1]);
     }
@@ -458,12 +460,11 @@ export default function DersProgrami() {
     if (overlaps(blocks, dayIndex, startMin, durationMin, payload.blockId)) return;
 
     if (payload.dragKind === 'new') {
-      const base = { ...blockFromPayload(payload), ...(rowFields || {}) };
-      commit([...blocks, { ...base, id: `b${Date.now()}`, dayIndex, startMin, durationMin }]);
+      commit([...blocks, {
+        ...blockFromPayload(payload), id: `b${Date.now()}`, dayIndex, startMin, durationMin,
+      }]);
     } else {
-      commit(blocks.map((b) =>
-        b.id === payload.blockId ? { ...b, ...(rowFields || {}), dayIndex, startMin } : b
-      ));
+      commit(blocks.map((b) => (b.id === payload.blockId ? { ...b, dayIndex, startMin } : b)));
     }
   }
 
@@ -794,6 +795,7 @@ export default function DersProgrami() {
                       editing={rowsEditing}
                       onRemoveRow={(key) => setRows((rowKeys ?? []).filter((k) => k !== key))}
                       canRemoveRow={!rowHasBlocks(row.key)}
+                      muted={Boolean(activeDrag) && activeDrag.rowKey !== row.key}
                     />
                   ))}
               </div>
@@ -1511,10 +1513,10 @@ function ensureBlockValid(b) {
   return b;
 }
 
-function SubjectRow({ row, days, blocks, onRemove, editing, onRemoveRow, canRemoveRow }) {
+function SubjectRow({ row, days, blocks, onRemove, editing, onRemoveRow, canRemoveRow, muted }) {
   return (
     <>
-      <span className={s.rowLabel} title={row.label}>
+      <span className={`${s.rowLabel} ${muted ? s.rowMuted : ''}`} title={row.label}>
         <span className={s.rowDot} style={{ background: row.color }} />
         <span className={s.rowName}>{row.label}</span>
         {editing && (
@@ -1537,6 +1539,7 @@ function SubjectRow({ row, days, blocks, onRemove, editing, onRemoveRow, canRemo
           key={`${day.index}:${row.key}`}
           dayIndex={day.index}
           rowKey={row.key}
+          muted={muted}
           items={blocks
             .filter((b) => b.dayIndex === day.index && subjectRowKey(b) === row.key)
             .sort((a, b) => a.startMin - b.startMin)}
@@ -1547,11 +1550,15 @@ function SubjectRow({ row, days, blocks, onRemove, editing, onRemoveRow, canRemo
   );
 }
 
-function SubjectCell({ dayIndex, rowKey, items, onRemove }) {
+function SubjectCell({ dayIndex, rowKey, items, onRemove, muted }) {
   // Saat serbest: bu hücreye bırakılan blok o günün ilk boş dilimine yerleşir.
   const { setNodeRef, isOver } = useDroppable({ id: `${dayIndex}:row:${rowKey}` });
   return (
-    <div ref={setNodeRef} className={`${s.subjCell} ${isOver ? s.cellOver : ''}`}>
+    <div
+      ref={setNodeRef}
+      className={[s.subjCell, muted ? s.cellMuted : '', isOver && !muted ? s.cellOver : '']
+        .filter(Boolean).join(' ')}
+    >
       {items.map((b) => <SubjectChip key={b.id} block={b} onRemove={onRemove} />)}
     </div>
   );
@@ -1569,6 +1576,7 @@ function SubjectChip({ block, onRemove }) {
     data: {
       dragKind: 'move',
       blockId: block.id,
+      rowKey: subjectRowKey(block),
       durationMin: block.durationMin,
       subjectLabel: blockLabel(block),
       subjectColor: block.subjectColor,
@@ -1609,6 +1617,7 @@ function PlacedBlock({ block, hourStart, onRemove }) {
     data: {
       dragKind: 'move',
       blockId: block.id,
+      rowKey: subjectRowKey(block),
       durationMin: block.durationMin,
       subjectLabel: blockLabel(block),
       subjectColor: block.subjectColor,
@@ -1665,7 +1674,13 @@ function DraftBlock({ fields, durationMin }) {
     // `dragKind` sürükleme türü (yeni/taşı); `fields.kind` bloğun kendi türü.
     // subjectLabel sürükleme katmanının (DragOverlay) gösterdiği ad — dış blokta
     // ders olmadığı için blockLabel ile çözülür.
-    data: { dragKind: 'new', durationMin, ...fields, subjectLabel: blockLabel(fields) },
+    data: {
+      dragKind: 'new',
+      durationMin,
+      ...fields,
+      rowKey: subjectRowKey(fields),
+      subjectLabel: blockLabel(fields),
+    },
   });
   const meta = blockMetaText(fields);
 
