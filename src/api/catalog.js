@@ -81,6 +81,27 @@ export async function listTopics(subjectId, { grade, curriculum } = {}) {
   return data.map((x) => ({ id: x.id, name: x.name, grade: x.grade, order: x.order }));
 }
 
+/** GET /api/block-durations/ → rehberin süre hafızası.
+ *
+ *  Hafıza **rehber özelinde**dir: bir kombinasyona bir öğrencide 20 dk denildiyse
+ *  başka öğrencide de 20 dk varsayılan gelir. Anahtar (ders, metod, konu) üçlüsü —
+ *  "Matematik denemesi 1 saat" demek "Matematik soru çözümü 1 saat" demek değildir.
+ *  Yazma ucu yoktur; hafıza blok kaydedilirken backend'de kendiliğinden güncellenir.
+ *
+ *  Dönen değer, doğrudan aranabilen bir Map: `durationKey(...)` → dakika. */
+export async function loadDurationMemory() {
+  const { data } = await api.get('/block-durations/');
+  return new Map(
+    (data || []).map((x) => [durationKey(x.subject, x.task_type, x.topic), x.duration_minutes]),
+  );
+}
+
+/** Süre hafızası anahtarı. Boş konu geçerli bir anahtardır (konusuz blok da bir
+ *  kombinasyondur); id'ler string'e çevrilir çünkü form alanları string tutar. */
+export function durationKey(subject, taskType, topic) {
+  return `${subject ?? ''}|${taskType ?? ''}|${(topic || '').trim()}`;
+}
+
 /** GET /api/books/?student=<id> → öğrencinin kütüphanesi. Ders Programı'nda
  *  doğrudan sürüklenip blok yapılabilir kitaplar (kaynak = kitap). */
 export async function listBooks(studentId) {

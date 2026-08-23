@@ -22,6 +22,7 @@ import {
 } from '../api/templates';
 import {
   listSubjects, listFieldSubjects, listTaskTypes, listTopics, listBooks,
+  loadDurationMemory, durationKey,
   BLOCK_KINDS, EXAM_SCOPES, blockLabel, blockColor,
 } from '../api/catalog';
 import { HOURS } from '../mocks/data';
@@ -174,6 +175,8 @@ export default function DersProgrami() {
   const [taskTypes, setTaskTypes] = useState([]);
   const [topics, setTopics] = useState([]);
   const [catalogError, setCatalogError] = useState(false);
+  // Süre hafızası (A4): durationKey(ders, metod, konu) → dakika. Rehber özelinde.
+  const [durationMemory, setDurationMemory] = useState(() => new Map());
 
   const [view, setView] = useState('hours');
   const [draft, setDraft] = useState({
@@ -227,12 +230,17 @@ export default function DersProgrami() {
   // Katalogları ve öğrencileri bir kez yükle; draft varsayılanlarını ata.
   useEffect(() => {
     let alive = true;
-    Promise.all([listSubjects(), listTaskTypes(), listStudents()]).then(
-      ([subs, types, sts]) => {
+    Promise.all([
+      listSubjects(), listTaskTypes(), listStudents(),
+      // Hafıza olmaması normal (ilk kullanım) — katalog yüklemesini düşürmesin.
+      loadDurationMemory().catch(() => new Map()),
+    ]).then(
+      ([subs, types, sts, memory]) => {
         if (!alive) return;
         setSubjects(subs);
         setTaskTypes(types);
         setStudents(sts);
+        setDurationMemory(memory);
         setStudentId((id) => id || String(sts[0]?.id ?? ''));
         setDraft((d) => {
           const firstInCat = subs.find((x) => x.category === d.category);
@@ -299,6 +307,8 @@ export default function DersProgrami() {
           // Öğrenci modunda ilk blokla birlikte program açılmış olabilir.
           if (scope && programId == null) getSchedule(scope).then((d) => setProgramId(d.programId));
           setBlocks(saved);                  // geçici id'ler → gerçek task id'leri
+          // Backend blok kaydedilirken süre hafızasını günceller; yerel kopyayı tazele.
+          loadDurationMemory().then(setDurationMemory).catch(() => {});
         })
         .catch(() => {});
     },
@@ -535,6 +545,19 @@ export default function DersProgrami() {
   const isGeneralExam = draft.kind === 'exam' && Boolean(draft.examScope);
   // Ders/metod/konu alanları: dış blokta ve genel denemede gösterilmez.
   const showSubjectFields = !isExternal && !isGeneralExam;
+
+  /* Süre hafızası (A4): ders/metod/konu üçlüsü değişince, rehberin bu kombinasyonda
+     en son kullandığı süre varsayılan olarak gelir — hafıza rehber özelinde olduğu
+     için başka bir öğrencide de aynı süre açılır. Kombinasyon değişmedikçe tetiklenmez,
+     böylece elle girilen süre ezilmez. Ders/metodu olmayan bloklarda (dış meşguliyet,
+     genel deneme) hafıza yoktur. */
+  useEffect(() => {
+    if (!showSubjectFields) return;
+    const remembered = durationMemory.get(
+      durationKey(draft.subject, draft.type, draft.topic)
+    );
+    if (remembered) setDraft((d) => ({ ...d, durationMin: remembered }));
+  }, [showSubjectFields, draft.subject, draft.type, draft.topic, durationMemory]);
 
   // Kitap modu: öğrencinin ders-kitaplarındaki dersler + seçilen derse göre kitaplar.
   const bookSubjects = useMemo(() => {
