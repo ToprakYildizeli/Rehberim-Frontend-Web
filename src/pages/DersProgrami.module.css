@@ -14,13 +14,6 @@
 
 .studentSelect { min-width: 190px; }
 
-.totalPill {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
 .hint {
   font-size: 0.78rem;
   color: var(--text-muted);
@@ -97,8 +90,8 @@
 /* --cols = programın gün sayısı (esnek pencere); satır başındaki saat sütunu sabit. */
 .grid {
   display: grid;
-  grid-template-columns: 46px repeat(var(--cols, 7), minmax(0, 1fr));
-  min-width: min(600px, calc(46px + var(--cols, 7) * 86px));
+  grid-template-columns: var(--labelw, 46px) repeat(var(--cols, 7), minmax(0, 1fr));
+  min-width: calc(var(--labelw, 46px) + var(--cols, 7) * 84px);
 }
 
 .corner { border-bottom: 1px solid var(--border); }
@@ -540,27 +533,24 @@
   border-radius: var(--radius);
 }
 
+/* Pencere çubuğundaki alan etiketleri küçük ve sessiz; asıl bilgi değerlerde. */
+.windowBar label { font-size: 0.7rem; color: var(--text-muted); }
+
 .windowField { min-width: 180px; margin: 0; }
 .windowDays { width: 84px; margin: 0; }
 
 .windowRange {
   display: flex;
   flex-direction: column;
-  gap: 1px;
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text);
-  padding-bottom: 7px;
+  gap: 2px;
+  padding: 0 var(--space-2) 8px;
+  border-left: 1px solid var(--border);
+  padding-left: var(--space-4);
 }
 
-.windowRangeSub { font-size: 0.68rem; font-weight: 400; color: var(--text-muted); }
+.windowRangeText { font-size: 0.85rem; font-weight: 700; color: var(--text); white-space: nowrap; }
+.windowRangeSub { font-size: 0.68rem; color: var(--text-muted); }
 
-.windowStudent {
-  margin-left: auto;
-  padding-bottom: 9px;
-  font-size: 0.76rem;
-  color: var(--text-secondary);
-}
 
 .windowError {
   margin: 0;
@@ -571,7 +561,6 @@
   padding: var(--space-2) var(--space-3);
 }
 
-.totalOutside { color: var(--text-muted); font-weight: 400; }
 
 .assignWindow { display: grid; grid-template-columns: 1fr 84px; gap: var(--space-3); }
 
@@ -595,20 +584,18 @@
 .blockShort .blockSubject { font-size: 0.6rem; }
 
 /* ---------- Ders satırlı görünüm (A2) ---------- */
-.windowView { margin: 0; }
+.windowView { margin: 0; margin-left: auto; }
 
 .rowLabel {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.68rem;
+  gap: 6px;
+  min-width: 0;
+  font-size: 0.76rem;
   font-weight: 600;
-  color: var(--text-secondary);
-  padding: var(--space-2) var(--space-2) var(--space-2) 0;
+  color: var(--text);
+  padding: var(--space-2) var(--space-3) var(--space-2) 0;
   border-bottom: 1px solid var(--border);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .rowDot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
@@ -665,39 +652,54 @@
 
 .rowRemove {
   margin-left: auto;
-  background: transparent;
-  border: none;
+  flex-shrink: 0;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
   color: var(--text-muted);
   cursor: pointer;
-  padding: 1px;
+  padding: 2px;
   display: flex;
-  border-radius: 3px;
-  opacity: 0;
-  transition: opacity 0.12s;
+  border-radius: var(--radius-sm);
 }
 
-.rowLabel:hover .rowRemove { opacity: 1; }
-.rowRemove:hover { color: var(--error); background: var(--error-bg); }
-.rowRemove:disabled { opacity: 0; cursor: default; }
+.rowRemove:hover:not(:disabled) { color: var(--error); border-color: var(--error); }
+.rowRemove:disabled { opacity: 0.25; cursor: not-allowed; }
 
-.rowAdd {
+
+
+/* ---------- Araç çubuğu: tek tip eylem düğmeleri ---------- */
+.actions { display: flex; align-items: center; gap: var(--space-2); }
+
+/* Hepsi aynı yükseklik ve aynı minimum genişlikte dursun. */
+.actions > * { flex-shrink: 0; }
+.action { min-width: 112px; justify-content: center; }
+
+/* Çalışma özeti bir düğme değil; düğmelerle aynı yükseklikte bir gösterge. */
+.totalStat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-alt);
+  white-space: nowrap;
+}
+
+.totalStatLabel { font-size: 0.68rem; color: var(--text-muted); }
+.totalStatValue { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+.totalStatSub { font-size: 0.68rem; color: var(--text-muted); }
+
+/* ---------- Ders satırı düzenleme araç çubuğu ---------- */
+.rowTools {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  flex-wrap: wrap;
   margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
 }
 
 .rowAddSelect { max-width: 220px; }
-
-.rowReset {
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  font-family: inherit;
-  font-size: 0.7rem;
-  cursor: pointer;
-  text-decoration: underline;
-  padding: 0;
-}
-
-.rowReset:hover { color: var(--accent); }
+.rowToolsHint { font-size: 0.68rem; color: var(--text-muted); }

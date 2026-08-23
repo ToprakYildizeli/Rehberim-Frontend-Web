@@ -4,7 +4,7 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core';
-import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat } from 'lucide-react';
+import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil } from 'lucide-react';
 import {
   Card, Button, Field, Select, Input, PillGroup, Spinner, Modal,
 } from '../components/ui';
@@ -568,6 +568,7 @@ export default function DersProgrami() {
   // öğrencinin alanına düşen dersler (backend'den), üstüne ekleyip çıkarabiliyor.
   // Blok içeren satırlar listede olmasa da gösterilir — hiçbir blok gizlenmemeli.
   const [rowKeys, setRowKeys] = useState(null);
+  const [rowsEditing, setRowsEditing] = useState(false);
 
   // Öğrenci (ya da genel mod) değişince varsayılan satırları kur. Kullanıcının
   // önceki düzenlemesi varsa localStorage'dan geri gelir; görünüm tercihi olduğu
@@ -631,6 +632,15 @@ export default function DersProgrami() {
     [blocks]
   );
 
+  /** Satırları öğrencinin alan listesine geri döndürür. */
+  const resetRows = useCallback(() => {
+    clearRowPrefs(`dp-rows-${scope || 'genel'}`);
+    setRowKeys(null);
+    listFieldSubjects(scope || undefined)
+      .then((subs) => setRowKeys(subs.map((x) => `sub-${x.id}`)))
+      .catch(() => setRowKeys([]));
+  }, [scope]);
+
   // Kitap modunda seçili ders/kitap kütüphaneyle tutarlı kalsın (öğrenci değişince
   // ya da moda ilk geçişte ilk uygun ders+kitaba düşer).
   useEffect(() => {
@@ -676,34 +686,39 @@ export default function DersProgrami() {
         </div>
 
         <div className={s.toolbarRight}>
-          <span className={s.totalPill}>
-            Çalışma: {fmtHours(totalMin)}
+          <span className={s.totalStat}>
+            <span className={s.totalStatLabel}>Çalışma</span>
+            <span className={s.totalStatValue}>{fmtHours(totalMin)}</span>
             {outsideMin > 0 && (
-              <span className={s.totalOutside}> · +{fmtHours(outsideMin)} dış</span>
+              <span className={s.totalStatSub}>+{fmtHours(outsideMin)} dış</span>
             )}
           </span>
-          <Button variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
-            <Bookmark size={13} /> Şablon Kaydet
-          </Button>
-          <TemplateMenu
-            templates={templates}
-            activeStudent={activeStudent}
-            onLoad={handleLoadTemplate}
-            onAssign={(tpl) => setAssignSource({ type: 'template', id: tpl.id, name: tpl.name })}
-            onDelete={handleDeleteTemplate}
-            onToggleRoutine={handleToggleRoutine}
-          />
-          <Button variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
-            <Send size={13} /> Ata
-          </Button>
-          {mode === 'ogrenci' && (
-            <Button variant="ghost" size="sm" onClick={loadLastWeek} title="Geçen haftanın programını yükle">
-              <RotateCcw size={13} /> Geçen Hafta
+          {/* Eylem düğmeleri tek tip: aynı boyut, aynı görünüm. Yalnız "Ata"
+              birincil eylem olduğu için dolgulu. */}
+          <div className={s.actions}>
+            <Button className={s.action} variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
+              <Bookmark size={13} /> Şablon Kaydet
             </Button>
-          )}
-          <Button variant="danger" size="sm" onClick={clearAll} title="Tümünü temizle">
-            <Trash2 size={13} /> Temizle
-          </Button>
+            <TemplateMenu
+              templates={templates}
+              activeStudent={activeStudent}
+              onLoad={handleLoadTemplate}
+              onAssign={(tpl) => setAssignSource({ type: 'template', id: tpl.id, name: tpl.name })}
+              onDelete={handleDeleteTemplate}
+              onToggleRoutine={handleToggleRoutine}
+            />
+            {mode === 'ogrenci' && (
+              <Button className={s.action} variant="soft" size="sm" onClick={loadLastWeek} title="Geçen haftanın programını yükle">
+                <RotateCcw size={13} /> Geçen Hafta
+              </Button>
+            )}
+            <Button className={s.action} variant="soft" size="sm" onClick={clearAll} title="Tümünü temizle">
+              <Trash2 size={13} /> Temizle
+            </Button>
+            <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
+              <Send size={13} /> Ata
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -735,19 +750,16 @@ export default function DersProgrami() {
             />
           </Field>
           <span className={s.windowRange}>
-            {windowRangeText(win.startDate, win.dayCount)}
+            <span className={s.windowRangeText}>
+              {windowRangeText(win.startDate, win.dayCount)}
+            </span>
             <span className={s.windowRangeSub}>
-              {programId != null
-                ? 'Bu programın penceresi — değiştirince kaydedilir'
-                : 'Atamadan önce serbestçe değiştirebilirsin'}
+              {programId != null ? 'Kayıtlı program' : 'Henüz atanmadı'}
             </span>
           </span>
           <Field label="Tahta düzeni" className={s.windowView}>
             <PillGroup options={VIEWS} value={view} onChange={setView} />
           </Field>
-          {mode === 'ogrenci' && activeStudent && (
-            <span className={s.windowStudent}>{activeStudent.name}</span>
-          )}
         </div>
       )}
       {windowError && <p className={s.windowError}>{windowError}</p>}
@@ -765,7 +777,12 @@ export default function DersProgrami() {
         >
           <div className={s.layout}>
             <Card className={s.gridCard}>
-              <div className={s.grid} style={{ '--cols': days.length }}>
+              {/* Ders satırlı görünümde ilk sütun ders adlarını taşıdığı için
+                  saat sütunundan çok daha geniş olmalı. */}
+              <div
+                className={s.grid}
+                style={{ '--cols': days.length, '--labelw': view === 'subjects' ? '156px' : '46px' }}
+              >
                 <span className={s.corner} />
                 {days.map((d) => (
                   <span className={s.dayHead} key={d.index}>
@@ -785,43 +802,50 @@ export default function DersProgrami() {
                       days={days}
                       blocks={blocks}
                       onRemove={removeBlock}
+                      editing={rowsEditing}
                       onRemoveRow={(key) => setRows((rowKeys ?? []).filter((k) => k !== key))}
                       canRemoveRow={!rowHasBlocks(row.key)}
                     />
                   ))}
               </div>
+
+              {/* Satır ekle/çıkar kontrolleri normalde gizli; "Satırları düzenle"
+                  açıldığında beliriyor ki tahta kalabalık görünmesin. */}
               {view === 'subjects' && (
-                <div className={s.rowAdd}>
-                  <Select
-                    value=""
-                    aria-label="Satır ekle"
-                    className={s.rowAddSelect}
-                    disabled={addableRows.length === 0}
-                    onChange={(e) => {
-                      if (e.target.value) setRows([...(rowKeys ?? []), e.target.value]);
-                    }}
+                <div className={s.rowTools}>
+                  <Button
+                    variant={rowsEditing ? 'primary' : 'soft'}
+                    size="sm"
+                    onClick={() => setRowsEditing((v) => !v)}
                   >
-                    <option value="">
-                      {addableRows.length ? '+ Satır ekle…' : 'Tüm satırlar açık'}
-                    </option>
-                    {addableRows.map((o) => (
-                      <option value={o.key} key={o.key}>{o.label}</option>
-                    ))}
-                  </Select>
-                  {rowKeys != null && (
-                    <button
-                      type="button"
-                      className={s.rowReset}
-                      onClick={() => {
-                        clearRowPrefs(`dp-rows-${scope || 'genel'}`);
-                        setRowKeys(null);
-                        listFieldSubjects(scope || undefined)
-                          .then((subs) => setRowKeys(subs.map((x) => `sub-${x.id}`)))
-                          .catch(() => setRowKeys([]));
-                      }}
-                    >
-                      Varsayılana dön
-                    </button>
+                    <Pencil size={13} /> {rowsEditing ? 'Bitir' : 'Satırları düzenle'}
+                  </Button>
+
+                  {rowsEditing && (
+                    <>
+                      <Select
+                        value=""
+                        aria-label="Ders satırı ekle"
+                        className={s.rowAddSelect}
+                        disabled={addableRows.length === 0}
+                        onChange={(e) => {
+                          if (e.target.value) setRows([...(rowKeys ?? []), e.target.value]);
+                        }}
+                      >
+                        <option value="">
+                          {addableRows.length ? 'Satır ekle…' : 'Tüm satırlar açık'}
+                        </option>
+                        {addableRows.map((o) => (
+                          <option value={o.key} key={o.key}>{o.label}</option>
+                        ))}
+                      </Select>
+                      <Button variant="soft" size="sm" onClick={resetRows}>
+                        Varsayılana dön
+                      </Button>
+                      <span className={s.rowToolsHint}>
+                        Blok taşıyan satırlar gizlenemez.
+                      </span>
+                    </>
                   )}
                 </div>
               )}
@@ -1112,7 +1136,7 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
 
   return (
     <div className={s.tplMenu} ref={ref}>
-      <Button variant="soft" size="sm" onClick={() => setOpen((o) => !o)}>
+      <Button className={s.action} variant="soft" size="sm" onClick={() => setOpen((o) => !o)}>
         <FolderOpen size={13} /> Şablonlar <ChevronDown size={12} />
       </Button>
       {open && (
@@ -1511,24 +1535,26 @@ function ensureBlockValid(b) {
   return b;
 }
 
-function SubjectRow({ row, days, blocks, onRemove, onRemoveRow, canRemoveRow }) {
+function SubjectRow({ row, days, blocks, onRemove, editing, onRemoveRow, canRemoveRow }) {
   return (
     <>
       <span className={s.rowLabel} title={row.label}>
         <span className={s.rowDot} style={{ background: row.color }} />
         <span className={s.rowName}>{row.label}</span>
-        <button
-          type="button"
-          className={s.rowRemove}
-          disabled={!canRemoveRow}
-          title={canRemoveRow
-            ? `${row.label} satırını gizle`
-            : 'Bu satırda blok var; önce blokları kaldırın'}
-          aria-label={`${row.label} satırını gizle`}
-          onClick={() => onRemoveRow(row.key)}
-        >
-          <X size={10} />
-        </button>
+        {editing && (
+          <button
+            type="button"
+            className={s.rowRemove}
+            disabled={!canRemoveRow}
+            title={canRemoveRow
+              ? `${row.label} satırını gizle`
+              : 'Bu satırda blok var; önce blokları kaldırın'}
+            aria-label={`${row.label} satırını gizle`}
+            onClick={() => onRemoveRow(row.key)}
+          >
+            <X size={11} />
+          </button>
+        )}
       </span>
       {days.map((day) => (
         <SubjectCell
