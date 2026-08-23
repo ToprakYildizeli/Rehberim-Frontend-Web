@@ -146,13 +146,16 @@ export async function getDashboard() {
       compliance = 0;
     }
 
-    // TYT herkes için aynı ölçek. AYT ise **öğrencinin kendi alanına** göre
-    // hesaplanır: EA öğrencisinin "Tarih"i Tarih-1'dir, Sözel'inki Tarih-1+2.
-    // Alanı olmayan öğrencinin AYT boyutu yoktur (kıyaslanacak ölçeği yok).
+    // TYT herkes için aynı ölçek. AYT'de ölçek alana göre değişir ve her öğrencinin
+    // **üç alanda da** neti hesaplanır — seçilen alan "kimin listeleneceğini" değil,
+    // "hangi ölçekle bakılacağını" belirler. Sayısalcının 40 mat + 30 fen neti
+    // Sayısal ölçeğinde 70, EA ölçeğinde 40'tır; ikisi de anlamlı ve kıyaslanabilir.
     const netDims = {};
     TYT_DIM_GROUPS.forEach((g) => { netDims[`tyt_${g.key}`] = dimAvg(b.exams, 'tyt', g.subs); });
-    (aytGroupsByField[s.study_field] || []).forEach((g) => {
-      netDims[`ayt_${g.key}`] = dimAvg(b.exams, 'ayt', g.subs);
+    Object.entries(aytGroupsByField).forEach(([field, groups]) => {
+      (groups || []).forEach((g) => {
+        netDims[`ayt_${field}_${g.key}`] = dimAvg(b.exams, 'ayt', g.subs);
+      });
     });
 
     return {

@@ -47,20 +47,16 @@ export default function Panel() {
     return next;
   });
 
-  // Kıyas değeri: "Deneme Ort."ta seçili tür+grup neti; diğer metriklerde alanın kendisi
-  const dimKey = `${netExam}_${netGroup}`;
+  // Kıyas değeri: "Deneme Ort."ta seçili tür+grup neti; diğer metriklerde alanın kendisi.
+  // AYT'de seçilen alan bir SÜZGEÇ değil, ÖLÇEKtir: herkes o alanın ders kümesiyle
+  // hesaplanıp listelenir. Sayısalcı, EA ölçeğinde de kendi matematik netiyle görünür.
+  const dimKey = netExam === 'ayt' ? `ayt_${netField}_${netGroup}` : `tyt_${netGroup}`;
   const metricVal = (st) => (metric === 'avgNet' ? (st.netDims?.[dimKey] ?? null) : st[metric]);
-  // AYT netleri yalnız aynı alan içinde kıyaslanabilir — ders kümesi ve dolayısıyla
-  // maksimum net alana göre değişir. Seçili alan dışındaki öğrenciler listeye girmez.
-  const aytOnly = metric === 'avgNet' && netExam === 'ayt';
   const ranked = useMemo(() => {
     if (!data?.students) return [];
     const val = (st) => (metric === 'avgNet' ? (st.netDims?.[dimKey] ?? null) : st[metric]);
-    return data.students
-      .filter((st) => !aytOnly || st.study_field === netField)
-      .filter((st) => val(st) != null)
-      .sort((a, b) => val(b) - val(a));
-  }, [data, metric, dimKey, aytOnly, netField]);
+    return data.students.filter((st) => val(st) != null).sort((a, b) => val(b) - val(a));
+  }, [data, metric, dimKey]);
 
   if (!data) return <div className={s.center}><Spinner size={24} /></div>;
 
