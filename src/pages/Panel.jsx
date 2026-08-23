@@ -17,7 +17,7 @@ const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${Stri
 const METRICS = [
   { value: 'avgNet', label: 'Deneme Ort.', unit: 'net', max: 120 },   // TYT üzerinden
   { value: 'avgLevel', label: 'Konu Puanı', unit: '', max: 5 },
-  { value: 'weeklyHours', label: 'Haftalık Saat', unit: 'sa', max: 40 },
+  { value: 'weeklyHours', label: 'Haftalık Saat', unit: 'sa', max: 80 },
 ];
 const NET_TYPES = [{ value: 'tyt', label: 'TYT' }, { value: 'ayt', label: 'AYT' }];
 

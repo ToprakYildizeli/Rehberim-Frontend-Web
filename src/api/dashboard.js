@@ -42,13 +42,6 @@ function dimAvg(exams, type, subs) {
   return round1(vals.reduce((a, x) => a + x, 0) / vals.length);
 }
 
-/** start_date (YYYY-MM-DD) + 6 gün = programın son günü. */
-function endDateOf(startIso) {
-  const [y, m, d] = startIso.split('-').map(Number);
-  const dt = new Date(y, m - 1, d + 6);
-  return isoOf(dt);
-}
-
 /** Panoyu besleyen tüm türetilmiş veriyi döndürür. */
 export async function getDashboard() {
   const [students, appts, programsRes, examsRes, tpRes] = await Promise.all([
@@ -87,10 +80,21 @@ export async function getDashboard() {
     const avgLevel = b.tps.length ? round1(b.tps.reduce((a, t) => a + t.level, 0) / b.tps.length) : null;
     const weakCount = b.tps.filter((t) => t.level <= 2).length;
 
-    const weekHours = b.programs.map((p) => (p.tasks || []).reduce((a, t) => a + (t.duration_minutes || 0), 0) / 60);
+    // Haftalık saat YALNIZ çalışma + deneme bloklarını sayar. Dış meşguliyet
+    // (okul, dershane, antrenman, doktor) programda yer kaplar ama çalışma değildir
+    // — backend bunu `counts_as_study` ile söyler.
+    // Pencere 7 günden farklı olabildiği için ("Salıdan Cumaya 4 gün") her programın
+    // toplamı haftalık hıza çevriliyor, yoksa kısa programlı öğrenci az çalışıyor görünür.
+    const weekHours = b.programs.map((p) => {
+      const mins = (p.tasks || [])
+        .filter((t) => t.counts_as_study !== false)
+        .reduce((a, t) => a + (t.duration_minutes || 0), 0);
+      return (mins / 60) * (7 / (p.day_count || 7));
+    });
     const weeklyHours = weekHours.length ? round1(weekHours.reduce((a, x) => a + x, 0) / weekHours.length) : 0;
 
-    const current = b.programs.find((p) => p.start_date <= today && today <= endDateOf(p.start_date));
+    // Pencere artık 7 gün olmak zorunda değil — bitişi sunucudan gelen `end_date` söyler.
+    const current = b.programs.find((p) => p.start_date <= today && today <= p.end_date);
     const hasCurrentProgram = !!current;
     let compliance = null;
     if (current && current.tasks?.length) {
