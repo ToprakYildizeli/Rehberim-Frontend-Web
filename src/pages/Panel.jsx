@@ -7,7 +7,7 @@ import {
 import {
   Card, CardHeader, Button, Avatar, Badge, ProgressBar, PillGroup, Select, EmptyState, Spinner,
 } from '../components/ui';
-import { getDashboard } from '../api/dashboard';
+import { getDashboard, AYT_FIELDS } from '../api/dashboard';
 import s from './Panel.module.css';
 
 const MONTHS = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -29,7 +29,8 @@ export default function Panel() {
   const [data, setData] = useState(null);
   const [metric, setMetric] = useState('avgNet');
   const [netExam, setNetExam] = useState('tyt');   // "Deneme Ort." kıyası: TYT/AYT
-  const [netGroup, setNetGroup] = useState('total'); // ve ders grubu (sınava göre)
+  const [netField, setNetField] = useState('say'); // AYT'de kıyaslanan alan
+  const [netGroup, setNetGroup] = useState('total'); // ve ders grubu (sınava/alana göre)
   const [netType, setNetType] = useState('tyt');
   const [hidden, setHidden] = useState(() => new Set());
 
@@ -49,17 +50,26 @@ export default function Panel() {
   // Kıyas değeri: "Deneme Ort."ta seçili tür+grup neti; diğer metriklerde alanın kendisi
   const dimKey = `${netExam}_${netGroup}`;
   const metricVal = (st) => (metric === 'avgNet' ? (st.netDims?.[dimKey] ?? null) : st[metric]);
+  // AYT netleri yalnız aynı alan içinde kıyaslanabilir — ders kümesi ve dolayısıyla
+  // maksimum net alana göre değişir. Seçili alan dışındaki öğrenciler listeye girmez.
+  const aytOnly = metric === 'avgNet' && netExam === 'ayt';
   const ranked = useMemo(() => {
     if (!data?.students) return [];
     const val = (st) => (metric === 'avgNet' ? (st.netDims?.[dimKey] ?? null) : st[metric]);
-    return data.students.filter((st) => val(st) != null).sort((a, b) => val(b) - val(a));
-  }, [data, metric, dimKey]);
+    return data.students
+      .filter((st) => !aytOnly || st.study_field === netField)
+      .filter((st) => val(st) != null)
+      .sort((a, b) => val(b) - val(a));
+  }, [data, metric, dimKey, aytOnly, netField]);
 
   if (!data) return <div className={s.center}><Spinner size={24} /></div>;
 
   const { kpis, upcoming, needProgram, complianceRanked, netChanges, konuRanked, netSeries, netDimGroups } = data;
   const metricDef = METRICS.find((x) => x.value === metric);
-  const groupOpts = (netDimGroups && netDimGroups[netExam]) || [];
+  // AYT'de grup listesi (ve maksimumları) seçili alana bağlı; TYT'de tek liste.
+  const groupOpts = (netExam === 'ayt'
+    ? netDimGroups?.ayt?.[netField]
+    : netDimGroups?.tyt) || [];
   const dimDef = groupOpts.find((d) => d.key === netGroup) || groupOpts[0] || { max: 120 };
   const rankMax = metric === 'avgNet' ? dimDef.max : metricDef.max;
   const rankUnit = metric === 'avgNet' ? 'net' : metricDef.unit;
@@ -220,7 +230,6 @@ export default function Panel() {
         <div className={s.cmpHead}>
           <div>
             <h2 className={s.cmpTitle}><BarChart3 size={16} /> Öğrenci Kıyaslama</h2>
-            <p className={s.cmpSub}>Ortalamalar üzerinden (deneme bazlı değil)</p>
           </div>
           <div className={s.cmpControls}>
             <PillGroup options={METRICS} value={metric} onChange={setMetric} />
@@ -231,6 +240,16 @@ export default function Panel() {
                   value={netExam}
                   onChange={(v) => { setNetExam(v); setNetGroup('total'); }}
                 />
+                {netExam === 'ayt' && (
+                  <Select
+                    className={s.dimSelect}
+                    value={netField}
+                    onChange={(e) => { setNetField(e.target.value); setNetGroup('total'); }}
+                    aria-label="Alan"
+                  >
+                    {AYT_FIELDS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+                  </Select>
+                )}
                 <Select className={s.dimSelect} value={netGroup} onChange={(e) => setNetGroup(e.target.value)} aria-label="Ders grubu">
                   {groupOpts.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
                 </Select>

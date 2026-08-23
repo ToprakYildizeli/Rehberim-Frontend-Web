@@ -4,33 +4,70 @@
 import api from './client';
 import { listStudents } from './students';
 import { listAppointments } from './appointments';
+import { listSubjects } from './catalog';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const todayIso = () => isoOf(new Date());
 const round1 = (n) => Math.round(n * 10) / 10;
 
-// "Deneme Ort." kıyası — sınav (TYT/AYT) + o sınava göre ders grubu.
-const NET_DIM_GROUPS = {
-  tyt: [
-    { key: 'total', label: 'Toplam', subs: null, max: 120 },
-    { key: 'tr', label: 'Türkçe', subs: ['TYT Türkçe'], max: 40 },
-    { key: 'sos', label: 'Sosyal', subs: ['TYT Tarih', 'TYT Coğrafya', 'TYT Felsefe', 'TYT Din Kültürü ve Ahlak Bilgisi'], max: 20 },
-    { key: 'mat', label: 'Matematik', subs: ['TYT Matematik', 'TYT Geometri'], max: 40 },
-    { key: 'fen', label: 'Fen', subs: ['TYT Fizik', 'TYT Kimya', 'TYT Biyoloji'], max: 20 },
-  ],
-  ayt: [
-    { key: 'total', label: 'Toplam', subs: null, max: 80 },
-    { key: 'edb', label: 'Edebiyat', subs: ['AYT Türk Dili ve Edebiyatı'], max: 24 },
-    { key: 'tar', label: 'Tarih', subs: ['AYT Tarih-1', 'AYT Tarih-2'], max: 21 },
-    { key: 'cog', label: 'Coğrafya', subs: ['AYT Coğrafya-1', 'AYT Coğrafya-2'], max: 17 },
-    { key: 'fel', label: 'Felsefe', subs: ['AYT Felsefe'], max: 12 },
-    { key: 'mat', label: 'Matematik', subs: ['AYT Matematik', 'AYT Geometri'], max: 40 },
-    { key: 'fiz', label: 'Fizik', subs: ['AYT Fizik'], max: 14 },
-    { key: 'kim', label: 'Kimya', subs: ['AYT Kimya'], max: 13 },
-    { key: 'biy', label: 'Biyoloji', subs: ['AYT Biyoloji'], max: 13 },
-  ],
+// "Deneme Ort." kıyası — TYT'de tek ölçek; AYT'de ölçek **alana** bağlıdır.
+const TYT_DIM_GROUPS = [
+  { key: 'total', label: 'Toplam', subs: null, max: 120 },
+  { key: 'tr', label: 'Türkçe', subs: ['TYT Türkçe'], max: 40 },
+  { key: 'sos', label: 'Sosyal', subs: ['TYT Tarih', 'TYT Coğrafya', 'TYT Felsefe', 'TYT Din Kültürü ve Ahlak Bilgisi'], max: 20 },
+  { key: 'mat', label: 'Matematik', subs: ['TYT Matematik', 'TYT Geometri'], max: 40 },
+  { key: 'fen', label: 'Fen', subs: ['TYT Fizik', 'TYT Kimya', 'TYT Biyoloji'], max: 20 },
+];
+
+/** AYT ders grupları — hangi derslerin hangi başlık altında toplandığı.
+ *  Maksimum netler burada YAZILI DEĞİL; alana göre `/api/subjects/`ten gelen
+ *  `question_count` toplanarak hesaplanır (bkz. aytGroupsFor). */
+const AYT_DIM_GROUPS = [
+  { key: 'edb', label: 'Edebiyat', subs: ['AYT Türk Dili ve Edebiyatı'] },
+  { key: 'tar', label: 'Tarih', subs: ['AYT Tarih-1', 'AYT Tarih-2'] },
+  { key: 'cog', label: 'Coğrafya', subs: ['AYT Coğrafya-1', 'AYT Coğrafya-2'] },
+  { key: 'fel', label: 'Felsefe', subs: ['AYT Felsefe'] },
+  { key: 'din', label: 'Din Kültürü', subs: ['AYT Din Kültürü ve Ahlak Bilgisi'] },
+  { key: 'mat', label: 'Matematik', subs: ['AYT Matematik', 'AYT Geometri'] },
+  { key: 'fiz', label: 'Fizik', subs: ['AYT Fizik'] },
+  { key: 'kim', label: 'Kimya', subs: ['AYT Kimya'] },
+  { key: 'biy', label: 'Biyoloji', subs: ['AYT Biyoloji'] },
+];
+
+/** Alanların gösterim sırası ve adları (backend `Student.StudyField`). */
+export const AYT_FIELDS = [
+  { value: 'say', label: 'Sayısal' },
+  { value: 'ea', label: 'Eşit Ağırlık' },
+  { value: 'soz', label: 'Sözel' },
+];
+
+/** Alan → o alanın AYT dersleri. Backend'deki `Student.AYT_FIELD_SUBJECTS`in
+ *  birebir aynısı; o eşleme genel bir uçtan yayınlanmadığı (yalnızca öğrenci
+ *  bazlı `/api/subjects/?student=&scope=field` var) için burada yansıtılıyor.
+ *  Ders adları katalogla aynı yazılmalı. */
+const AYT_FIELD_SUBJECTS = {
+  say: ['AYT Matematik', 'AYT Geometri', 'AYT Fizik', 'AYT Kimya', 'AYT Biyoloji'],
+  ea: ['AYT Matematik', 'AYT Geometri', 'AYT Türk Dili ve Edebiyatı', 'AYT Tarih-1', 'AYT Coğrafya-1'],
+  soz: ['AYT Türk Dili ve Edebiyatı', 'AYT Tarih-1', 'AYT Coğrafya-1', 'AYT Tarih-2',
+    'AYT Coğrafya-2', 'AYT Felsefe', 'AYT Din Kültürü ve Ahlak Bilgisi'],
 };
+
+/** Bir alanın AYT grupları: gruplar o alanın derslerine kırpılır, maksimum net
+ *  katalogdaki soru sayılarından toplanır. Böylece EA'da "Tarih" yalnız Tarih-1
+ *  (10 net) olur, Sözel'de Tarih-1+2 (21 net) olur — ve "Toplam" her alanda 80'i
+ *  aşamaz. Eskiden tek bir 80'lik ölçek kullanıldığı için AYT'de 90/80 gibi
+ *  imkânsız değerler çıkabiliyordu. */
+function aytGroupsFor(field, maxByLabel) {
+  const own = AYT_FIELD_SUBJECTS[field];
+  if (!own) return null;
+  const sum = (labels) => labels.reduce((a, l) => a + (maxByLabel[l] || 0), 0);
+  const groups = AYT_DIM_GROUPS
+    .map((g) => ({ ...g, subs: g.subs.filter((l) => own.includes(l)) }))
+    .filter((g) => g.subs.length)
+    .map((g) => ({ ...g, max: sum(g.subs) }));
+  return [{ key: 'total', label: 'Toplam', subs: own, max: sum(own) }, ...groups];
+}
 
 /** Bir öğrencinin bir net boyutundaki (tür + ders grubu) denemeler-arası ortalaması. */
 function dimAvg(exams, type, subs) {
@@ -44,13 +81,19 @@ function dimAvg(exams, type, subs) {
 
 /** Panoyu besleyen tüm türetilmiş veriyi döndürür. */
 export async function getDashboard() {
-  const [students, appts, programsRes, examsRes, tpRes] = await Promise.all([
+  const [students, appts, programsRes, examsRes, tpRes, subjects] = await Promise.all([
     listStudents(),
     listAppointments(),
     api.get('/programs/'),
     api.get('/exams/'),
     api.get('/topic-progress/'),
+    listSubjects(),          // maksimum netler katalogtaki soru sayılarından gelir
   ]);
+  // Ders etiketi → sınavdaki soru sayısı (= o dersten çıkarılabilecek en yüksek net).
+  const maxByLabel = Object.fromEntries(subjects.map((x) => [x.label, x.questionCount]));
+  const aytGroupsByField = Object.fromEntries(
+    AYT_FIELDS.map((f) => [f.value, aytGroupsFor(f.value, maxByLabel)])
+  );
   const programs = programsRes.data || [];
   const exams = examsRes.data || [];
   const tps = tpRes.data || [];
@@ -103,9 +146,13 @@ export async function getDashboard() {
       compliance = 0;
     }
 
+    // TYT herkes için aynı ölçek. AYT ise **öğrencinin kendi alanına** göre
+    // hesaplanır: EA öğrencisinin "Tarih"i Tarih-1'dir, Sözel'inki Tarih-1+2.
+    // Alanı olmayan öğrencinin AYT boyutu yoktur (kıyaslanacak ölçeği yok).
     const netDims = {};
-    Object.entries(NET_DIM_GROUPS).forEach(([type, groups]) => {
-      groups.forEach((g) => { netDims[`${type}_${g.key}`] = dimAvg(b.exams, type, g.subs); });
+    TYT_DIM_GROUPS.forEach((g) => { netDims[`tyt_${g.key}`] = dimAvg(b.exams, 'tyt', g.subs); });
+    (aytGroupsByField[s.study_field] || []).forEach((g) => {
+      netDims[`ayt_${g.key}`] = dimAvg(b.exams, 'ayt', g.subs);
     });
 
     return {
@@ -173,8 +220,14 @@ export async function getDashboard() {
     students: enriched, enrById, upcoming, kpis, needProgram,
     complianceRanked, netChanges, konuRanked, netSeries,
     netDimGroups: {
-      tyt: NET_DIM_GROUPS.tyt.map(({ key, label, max }) => ({ key, label, max })),
-      ayt: NET_DIM_GROUPS.ayt.map(({ key, label, max }) => ({ key, label, max })),
+      tyt: TYT_DIM_GROUPS.map(({ key, label, max }) => ({ key, label, max })),
+      // AYT'de grup listesi ve maksimumlar alana göre değişir.
+      ayt: Object.fromEntries(
+        AYT_FIELDS.map((f) => [
+          f.value,
+          (aytGroupsByField[f.value] || []).map(({ key, label, max }) => ({ key, label, max })),
+        ])
+      ),
     },
   };
 }
