@@ -659,3 +659,45 @@
 }
 
 .chipRemove:hover { color: var(--error); background: var(--error-bg); }
+
+/* Ders satırı başlığı: ad + satırı gizleme düğmesi */
+.rowName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rowRemove {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 1px;
+  display: flex;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.rowLabel:hover .rowRemove { opacity: 1; }
+.rowRemove:hover { color: var(--error); background: var(--error-bg); }
+.rowRemove:disabled { opacity: 0; cursor: default; }
+
+.rowAdd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.rowAddSelect { max-width: 220px; }
+
+.rowReset {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.7rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.rowReset:hover { color: var(--accent); }

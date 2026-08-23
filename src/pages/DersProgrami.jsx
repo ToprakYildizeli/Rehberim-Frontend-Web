@@ -21,7 +21,7 @@ import {
   assignBoard, assignTemplate, setRoutine, clearRoutine,
 } from '../api/templates';
 import {
-  listSubjects, listTaskTypes, listTopics, listBooks,
+  listSubjects, listFieldSubjects, listTaskTypes, listTopics, listBooks,
   BLOCK_KINDS, EXAM_SCOPES, blockLabel, blockColor,
 } from '../api/catalog';
 import { HOURS } from '../mocks/data';
@@ -52,6 +52,34 @@ const clampDays = (n) =>
   (Number.isFinite(n)
     ? Math.min(MAX_DAYS, Math.max(MIN_DAYS, Math.round(n)))
     : DEFAULT_DAY_COUNT);
+
+/* Ders satırı tercihleri yalnız bir görünüm ayarı; sunucuya yazılmıyor (yol
+   haritası A2 kararı), ama her açılışta sıfırlanmasın diye tarayıcıda saklanıyor. */
+function readRowPrefs(key) {
+  try {
+    const raw = window.localStorage.getItem(key);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeRowPrefs(key, rows) {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(rows));
+  } catch {
+    /* kota dolu / gizli mod — tercih kaydedilmez, akış bozulmaz */
+  }
+}
+
+function clearRowPrefs(key) {
+  try {
+    window.localStorage.removeItem(key);
+  } catch {
+    /* yok sayılabilir */
+  }
+}
 
 /** Bir başlangıç tarihinin seçilemez olup olmadığını söyleyen fonksiyon üretir.
  *
@@ -536,26 +564,72 @@ export default function DersProgrami() {
     return draftBlockFields(draft, subjectMap, taskTypeMap);
   }, [isBookMode, activeBook, bookBlockFields, draft, subjectMap, taskTypeMap]);
 
-  // Ders satırlı görünümün satırları: tahtadaki blokların dersleri + taslağınki
-  // (taslak satırı da olsun ki oraya sürükleyip bırakılabilsin).
+  // Ders satırlı görünümün satırları. Kullanıcının yönettiği bir liste: varsayılanı
+  // öğrencinin alanına düşen dersler (backend'den), üstüne ekleyip çıkarabiliyor.
+  // Blok içeren satırlar listede olmasa da gösterilir — hiçbir blok gizlenmemeli.
+  const [rowKeys, setRowKeys] = useState(null);
+
+  // Öğrenci (ya da genel mod) değişince varsayılan satırları kur. Kullanıcının
+  // önceki düzenlemesi varsa localStorage'dan geri gelir; görünüm tercihi olduğu
+  // için sunucuya yazılmıyor.
+  useEffect(() => {
+    let alive = true;
+    const storeKey = `dp-rows-${scope || 'genel'}`;
+    const saved = readRowPrefs(storeKey);
+    if (saved) { setRowKeys(saved); return () => { alive = false; }; }
+    setRowKeys(null);
+    listFieldSubjects(scope || undefined)
+      .then((subs) => { if (alive) setRowKeys(subs.map((x) => `sub-${x.id}`)); })
+      .catch(() => { if (alive) setRowKeys([]); });
+    return () => { alive = false; };
+  }, [scope]);
+
+  const setRows = useCallback((next) => {
+    setRowKeys(next);
+    writeRowPrefs(`dp-rows-${scope || 'genel'}`, next);
+  }, [scope]);
+
+  // Satır anahtarı → görünen ad/renk. Blok taşıyan satırlar için bloğun kendi
+  // alanlarından, boş satırlar için ders kataloğundan çözülür.
+  const rowInfo = useCallback((key) => {
+    const withBlock = (blocks ?? []).find((b) => subjectRowKey(b) === key);
+    if (withBlock) {
+      return { key, label: subjectRowLabel(withBlock), color: withBlock.subjectColor,
+        order: subjectRowOrder(withBlock) };
+    }
+    const fields = subjectRowFields(key, subjects);
+    return { key, label: subjectRowLabel(fields), color: fields.subjectColor,
+      order: subjectRowOrder(fields) };
+  }, [blocks, subjects]);
+
   const subjectRows = useMemo(() => {
-    const rows = new Map();
-    const add = (b) => {
-      const key = subjectRowKey(b);
-      if (rows.has(key)) return;
-      rows.set(key, {
-        key,
-        label: subjectRowLabel(b),
-        color: b.subjectColor,
-        order: subjectRowOrder(b),
-      });
-    };
-    (blocks ?? []).forEach(add);
-    if (draftFields) add(draftFields);
-    return [...rows.values()].sort(
+    const keys = new Set(rowKeys ?? []);
+    // Blok taşıyan ve taslağın satırı her hâlükârda görünür.
+    (blocks ?? []).forEach((b) => keys.add(subjectRowKey(b)));
+    if (draftFields) keys.add(subjectRowKey(draftFields));
+    return [...keys].map(rowInfo).sort(
       (a, b) => a.order - b.order || a.label.localeCompare(b.label, 'tr')
     );
-  }, [blocks, draftFields]);
+  }, [rowKeys, blocks, draftFields, rowInfo]);
+
+  // Henüz satırı olmayan, eklenebilir seçenekler.
+  const addableRows = useMemo(() => {
+    const shown = new Set(subjectRows.map((r) => r.key));
+    const opts = subjects
+      .map((x) => ({ key: `sub-${x.id}`, label: x.label }))
+      .concat([
+        { key: 'exam-tyt', label: 'Genel TYT' },
+        { key: 'exam-ayt', label: 'Genel AYT' },
+        { key: 'ext', label: 'Dış meşguliyet' },
+      ]);
+    return opts.filter((o) => !shown.has(o.key));
+  }, [subjects, subjectRows]);
+
+  /** Blok taşıyan satır silinemez — silinirse blokları görünmez olurdu. */
+  const rowHasBlocks = useCallback(
+    (key) => (blocks ?? []).some((b) => subjectRowKey(b) === key),
+    [blocks]
+  );
 
   // Kitap modunda seçili ders/kitap kütüphaneyle tutarlı kalsın (öğrenci değişince
   // ya da moda ilk geçişte ilk uygun ders+kitaba düşer).
@@ -705,13 +779,51 @@ export default function DersProgrami() {
                     <HourRow key={hour} hour={hour} days={days} blocks={blocks} onRemove={removeBlock} />
                   ))
                   : subjectRows.map((row) => (
-                    <SubjectRow key={row.key} row={row} days={days} blocks={blocks} onRemove={removeBlock} />
+                    <SubjectRow
+                      key={row.key}
+                      row={row}
+                      days={days}
+                      blocks={blocks}
+                      onRemove={removeBlock}
+                      onRemoveRow={(key) => setRows((rowKeys ?? []).filter((k) => k !== key))}
+                      canRemoveRow={!rowHasBlocks(row.key)}
+                    />
                   ))}
               </div>
-              {view === 'subjects' && subjectRows.length === 0 && (
-                <p className={s.previewHint}>
-                  Ders satırlı görünüm için önce bir blok ekleyin ya da sağdaki taslağı sürükleyin.
-                </p>
+              {view === 'subjects' && (
+                <div className={s.rowAdd}>
+                  <Select
+                    value=""
+                    aria-label="Satır ekle"
+                    className={s.rowAddSelect}
+                    disabled={addableRows.length === 0}
+                    onChange={(e) => {
+                      if (e.target.value) setRows([...(rowKeys ?? []), e.target.value]);
+                    }}
+                  >
+                    <option value="">
+                      {addableRows.length ? '+ Satır ekle…' : 'Tüm satırlar açık'}
+                    </option>
+                    {addableRows.map((o) => (
+                      <option value={o.key} key={o.key}>{o.label}</option>
+                    ))}
+                  </Select>
+                  {rowKeys != null && (
+                    <button
+                      type="button"
+                      className={s.rowReset}
+                      onClick={() => {
+                        clearRowPrefs(`dp-rows-${scope || 'genel'}`);
+                        setRowKeys(null);
+                        listFieldSubjects(scope || undefined)
+                          .then((subs) => setRowKeys(subs.map((x) => `sub-${x.id}`)))
+                          .catch(() => setRowKeys([]));
+                      }}
+                    >
+                      Varsayılana dön
+                    </button>
+                  )}
+                </div>
               )}
             </Card>
 
@@ -1399,12 +1511,24 @@ function ensureBlockValid(b) {
   return b;
 }
 
-function SubjectRow({ row, days, blocks, onRemove }) {
+function SubjectRow({ row, days, blocks, onRemove, onRemoveRow, canRemoveRow }) {
   return (
     <>
       <span className={s.rowLabel} title={row.label}>
         <span className={s.rowDot} style={{ background: row.color }} />
-        {row.label}
+        <span className={s.rowName}>{row.label}</span>
+        <button
+          type="button"
+          className={s.rowRemove}
+          disabled={!canRemoveRow}
+          title={canRemoveRow
+            ? `${row.label} satırını gizle`
+            : 'Bu satırda blok var; önce blokları kaldırın'}
+          aria-label={`${row.label} satırını gizle`}
+          onClick={() => onRemoveRow(row.key)}
+        >
+          <X size={10} />
+        </button>
       </span>
       {days.map((day) => (
         <SubjectCell

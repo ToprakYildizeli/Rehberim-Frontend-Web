@@ -44,8 +44,8 @@ export function subjectColor(name = '') {
 }
 
 /** GET /api/subjects/ → [{ id, name, label, category, color }] (33 gerçek ders). */
-export async function listSubjects() {
-  const { data } = await api.get('/subjects/');
+export async function listSubjects(params) {
+  const { data } = await api.get('/subjects/', params ? { params } : undefined);
   return data.map((x) => ({
     id: x.id,
     name: x.name,
@@ -54,6 +54,13 @@ export async function listSubjects() {
     questionCount: x.question_count ?? 0,   // sınavdaki soru sayısı (maks. net)
     color: subjectColor(x.label || x.name),
   }));
+}
+
+/** Öğrencinin **alanına düşen** dersler: tüm TYT + alanının AYT dersleri.
+ *  Ders satırlı tahtanın varsayılan satırlarını açmak için — kısıt değil, başlangıç
+ *  kümesi; kullanıcı satır ekleyip çıkarabilir. Alan→AYT eşlemesi backend'de. */
+export async function listFieldSubjects(studentId) {
+  return listSubjects(studentId ? { student: studentId, scope: 'field' } : { scope: 'field' });
 }
 
 /** GET /api/task-types/ → [{ id, name }] (çalışma metodları). */
