@@ -94,21 +94,32 @@
 .piePct { margin-left: auto; color: var(--text-muted); font-variant-numeric: tabular-nums; }
 
 /* ---------- Timetable grid ---------- */
+/* --cols = programın gün sayısı (esnek pencere); satır başındaki saat sütunu sabit. */
 .grid {
   display: grid;
-  grid-template-columns: 46px repeat(7, minmax(0, 1fr));
-  min-width: 600px;
+  grid-template-columns: 46px repeat(var(--cols, 7), minmax(0, 1fr));
+  min-width: min(600px, calc(46px + var(--cols, 7) * 86px));
 }
 
 .corner { border-bottom: 1px solid var(--border); }
 
 .dayHead {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
   text-align: center;
   font-size: 0.76rem;
   font-weight: 600;
   color: var(--text-secondary);
   padding: var(--space-2) 0 var(--space-3);
   border-bottom: 1px solid var(--border);
+}
+
+.dayHeadDate {
+  font-size: 0.62rem;
+  font-weight: 500;
+  color: var(--text-muted);
 }
 
 .hourLabel {
@@ -131,7 +142,9 @@
   transition: background 0.12s;
 }
 
-.cell:nth-child(8n + 1) { border-left: 1px solid var(--border); }
+/* Satırın ilk hücresine sol kenarlık. Sütun sayısı değişken olduğu için
+   nth-child aritmetiği yerine "saat etiketinden hemen sonraki hücre" kuralı. */
+.hourLabel + .cell { border-left: 1px solid var(--border); }
 
 .cellOver { background: var(--accent-subtle); }
 .cellBlocked { background: var(--danger-bg); }
@@ -204,9 +217,10 @@
 
 .railForm { display: flex; flex-direction: column; gap: var(--space-3); }
 
+/* Uzun pencerelerde (10-14 gün) sığmayan günler alt satıra sarar. */
 .dayPills {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(32px, 1fr));
   gap: 5px;
 }
 
@@ -500,4 +514,60 @@
 
 @media (max-width: 900px) {
   .sumBar { grid-template-columns: 1fr; }
+}
+
+/* ---------- Esnek program penceresi (A1) ---------- */
+.windowBar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.windowField { min-width: 140px; margin: 0; }
+
+.windowRange {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+  padding-bottom: 7px;
+}
+
+.windowRangeSub { font-size: 0.68rem; font-weight: 400; color: var(--text-muted); }
+
+.windowStudent {
+  margin-left: auto;
+  padding-bottom: 9px;
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}
+
+.windowError {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--error);
+  background: var(--error-bg);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+}
+
+.totalOutside { color: var(--text-muted); font-weight: 400; }
+
+.assignWindow { display: grid; grid-template-columns: 1fr 110px; gap: var(--space-3); }
+
+/* ---------- Dış meşguliyet blokları (A3) ---------- */
+/* Çalışma saatine sayılmadıkları için çizgili zemin ve soluk metinle ayrışırlar. */
+.blockExternal {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(255, 255, 255, 0.14) 0 6px,
+    transparent 6px 12px
+  );
 }

@@ -1,78 +1,145 @@
 /* Öğrenciye özel Ders Programı — gerçek backend (/api/programs/ + /api/tasks/).
-   Board hafta-günü + saat ile çalışır; backend Task tarihlidir. 7 günlük pencere
-   her günü tam bir kez kapsadığından tarih↔gün birebir eşlenir. */
-import api from './client';
-import { subjectColor } from './catalog';
 
-// DAYS id sırası (Pzt..Paz) — mocks/data.js ile aynı.
-const DAY_IDS = ['pzt', 'sal', 'car', 'per', 'cum', 'cmt', 'paz'];
+   Program penceresi esnektir: `start_date` + `day_count` (varsayılan 7). Tahtanın
+   sütunları pencerenin günleridir, bu yüzden bloklar hafta günüyle değil **gün
+   indeksiyle** (0 = pencerenin ilk günü) tutulur — 7 günden uzun pencerelerde
+   hafta günü tekrar edeceği için tek başına ayırt edici olmaz. */
+import api from './client';
+import { blockColor } from './catalog';
 
 const pad2 = (n) => String(n).padStart(2, '0');
-const isoDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-const parseDate = (str) => { const [y, m, d] = str.split('-').map(Number); return new Date(y, m - 1, d); };
-// JS getDay(): Paz=0..Cmt=6 → DAY_IDS (Pzt=0..Paz=6)
-const dayIdOf = (dateStr) => DAY_IDS[(parseDate(dateStr).getDay() + 6) % 7];
-const hourOf = (t) => (t ? parseInt(t.slice(0, 2), 10) : 0);
 
-/** startDate penceresinde (7 gün) verilen güne düşen tarihi bulur. */
-function dateForDay(startDate, dayId) {
-  const base = parseDate(startDate);
-  for (let i = 0; i < 7; i += 1) {
-    const d = new Date(base);
-    d.setDate(base.getDate() + i);
-    if (dayIdOf(isoDate(d)) === dayId) return isoDate(d);
-  }
-  return startDate;
+export const isoDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+export const parseDate = (str) => {
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+export const today = () => isoDate(new Date());
+export const addDays = (str, n) => {
+  const d = parseDate(str);
+  d.setDate(d.getDate() + n);
+  return isoDate(d);
+};
+export const daysBetween = (from, to) =>
+  Math.round((parseDate(to) - parseDate(from)) / 86400000);
+/** JS getDay() (Paz=0..Cmt=6) → backend weekday (Pzt=0..Paz=6). */
+export const weekdayOf = (str) => (parseDate(str).getDay() + 6) % 7;
+/** Verilen tarihi içeren haftanın Pazartesi'si. */
+export const mondayOf = (str) => addDays(str, -weekdayOf(str));
+
+const DAY_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+const MONTH_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+export const DEFAULT_DAY_COUNT = 7;
+
+/** Pencerenin sütunları: [{ index, date, weekday, short, dayNum, monthShort }] */
+export function windowDays(startDate, dayCount) {
+  return Array.from({ length: Math.max(1, dayCount) }, (_, index) => {
+    const date = addDays(startDate, index);
+    const d = parseDate(date);
+    return {
+      index,
+      date,
+      weekday: weekdayOf(date),
+      short: DAY_SHORT[weekdayOf(date)],
+      dayNum: d.getDate(),
+      monthShort: MONTH_SHORT[d.getMonth()],
+    };
+  });
 }
 
+/** "25 Ağu – 29 Ağu" biçiminde pencere aralığı (özet metinleri için). */
+export function windowRangeText(startDate, dayCount) {
+  const days = windowDays(startDate, dayCount);
+  const first = days[0];
+  const last = days[days.length - 1];
+  return `${first.dayNum} ${first.monthShort} – ${last.dayNum} ${last.monthShort}`;
+}
+
+const hourOf = (t) => (t ? parseInt(t.slice(0, 2), 10) : 0);
+
 /** Backend Task → board bloğu (denormalize gösterim alanlarıyla). */
-function mapTaskToBlock(task) {
-  return {
+function mapTaskToBlock(task, startDate) {
+  const b = {
     id: `t${task.id}`,
     taskId: task.id,
-    day: dayIdOf(task.date),
+    dayIndex: daysBetween(startDate, task.date),
     start: hourOf(task.start_time),
     duration: (task.duration_minutes || 60) / 60,
+    kind: task.kind || 'study',
+    examScope: task.exam_scope || '',
+    countsAsStudy: task.counts_as_study !== false,
     subject: task.subject != null ? String(task.subject) : '',
     subjectLabel: task.subject_label,
-    subjectColor: subjectColor(task.subject_label || ''),
     type: task.task_type != null ? String(task.task_type) : '',
     typeName: task.task_type_name,
     topic: task.title || '',
     book: task.book != null ? task.book : null,
     bookLabel: task.book_label || null,
   };
+  return { ...b, subjectColor: blockColor(b) };
 }
 
-// Diff için scope başına son yüklenen durum: { programId, startDate, blocks }
+/** Board bloğu → backend Task gövdesi. Dış bloklarda ders/metod/kitap gitmez. */
+export function blockToTaskPayload(b, startDate) {
+  const isExternal = b.kind === 'external';
+  return {
+    kind: b.kind || 'study',
+    exam_scope: b.examScope || '',
+    subject: !isExternal && b.subject ? Number(b.subject) : null,
+    task_type: !isExternal && b.type ? Number(b.type) : null,
+    book: !isExternal && b.book ? Number(b.book) : null,
+    title: b.topic || '',
+    date: addDays(startDate, b.dayIndex),
+    start_time: `${pad2(Math.floor(b.start))}:00`,
+    duration_minutes: Math.round(b.duration * 60),
+  };
+}
+
+/** Board bloklarının çalışma saati toplamı — dış meşguliyetler sayılmaz. */
+export function studyHours(blocks) {
+  return (blocks || []).reduce((sum, b) => (b.kind === 'external' ? sum : sum + b.duration), 0);
+}
+
+/** Dış meşguliyet bloklarının toplamı (ayrı gösterilir). */
+export function externalHours(blocks) {
+  return (blocks || []).reduce((sum, b) => (b.kind === 'external' ? sum + b.duration : sum), 0);
+}
+
+// Diff için scope başına son yüklenen durum: { programId, startDate, dayCount, blocks }
 const cache = new Map();
 
-/** Öğrencinin mevcut haftasının programını board bloklarına çevirir. */
+function programToEntry(program) {
+  const startDate = program ? program.start_date : today();
+  const dayCount = program ? program.day_count || DEFAULT_DAY_COUNT : DEFAULT_DAY_COUNT;
+  return {
+    programId: program ? program.id : null,
+    startDate,
+    dayCount,
+    blocks: program ? program.tasks.map((t) => mapTaskToBlock(t, startDate)) : [],
+  };
+}
+
+/** Öğrencinin güncel programını pencere + bloklar olarak döndürür. */
 export async function getStudentProgram(studentId) {
   const { data } = await api.get('/programs/');
-  const mine = data.filter((p) => String(p.student) === String(studentId));
-  const today = isoDate(new Date());
-  const current =
-    mine.find((p) => p.start_date <= today && today <= p.end_date) ||
-    mine.sort((a, b) => (a.start_date < b.start_date ? 1 : -1))[0] ||
-    null;
+  const now = today();
+  const mine = data
+    .filter((p) => String(p.student) === String(studentId))
+    .sort((a, b) => (a.start_date < b.start_date ? 1 : -1));
+  const current = mine.find((p) => p.start_date <= now && now <= p.end_date) || mine[0] || null;
 
-  const blocks = current ? current.tasks.map(mapTaskToBlock) : [];
-  const entry = {
-    programId: current ? current.id : null,
-    startDate: current ? current.start_date : today,
-    blocks,
-  };
+  const entry = programToEntry(current);
   cache.set(String(studentId), entry);
   // Referans kopyası döndür (board mutasyonu cache'i bozmasın)
-  return blocks.map((b) => ({ ...b }));
+  return { ...entry, blocks: entry.blocks.map((b) => ({ ...b })) };
 }
 
 /** Öğrencinin TÜM programlarını (geçmiş dahil) salt-okunur döndürür.
  *  Detay sayfasının "Ders Programı" sekmesi için; en yeni başta sıralı. */
 export async function getStudentPrograms(studentId) {
   const { data } = await api.get('/programs/');
-  const today = isoDate(new Date());
+  const now = today();
   return data
     .filter((p) => String(p.student) === String(studentId))
     .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))
@@ -80,24 +147,41 @@ export async function getStudentPrograms(studentId) {
       id: p.id,
       startDate: p.start_date,
       endDate: p.end_date,
-      isCurrent: p.start_date <= today && today <= p.end_date,
-      blocks: (p.tasks || []).map(mapTaskToBlock),
+      dayCount: p.day_count || DEFAULT_DAY_COUNT,
+      isCurrent: p.start_date <= now && now <= p.end_date,
+      blocks: (p.tasks || []).map((t) => mapTaskToBlock(t, p.start_date)),
     }));
 }
 
-/** Atama için önerilen sıradaki boş hafta başlangıcı (en son program end+1, yoksa bugün). */
+/** Atama için önerilen başlangıç: öğrenciye program atanmamış ilk gün.
+ *  Backend `first_free_day` ile aynı kural (son programın bitişinden sonraki gün,
+ *  geçmişte kalıyorsa bugün). */
 export async function suggestNextWeekStart(studentId) {
   const progs = await getStudentPrograms(studentId);   // en yeni başta
-  if (!progs.length) return isoDate(new Date());
-  const d = parseDate(progs[0].endDate);
-  d.setDate(d.getDate() + 1);
-  return isoDate(d);
+  const now = today();
+  if (!progs.length) return now;
+  const next = addDays(progs[0].endDate, 1);
+  return next < now ? now : next;
 }
 
-/** Board değişikliklerini backend'e yazar; reconcile edilmiş blokları döndürür. */
-export async function persistStudentSchedule(studentId, nextBlocks) {
+/** Mevcut programın penceresini değiştirir (başlangıç ve/veya gün sayısı).
+ *  Backend örtüşen aralığı reddeder; hata çağırana yükselir. */
+export async function updateProgramWindow(programId, { startDate, dayCount }) {
+  const body = {};
+  if (startDate) body.start_date = startDate;
+  if (dayCount) body.day_count = dayCount;
+  const { data } = await api.patch(`/programs/${programId}/`, body);
+  const key = [...cache.entries()].find(([, e]) => e.programId === programId)?.[0];
+  if (key) cache.set(key, programToEntry(data));
+  return data;
+}
+
+/** Board değişikliklerini backend'e yazar; reconcile edilmiş blokları döndürür.
+ *  `win` = { startDate, dayCount } — program yoksa bu pencerede oluşturulur. */
+export async function persistStudentSchedule(studentId, nextBlocks, win) {
   const key = String(studentId);
-  const entry = cache.get(key) || { programId: null, startDate: isoDate(new Date()), blocks: [] };
+  const entry = cache.get(key)
+    || { programId: null, startDate: win.startDate, dayCount: win.dayCount, blocks: [] };
   const prevById = new Map(entry.blocks.map((b) => [b.id, b]));
 
   // Program yoksa ve eklenen blok varsa önce oluştur.
@@ -105,28 +189,21 @@ export async function persistStudentSchedule(studentId, nextBlocks) {
   if (programId == null && nextBlocks.length > 0) {
     const { data } = await api.post('/programs/', {
       student: Number(studentId),
-      start_date: entry.startDate,
+      start_date: win.startDate,
+      day_count: win.dayCount,
       schedule_type: 'timed',
     });
     programId = data.id;
     entry.programId = data.id;
     entry.startDate = data.start_date;
+    entry.dayCount = data.day_count;
   }
-
-  const taskPayload = (b) => ({
-    subject: b.subject ? Number(b.subject) : null,
-    task_type: b.type ? Number(b.type) : null,
-    book: b.book ? Number(b.book) : null,
-    title: b.topic || '',
-    date: dateForDay(entry.startDate, b.day),
-    start_time: `${pad2(Math.floor(b.start))}:00`,
-    duration_minutes: Math.round(b.duration * 60),
-  });
+  const startDate = entry.startDate;
 
   const changed = (a, b) =>
-    a.day !== b.day || a.start !== b.start || a.duration !== b.duration ||
+    a.dayIndex !== b.dayIndex || a.start !== b.start || a.duration !== b.duration ||
     a.subject !== b.subject || a.type !== b.type || a.topic !== b.topic ||
-    a.book !== b.book;
+    a.book !== b.book || a.kind !== b.kind || a.examScope !== b.examScope;
 
   const nextIds = new Set(nextBlocks.map((b) => b.id));
   // Silinenler
@@ -138,13 +215,13 @@ export async function persistStudentSchedule(studentId, nextBlocks) {
   const result = [];
   const ops = nextBlocks.map(async (b) => {
     if (!b.taskId) {
-      const { data } = await api.post(`/programs/${programId}/tasks/`, taskPayload(b));
-      result.push(mapTaskToBlock(data));
+      const { data } = await api.post(`/programs/${programId}/tasks/`, blockToTaskPayload(b, startDate));
+      result.push(mapTaskToBlock(data, startDate));
     } else {
       const prev = prevById.get(b.id);
       if (prev && changed(prev, b)) {
-        const { data } = await api.patch(`/tasks/${b.taskId}/`, taskPayload(b));
-        result.push(mapTaskToBlock(data));
+        const { data } = await api.patch(`/tasks/${b.taskId}/`, blockToTaskPayload(b, startDate));
+        result.push(mapTaskToBlock(data, startDate));
       } else {
         result.push(b);
       }

@@ -9,14 +9,21 @@ import {
   Card, Button, Field, Select, Input, PillGroup, Spinner, Modal,
 } from '../components/ui';
 import { listStudents } from '../api/students';
-import { getSchedule, saveSchedule } from '../api/schedule';
-import { suggestNextWeekStart, getStudentPrograms } from '../api/programs';
+import { getSchedule, saveSchedule, setGeneralWindow } from '../api/schedule';
+import {
+  suggestNextWeekStart, getStudentPrograms, updateProgramWindow,
+  windowDays, windowRangeText, studyHours, externalHours,
+  addDays, DEFAULT_DAY_COUNT,
+} from '../api/programs';
 import {
   listTemplates, createTemplate, updateTemplate, deleteTemplate, templateToBlocks,
   assignBoard, assignTemplate, setRoutine, clearRoutine,
 } from '../api/templates';
-import { listSubjects, listTaskTypes, listTopics, listBooks } from '../api/catalog';
-import { DAYS, HOURS } from '../mocks/data';
+import {
+  listSubjects, listTaskTypes, listTopics, listBooks,
+  BLOCK_KINDS, EXAM_SCOPES, blockLabel, blockColor,
+} from '../api/catalog';
+import { HOURS } from '../mocks/data';
 import s from './DersProgrami.module.css';
 
 const ROW_H = 38;
@@ -28,6 +35,20 @@ const CATEGORIES = [
   { value: 'tyt', label: 'TYT' },
   { value: 'ayt', label: 'AYT' },
 ];
+/** Program uzunluğu seçenekleri (backend 1-31 kabul eder). */
+const DAY_COUNTS = [3, 5, 7, 10, 14];
+
+/** Backend hata gövdesinden ilk okunabilir mesajı çıkarır. */
+function apiMessage(err, fallback) {
+  const data = err?.response?.data;
+  if (typeof data === 'string') return data;
+  if (data && typeof data === 'object') {
+    const first = Object.values(data)[0];
+    if (Array.isArray(first) && first.length) return String(first[0]);
+    if (typeof first === 'string') return first;
+  }
+  return fallback;
+}
 
 // Kütüphaneden blok eklenince metod (task_type) kitabın formatından varsayılır;
 // kullanıcı bloğu ekledikten sonra dilerse değiştirir. Okuma kitabında metod yok.
@@ -41,12 +62,13 @@ const FORMAT_TO_TYPE = {
 const fmtHour = (h) => `${String(h).padStart(2, '0')}:00`;
 const timeRange = (b) => `${fmtHour(b.start)}-${fmtHour(b.start + b.duration)}`;
 
-/** True when [start, start+duration) on `day` collides with an existing block. */
-function overlaps(blocks, day, start, duration, ignoreId) {
+/** True when [start, start+duration) on `dayIndex` collides with an existing block.
+ *  Dış meşguliyet blokları da sayılır — okuldayken çalışma bloğu konulamaz. */
+function overlaps(blocks, dayIndex, start, duration, ignoreId) {
   return blocks.some(
     (b) =>
       b.id !== ignoreId &&
-      b.day === day &&
+      b.dayIndex === dayIndex &&
       start < b.start + b.duration &&
       b.start < start + duration
   );
@@ -63,6 +85,11 @@ export default function DersProgrami() {
   const [library, setLibrary] = useState([]);
   const [activeDrag, setActiveDrag] = useState(null);
 
+  // Program penceresi: başlangıç günü + gün sayısı. Tahtanın sütunları budur.
+  const [win, setWin] = useState({ startDate: null, dayCount: DEFAULT_DAY_COUNT });
+  const [programId, setProgramId] = useState(null);
+  const [windowError, setWindowError] = useState('');
+
   // Şablonlar + atama
   const [templates, setTemplates] = useState([]);
   const [assignSource, setAssignSource] = useState(null); // {type:'board'} | {type:'template',id,name}
@@ -76,6 +103,7 @@ export default function DersProgrami() {
   const [catalogError, setCatalogError] = useState(false);
 
   const [draft, setDraft] = useState({
+    kind: 'study', examScope: 'tyt', externalTitle: '',
     category: 'tyt', subject: '', type: '', topic: '', book: '', duration: 1, days: [],
   });
 
@@ -106,6 +134,8 @@ export default function DersProgrami() {
     (bk) => {
       const typeName = FORMAT_TO_TYPE[bk.bookFormat];
       return {
+        kind: 'study',
+        examScope: '',
         subject: bk.subject || '',
         subjectLabel: bk.subjectLabel || bk.label,
         subjectColor: bk.color,
@@ -142,6 +172,15 @@ export default function DersProgrami() {
     return () => { alive = false; };
   }, []);
 
+  // Pencere daralınca dışarıda kalan gün seçimleri düşer.
+  useEffect(() => {
+    setDraft((d) =>
+      d.days.some((i) => i >= win.dayCount)
+        ? { ...d, days: d.days.filter((i) => i < win.dayCount) }
+        : d
+    );
+  }, [win.dayCount]);
+
   // Seçili derse göre konu kataloğunu çek; ders değişince konuyu sıfırla.
   useEffect(() => {
     let alive = true;
@@ -157,10 +196,13 @@ export default function DersProgrami() {
   useEffect(() => {
     let alive = true;
     setBlocks(null);
+    setWindowError('');
     getSchedule(scope).then((d) => {
       if (!alive) return;
-      setBlocks(d);
-      lastWeek.current = d;
+      setBlocks(d.blocks);
+      setWin({ startDate: d.startDate, dayCount: d.dayCount });
+      setProgramId(d.programId);
+      lastWeek.current = d.blocks;
     });
     if (scope) {
       listBooks(scope).then((d) => { if (alive) setLibrary(d); });
@@ -173,11 +215,39 @@ export default function DersProgrami() {
   const commit = useCallback(
     (next) => {
       setBlocks(next);                       // iyimser güncelleme
-      saveSchedule(scope, next)
-        .then((saved) => { if (saved) setBlocks(saved); })  // geçici id'leri gerçek task id'leriyle değiştir
+      saveSchedule(scope, next, win)
+        .then((saved) => {
+          if (!saved) return;
+          // Öğrenci modunda ilk blokla birlikte program açılmış olabilir.
+          if (scope && programId == null) getSchedule(scope).then((d) => setProgramId(d.programId));
+          setBlocks(saved);                  // geçici id'ler → gerçek task id'leri
+        })
         .catch(() => {});
     },
-    [scope]
+    [scope, win, programId]
+  );
+
+  /** Pencereyi değiştirir. Program varsa backend'e PATCH'lenir (örtüşme reddedilir). */
+  const changeWindow = useCallback(
+    async (patch) => {
+      const next = { ...win, ...patch };
+      setWindowError('');
+      if (!scope) {
+        setGeneralWindow(next);
+        setWin(next);
+        return;
+      }
+      if (programId == null) { setWin(next); return; }
+      try {
+        const saved = await updateProgramWindow(programId, next);
+        setWin({ startDate: saved.start_date, dayCount: saved.day_count });
+        const fresh = await getSchedule(scope);
+        setBlocks(fresh.blocks);
+      } catch (err) {
+        setWindowError(apiMessage(err, 'Pencere değiştirilemedi.'));
+      }
+    },
+    [win, scope, programId]
   );
 
   // Öğrenci geçmişi (alttaki özet çubuğu: geçen hafta + toplam)
@@ -201,11 +271,11 @@ export default function DersProgrami() {
       );
       if (update) {
         try {
-          await updateTemplate(loadedTemplate.id, loadedTemplate.name, blocks || []);
+          await updateTemplate(loadedTemplate.id, loadedTemplate.name, blocks || [], win.startDate);
           await reloadTemplates();
           window.alert(`"${loadedTemplate.name}" güncellendi.`);
-        } catch {
-          window.alert('Şablon güncellenemedi.');
+        } catch (err) {
+          window.alert(apiMessage(err, 'Şablon güncellenemedi.'));
         }
         return;
       }
@@ -213,18 +283,26 @@ export default function DersProgrami() {
     const name = window.prompt('Şablon adı (ör. "Sayısal 1 default"):');
     if (!name || !name.trim()) return;
     try {
-      const created = await createTemplate(name.trim(), blocks || []);
+      const created = await createTemplate(name.trim(), blocks || [], win.startDate);
       await reloadTemplates();
       setLoadedTemplate({ id: created.id, name: created.name });   // artık bu şablonu düzenliyoruz
       window.alert(`"${name.trim()}" şablonu kaydedildi.`);
-    } catch {
-      window.alert('Şablon kaydedilemedi (aynı isim olabilir).');
+    } catch (err) {
+      window.alert(apiMessage(err, 'Şablon kaydedilemedi (aynı isim olabilir).'));
     }
   }
 
   function handleLoadTemplate(tpl) {
-    commit(templateToBlocks(tpl));   // tahtaya yükle (mode'a göre kaydedilir)
+    // Şablon hafta gününe göre saklanır; pencereye düşmeyen günler atlanır.
+    const { blocks: loaded, skipped } = templateToBlocks(tpl, win.startDate, win.dayCount);
+    commit(loaded);                                      // tahtaya yükle (mode'a göre kaydedilir)
     setLoadedTemplate({ id: tpl.id, name: tpl.name });   // düzenlenen şablon = bu obje
+    if (skipped > 0) {
+      window.alert(
+        `${skipped} blok bu ${win.dayCount} günlük pencereye düşmediği için yüklenmedi. `
+        + 'Gün sayısını artırıp yeniden yükleyebilirsin.'
+      );
+    }
   }
 
   async function handleDeleteTemplate(id) {
@@ -246,9 +324,12 @@ export default function DersProgrami() {
     await reloadTemplates();
   }
 
-  const totalHours = useMemo(
-    () => (blocks ?? []).reduce((sum, b) => sum + b.duration, 0),
-    [blocks]
+  // Çalışma saati dış meşguliyetleri saymaz; onlar ayrı gösterilir.
+  const totalHours = useMemo(() => studyHours(blocks ?? []), [blocks]);
+  const outsideHours = useMemo(() => externalHours(blocks ?? []), [blocks]);
+  const days = useMemo(
+    () => (win.startDate ? windowDays(win.startDate, win.dayCount) : []),
+    [win.startDate, win.dayCount]
   );
 
   const sensors = useSensors(
@@ -264,18 +345,19 @@ export default function DersProgrami() {
     const { active, over } = event;
     if (!over) return;
 
-    const [day, hourStr] = String(over.id).split(':');
+    const [dayStr, hourStr] = String(over.id).split(':');
+    const dayIndex = Number(dayStr);
     const start = Number(hourStr);
     const payload = active.data.current;
     const duration = payload.duration ?? 1;
 
     if (start + duration > HOURS[HOURS.length - 1] + 1) return;
-    if (overlaps(blocks, day, start, duration, payload.blockId)) return;
+    if (overlaps(blocks, dayIndex, start, duration, payload.blockId)) return;
 
-    if (payload.kind === 'new') {
-      commit([...blocks, { ...blockFromPayload(payload), id: `b${Date.now()}`, day, start, duration }]);
+    if (payload.dragKind === 'new') {
+      commit([...blocks, { ...blockFromPayload(payload), id: `b${Date.now()}`, dayIndex, start, duration }]);
     } else {
-      commit(blocks.map((b) => (b.id === payload.blockId ? { ...b, day, start } : b)));
+      commit(blocks.map((b) => (b.id === payload.blockId ? { ...b, dayIndex, start } : b)));
     }
   }
 
@@ -298,16 +380,16 @@ export default function DersProgrami() {
     if (draft.days.length === 0 || !draftFields) return;
     const base = draftFields;
     let next = [...blocks];
-    draft.days.forEach((day) => {
+    draft.days.forEach((dayIndex) => {
       const slot = HOURS.find(
         (h) =>
           h + draft.duration <= HOURS[HOURS.length - 1] + 1 &&
-          !overlaps(next, day, h, draft.duration)
+          !overlaps(next, dayIndex, h, draft.duration)
       );
       if (slot === undefined) return;
       next = [
         ...next,
-        { ...base, id: `b${Date.now()}-${day}`, day, start: slot, duration: draft.duration },
+        { ...base, id: `b${Date.now()}-${dayIndex}`, dayIndex, start: slot, duration: draft.duration },
       ];
     });
     commit(next);
@@ -338,7 +420,12 @@ export default function DersProgrami() {
     () => (mode === 'ogrenci' ? [...CATEGORIES, { value: 'kitap', label: 'Kitap' }] : CATEGORIES),
     [mode]
   );
-  const isBookMode = draft.category === 'kitap';
+  // Kitap yalnız çalışma bloğunda anlamlı; dış/deneme bloklarında kaynak kitap yok.
+  const isBookMode = draft.kind === 'study' && draft.category === 'kitap';
+  const isExternal = draft.kind === 'external';
+  const isGeneralExam = draft.kind === 'exam' && Boolean(draft.examScope);
+  // Ders/metod/konu alanları: dış blokta ve genel denemede gösterilmez.
+  const showSubjectFields = !isExternal && !isGeneralExam;
 
   // Kitap modu: öğrencinin ders-kitaplarındaki dersler + seçilen derse göre kitaplar.
   const bookSubjects = useMemo(() => {
@@ -408,7 +495,10 @@ export default function DersProgrami() {
         </div>
 
         <div className={s.toolbarRight}>
-          <span className={s.totalPill}>Toplam: {totalHours} saat</span>
+          <span className={s.totalPill}>
+            Çalışma: {totalHours} saat
+            {outsideHours > 0 && <span className={s.totalOutside}> · +{outsideHours} dış</span>}
+          </span>
           <Button variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
             <Bookmark size={13} /> Şablon Kaydet
           </Button>
@@ -434,11 +524,40 @@ export default function DersProgrami() {
         </div>
       </div>
 
-      {mode === 'ogrenci' && activeStudent && (
-        <p className={s.hint}>
-          {activeStudent.name} için haftalık programı düzenle.
-        </p>
+      {win.startDate && (
+        <div className={s.windowBar}>
+          <Field label="Başlangıç" className={s.windowField}>
+            <Input
+              type="date"
+              value={win.startDate}
+              onChange={(e) => e.target.value && changeWindow({ startDate: e.target.value })}
+            />
+          </Field>
+          <Field label="Gün sayısı" className={s.windowField}>
+            <Select
+              value={win.dayCount}
+              onChange={(e) => changeWindow({ dayCount: Number(e.target.value) })}
+            >
+              {DAY_COUNTS.map((n) => <option key={n} value={n}>{n} gün</option>)}
+              {!DAY_COUNTS.includes(win.dayCount) && (
+                <option value={win.dayCount}>{win.dayCount} gün</option>
+              )}
+            </Select>
+          </Field>
+          <span className={s.windowRange}>
+            {windowRangeText(win.startDate, win.dayCount)}
+            <span className={s.windowRangeSub}>
+              {programId != null
+                ? 'Bu programın penceresi — değiştirince kaydedilir'
+                : 'Atamadan önce serbestçe değiştirebilirsin'}
+            </span>
+          </span>
+          {mode === 'ogrenci' && activeStudent && (
+            <span className={s.windowStudent}>{activeStudent.name}</span>
+          )}
+        </div>
       )}
+      {windowError && <p className={s.windowError}>{windowError}</p>}
 
       {!blocks ? (
         <div style={{ display: 'grid', placeItems: 'center', padding: 60 }}>
@@ -453,14 +572,17 @@ export default function DersProgrami() {
         >
           <div className={s.layout}>
             <Card className={s.gridCard}>
-              <div className={s.grid}>
+              <div className={s.grid} style={{ '--cols': days.length }}>
                 <span className={s.corner} />
-                {DAYS.map((d) => (
-                  <span className={s.dayHead} key={d.id}>{d.short}</span>
+                {days.map((d) => (
+                  <span className={s.dayHead} key={d.index}>
+                    {d.short}
+                    <span className={s.dayHeadDate}>{d.dayNum} {d.monthShort}</span>
+                  </span>
                 ))}
 
                 {HOURS.map((hour) => (
-                  <Row key={hour} hour={hour} blocks={blocks} onRemove={removeBlock} />
+                  <Row key={hour} hour={hour} days={days} blocks={blocks} onRemove={removeBlock} />
                 ))}
               </div>
             </Card>
@@ -481,6 +603,51 @@ export default function DersProgrami() {
               ) : (
                 <>
                   <div className={s.railForm}>
+                    <Field label="Blok Türü">
+                      <PillGroup
+                        className={s.catToggle}
+                        options={BLOCK_KINDS}
+                        value={draft.kind}
+                        onChange={(val) =>
+                          setDraft((d) => ({
+                            ...d,
+                            kind: val,
+                            // Denemeye geçince varsayılan genel TYT; çalışmaya dönünce kapsam düşer.
+                            examScope: val === 'exam' ? (d.examScope || 'tyt') : '',
+                            // Dış/deneme bloğunda kitap kaynağı yok.
+                            category: val === 'study' ? d.category : 'tyt',
+                            book: val === 'study' ? d.book : '',
+                          }))
+                        }
+                      />
+                    </Field>
+
+                    {isExternal && (
+                      <Field label="Ad">
+                        <Input
+                          value={draft.externalTitle}
+                          placeholder="Okul, antrenman, doktor…"
+                          onChange={(e) => setDraft((d) => ({ ...d, externalTitle: e.target.value }))}
+                        />
+                      </Field>
+                    )}
+
+                    {draft.kind === 'exam' && (
+                      <Field label="Deneme Kapsamı">
+                        <Select
+                          value={draft.examScope}
+                          onChange={(e) => setDraft((d) => ({ ...d, examScope: e.target.value }))}
+                        >
+                          {EXAM_SCOPES.map((x) => (
+                            <option value={x.value} key={x.value}>{x.label}</option>
+                          ))}
+                          <option value="">Ders bazlı deneme…</option>
+                        </Select>
+                      </Field>
+                    )}
+
+                    {showSubjectFields && (
+                    <>
                     <Field label="Tür">
                       <PillGroup
                         className={s.catToggle}
@@ -565,6 +732,8 @@ export default function DersProgrami() {
                         </Field>
                       </>
                     )}
+                    </>
+                    )}
 
                     <Field label="Süre">
                       <Select
@@ -589,24 +758,32 @@ export default function DersProgrami() {
                       </p>
                     </>
                   ) : (
-                    <p className={s.previewHint}>Önce bu öğrencinin kütüphanesinden bir kitap seçin.</p>
+                    <p className={s.previewHint}>
+                      {isExternal
+                        ? 'Dış meşguliyet bloğu için bir ad girin.'
+                        : 'Önce bu öğrencinin kütüphanesinden bir kitap seçin.'}
+                    </p>
                   )}
 
-                  <div className={s.dayPills} style={{ marginTop: 'var(--space-3)' }}>
-                    {DAYS.map((d) => (
+                  <div
+                    className={s.dayPills}
+                    style={{ '--cols': days.length, marginTop: 'var(--space-3)' }}
+                  >
+                    {days.map((d) => (
                       <button
-                        key={d.id}
+                        key={d.index}
                         type="button"
-                        className={`${s.dayPill} ${draft.days.includes(d.id) ? s.dayPillActive : ''}`}
+                        className={`${s.dayPill} ${draft.days.includes(d.index) ? s.dayPillActive : ''}`}
+                        title={`${d.dayNum} ${d.monthShort}`}
                         onClick={() =>
                           setDraft((prev) => ({
                             ...prev,
-                            days: prev.days.includes(d.id)
-                              ? prev.days.filter((x) => x !== d.id)
-                              : [...prev.days, d.id],
+                            days: prev.days.includes(d.index)
+                              ? prev.days.filter((x) => x !== d.index)
+                              : [...prev.days, d.index],
                           }))
                         }
-                        aria-pressed={draft.days.includes(d.id)}
+                        aria-pressed={draft.days.includes(d.index)}
                       >
                         {d.short}
                       </button>
@@ -652,6 +829,8 @@ export default function DersProgrami() {
           students={students}
           defaultStudentId={mode === 'ogrenci' ? studentId : ''}
           blocks={blocks || []}
+          boardStart={win.startDate}
+          boardDayCount={win.dayCount}
           onClose={() => setAssignSource(null)}
         />
       )}
@@ -735,10 +914,11 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
   );
 }
 
-/** Atama modalı — öğrenci + sıradaki boş hafta (değiştirilebilir) seçilir. */
-function AssignModal({ source, students, defaultStudentId, blocks, onClose }) {
+/** Atama modalı — öğrenci + pencere (başlangıç + gün sayısı) seçilir. */
+function AssignModal({ source, students, defaultStudentId, blocks, boardStart, boardDayCount, onClose }) {
   const [studentId, setStudentId] = useState(defaultStudentId || String(students[0]?.id || ''));
   const [date, setDate] = useState('');
+  const [dayCount, setDayCount] = useState(boardDayCount || DEFAULT_DAY_COUNT);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
@@ -753,13 +933,14 @@ function AssignModal({ source, students, defaultStudentId, blocks, onClose }) {
   async function confirm() {
     if (!studentId) return;
     setBusy(true); setError('');
+    const win = { startDate: date || undefined, dayCount };
     try {
       const prog = source.type === 'template'
-        ? await assignTemplate(source.id, studentId, date || undefined)
-        : await assignBoard(studentId, blocks, date || undefined);
+        ? await assignTemplate(source.id, studentId, win)
+        : await assignBoard(studentId, blocks, boardStart, win);
       setResult(prog);
-    } catch {
-      setError('Atama başarısız oldu.');
+    } catch (err) {
+      setError(apiMessage(err, 'Atama başarısız oldu.'));
     } finally {
       setBusy(false);
     }
@@ -774,7 +955,9 @@ function AssignModal({ source, students, defaultStudentId, blocks, onClose }) {
       {result ? (
         <div className={s.assignForm}>
           <p><strong>{result.student_name}</strong> için program atandı.</p>
-          <p className={s.assignWeek}>{result.start_date} – {result.end_date} haftası · {result.tasks?.length || 0} görev</p>
+          <p className={s.assignWeek}>
+            {result.start_date} – {result.end_date} ({result.day_count} gün) · {result.tasks?.length || 0} görev
+          </p>
           <Button block onClick={onClose}>Kapat</Button>
         </div>
       ) : (
@@ -784,11 +967,22 @@ function AssignModal({ source, students, defaultStudentId, blocks, onClose }) {
               {students.map((st) => <option key={st.id} value={st.id}>{st.name} · {st.grade}</option>)}
             </Select>
           </Field>
-          <Field label="Başlangıç (görüşme günü)">
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </Field>
+          <div className={s.assignWindow}>
+            <Field label="Başlangıç (görüşme günü)">
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </Field>
+            <Field label="Gün sayısı">
+              <Select value={dayCount} onChange={(e) => setDayCount(Number(e.target.value))}>
+                {DAY_COUNTS.map((n) => <option key={n} value={n}>{n} gün</option>)}
+              </Select>
+            </Field>
+          </div>
           <p className={s.assignHint}>
-            Sıradaki boş hafta önerildi; dilersen değiştir. Dolu haftaya denk gelirse otomatik bir sonrakine kayar.
+            {date
+              ? `Bitiş: ${addDays(date, dayCount - 1)}. `
+              : ''}
+            Program atanmamış ilk gün önerildi; dilersen değiştir. Aralık öğrencinin
+            mevcut bir programıyla çakışamaz.
           </p>
           {noBoard && <p className={s.assignHint}>Board boş — önce blok ekleyin.</p>}
           {error && <p className={s.assignError}>{error}</p>}
@@ -804,15 +998,18 @@ function AssignModal({ source, students, defaultStudentId, blocks, onClose }) {
   );
 }
 
-/** Bloklardan saat ağırlığı özeti üretir (toplam, TYT/AYT %, ders donut'u). */
-function computeWeights(blocks, subjectMap) {
-  const total = (blocks || []).reduce((sum, b) => sum + b.duration, 0);
+/** Bloklardan saat ağırlığı özeti üretir (toplam, TYT/AYT %, ders donut'u).
+ *  Dış meşguliyet blokları çalışma saati olmadığı için tamamen dışarıda bırakılır;
+ *  genel denemeler kapsamlarına (TYT/AYT) sayılır. */
+function computeWeights(allBlocks, subjectMap) {
+  const blocks = (allBlocks || []).filter((b) => b.kind !== 'external');
+  const total = blocks.reduce((sum, b) => sum + b.duration, 0);
   const cat = { tyt: 0, ayt: 0 };
   const bySub = {};
-  (blocks || []).forEach((b) => {
-    const c = subjectMap[String(b.subject)]?.category;
+  blocks.forEach((b) => {
+    const c = b.examScope || subjectMap[String(b.subject)]?.category;
     if (c === 'tyt' || c === 'ayt') cat[c] += b.duration;
-    const label = b.subjectLabel ?? 'Diğer';
+    const label = blockLabel(b);
     if (!bySub[label]) bySub[label] = { hours: 0, color: b.subjectColor };
     bySub[label].hours += b.duration;
   });
@@ -896,25 +1093,38 @@ function SummaryBar({ current, history, subjectMap, inStudent }) {
   );
 }
 
-/** Draft alanlarından bir bloğun denormalize gösterim alanlarını üretir. */
+/** Draft alanlarından bir bloğun denormalize gösterim alanlarını üretir.
+ *  Blok türüne göre şekil değişir: dış blokta yalnız ad, genel denemede kapsam. */
 function draftBlockFields(draft, subjectMap, taskTypeMap) {
-  const sub = subjectMap[draft.subject];
+  if (draft.kind === 'external') {
+    const title = draft.externalTitle.trim();
+    if (!title) return null;                       // dış blokta ad zorunlu
+    const b = { kind: 'external', examScope: '', subject: '', subjectLabel: null,
+      type: '', typeName: null, topic: title, book: null, bookLabel: null };
+    return { ...b, subjectColor: blockColor(b) };
+  }
+  const isGeneralExam = draft.kind === 'exam' && draft.examScope;
+  const sub = isGeneralExam ? null : subjectMap[draft.subject];
   const tt = taskTypeMap[draft.type];
-  return {
-    subject: draft.subject,
+  const b = {
+    kind: draft.kind,
+    examScope: isGeneralExam ? draft.examScope : '',
+    subject: isGeneralExam ? '' : draft.subject,
     subjectLabel: sub?.label,
-    subjectColor: sub?.color,
-    type: draft.type,
-    typeName: tt?.name,
-    topic: draft.topic,
+    type: isGeneralExam ? '' : draft.type,
+    typeName: isGeneralExam ? null : tt?.name,
+    topic: isGeneralExam ? '' : draft.topic,
     book: null,
     bookLabel: null,
   };
+  return { ...b, subjectColor: blockColor(b) };
 }
 
 /** Sürükleme payload'ından bloğun denormalize alanlarını çıkarır. */
 function blockFromPayload(payload) {
   return {
+    kind: payload.kind || 'study',
+    examScope: payload.examScope || '',
     subject: payload.subject,
     subjectLabel: payload.subjectLabel,
     subjectColor: payload.subjectColor,
@@ -926,16 +1136,16 @@ function blockFromPayload(payload) {
   };
 }
 
-function Row({ hour, blocks, onRemove }) {
+function Row({ hour, days, blocks, onRemove }) {
   return (
     <>
       <span className={s.hourLabel}>{fmtHour(hour)}</span>
-      {DAYS.map((day) => (
+      {days.map((day) => (
         <Cell
-          key={`${day.id}:${hour}`}
-          day={day.id}
+          key={`${day.index}:${hour}`}
+          day={day.index}
           hour={hour}
-          block={blocks.find((b) => b.day === day.id && b.start === hour)}
+          block={blocks.find((b) => b.dayIndex === day.index && b.start === hour)}
           onRemove={onRemove}
         />
       ))}
@@ -956,23 +1166,32 @@ function Cell({ day, hour, block, onRemove }) {
   );
 }
 
+/** Blok içeriğinin ikinci satırı: dış blokta yok, denemede kapsam, çalışmada kitap/metod. */
+function blockMetaText(b) {
+  if (b.kind === 'external') return 'Çalışma saatine sayılmaz';
+  if (b.examScope) return 'Deneme';
+  return `${b.bookLabel || b.typeName || ''}${b.topic ? ` · ${b.topic}` : ''}`;
+}
+
 function PlacedBlock({ block, onRemove }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
     data: {
-      kind: 'move',
+      dragKind: 'move',
       blockId: block.id,
       duration: block.duration,
-      subjectLabel: block.subjectLabel,
+      subjectLabel: blockLabel(block),
       subjectColor: block.subjectColor,
     },
   });
+  const label = blockLabel(block);
+  const meta = blockMetaText(block);
 
   return (
     <div
       ref={setNodeRef}
       data-block={block.id}
-      className={`${s.block} ${isDragging ? s.blockDragging : ''}`}
+      className={`${s.block} ${isDragging ? s.blockDragging : ''} ${block.kind === 'external' ? s.blockExternal : ''}`}
       style={{
         background: block.subjectColor,
         height: block.duration * ROW_H - 4,
@@ -981,21 +1200,16 @@ function PlacedBlock({ block, onRemove }) {
       {...attributes}
     >
       <span className={s.blockSubject}>
-        {block.book ? '📖 ' : ''}{block.subjectLabel}
+        {block.kind === 'external' ? '🚫 ' : block.book ? '📖 ' : ''}{label}
       </span>
-      {block.duration > 1 && (
-        <span className={s.blockMeta}>
-          {block.bookLabel || block.typeName}
-          {block.topic ? ` · ${block.topic}` : ''}
-        </span>
-      )}
+      {block.duration > 1 && meta && <span className={s.blockMeta}>{meta}</span>}
       <span className={s.blockTime}>{timeRange(block)}</span>
       <button
         type="button"
         className={s.blockRemove}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => onRemove(block.id)}
-        aria-label={`${block.subjectLabel} bloğunu kaldır`}
+        aria-label={`${label} bloğunu kaldır`}
       >
         <X size={11} />
       </button>
@@ -1008,8 +1222,12 @@ function PlacedBlock({ block, onRemove }) {
 function DraftBlock({ fields, duration }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: 'draft',
-    data: { kind: 'new', duration, ...fields },
+    // `dragKind` sürükleme türü (yeni/taşı); `fields.kind` bloğun kendi türü.
+    // subjectLabel sürükleme katmanının (DragOverlay) gösterdiği ad — dış blokta
+    // ders olmadığı için blockLabel ile çözülür.
+    data: { dragKind: 'new', duration, ...fields, subjectLabel: blockLabel(fields) },
   });
+  const meta = blockMetaText(fields);
 
   return (
     <div
@@ -1021,11 +1239,10 @@ function DraftBlock({ fields, duration }) {
       {...attributes}
     >
       <span className={s.previewSubject}>
-        {fields.book ? '📖 ' : ''}{fields.subjectLabel}
+        {fields.kind === 'external' ? '🚫 ' : fields.book ? '📖 ' : ''}{blockLabel(fields)}
       </span>
       <span className={s.previewMeta}>
-        {fields.bookLabel || fields.typeName}
-        {fields.topic ? ` · ${fields.topic}` : ''} · {duration} saat
+        {meta ? `${meta} · ` : ''}{duration} saat
       </span>
     </div>
   );

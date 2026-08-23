@@ -2,6 +2,35 @@
    Ders Programı bloklarının ders/metod/konu seçimlerini besler. */
 import api from './client';
 
+/** Blok türleri (backend `Task.kind`). Dış bloklar çalışma saatine sayılmaz. */
+export const BLOCK_KINDS = [
+  { value: 'study', label: 'Çalışma' },
+  { value: 'external', label: 'Dış' },
+  { value: 'exam', label: 'Deneme' },
+];
+
+/** Genel deneme kapsamı (backend `Task.exam_scope`) — ders seçilmeden. */
+export const EXAM_SCOPES = [
+  { value: 'tyt', label: 'Genel TYT' },
+  { value: 'ayt', label: 'Genel AYT' },
+];
+
+const EXAM_SCOPE_LABEL = Object.fromEntries(EXAM_SCOPES.map((x) => [x.value, x.label]));
+
+/** Blokta gösterilecek ad: dış blokta başlık, genel denemede kapsam, yoksa ders. */
+export function blockLabel(b) {
+  if (b.kind === 'external') return b.topic || 'Dış meşguliyet';
+  if (b.examScope) return EXAM_SCOPE_LABEL[b.examScope] || 'Genel Deneme';
+  return b.subjectLabel || '—';
+}
+
+/** Blok rengi: dış bloklar nötr, genel denemeler mor, çalışma blokları dersin rengi. */
+export function blockColor(b) {
+  if (b.kind === 'external') return 'var(--text-muted)';
+  if (b.examScope) return 'var(--violet)';
+  return subjectColor(b.subjectLabel || '');
+}
+
 /** Ders adından programdaki blok rengini üretir (mevcut --subj-* CSS değişkenleri). */
 export function subjectColor(name = '') {
   const n = name.toLocaleLowerCase('tr-TR');

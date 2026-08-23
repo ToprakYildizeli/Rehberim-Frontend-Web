@@ -1,43 +1,63 @@
 /* Program şablonları + atama — gerçek backend (/api/program-templates/, /api/programs/assign/).
    Şablon: rehberin isimli, tekrar kullanılabilir genel programı (öğrenci/tarih bağımsız,
-   görevler haftanın gününe göre). Atama: bir planı öğrencinin (sıradaki boş) haftasına yazar. */
-import api from './client';
-import { subjectColor } from './catalog';
+   görevler haftanın gününe göre). Atama: bir planı öğrencinin programına yazar.
 
-// DAY_IDS index = backend weekday (0=Pzt … 6=Paz) — mocks/data.js DAYS ile aynı sıra.
-const DAY_IDS = ['pzt', 'sal', 'car', 'per', 'cum', 'cmt', 'paz'];
+   Tahta pencere gün indeksiyle çalışır, şablon ise hafta günüyle (weekday 0-6);
+   çeviri iki yönde de pencerenin başlangıç tarihine göre yapılır. Pencereye
+   düşmeyen şablon günleri backend'de olduğu gibi burada da atlanır. */
+import api from './client';
+import { blockColor } from './catalog';
+import { weekdayOf, addDays, DEFAULT_DAY_COUNT } from './programs';
+
 const pad2 = (n) => String(n).padStart(2, '0');
 
-/** Board bloğu → şablon/atama görevi (gün → weekday, saat/süre, ders/metod/kitap/başlık). */
-function blockToTask(b) {
+/** Board bloğu → şablon/atama görevi (gün indeksi → weekday). */
+function blockToTask(b, startDate) {
+  const isExternal = b.kind === 'external';
   return {
-    subject: b.subject ? Number(b.subject) : null,
-    task_type: b.type ? Number(b.type) : null,
-    book: b.book ? Number(b.book) : null,
+    kind: b.kind || 'study',
+    exam_scope: b.examScope || '',
+    subject: !isExternal && b.subject ? Number(b.subject) : null,
+    task_type: !isExternal && b.type ? Number(b.type) : null,
+    book: !isExternal && b.book ? Number(b.book) : null,
     title: b.topic || '',
-    weekday: Math.max(0, DAY_IDS.indexOf(b.day)),
+    weekday: weekdayOf(addDays(startDate, b.dayIndex)),
     start_time: `${pad2(Math.floor(b.start))}:00`,
     duration_minutes: Math.round(b.duration * 60),
     order: 0,
   };
 }
 
-/** Şablon görevleri → board blokları (şablonu tahtaya yüklerken). */
-export function templateToBlocks(tpl) {
-  return (tpl.tasks || []).map((t, i) => ({
-    id: `tpl${t.id}-${i}`,
-    day: DAY_IDS[t.weekday] || 'pzt',
-    start: t.start_time ? parseInt(t.start_time.slice(0, 2), 10) : 8,
-    duration: (t.duration_minutes || 60) / 60,
-    subject: t.subject != null ? String(t.subject) : '',
-    subjectLabel: t.subject_label,
-    subjectColor: subjectColor(t.subject_label || ''),
-    type: t.task_type != null ? String(t.task_type) : '',
-    typeName: t.task_type_name,
-    topic: t.title || '',
-    book: t.book != null ? t.book : null,
-    bookLabel: t.book_label || null,
-  }));
+const toTasks = (blocks, startDate) => blocks.map((b) => blockToTask(b, startDate));
+
+/** Şablon görevleri → board blokları. Görevin haftagünü pencerede hangi indekse
+ *  düşüyorsa oraya konur; pencereye sığmayanlar atlanır (backend ile aynı kural).
+ *  `{ blocks, skipped }` döner ki arayüz düşen görevleri kullanıcıya söyleyebilsin. */
+export function templateToBlocks(tpl, startDate, dayCount = DEFAULT_DAY_COUNT) {
+  const startWeekday = weekdayOf(startDate);
+  const blocks = [];
+  let skipped = 0;
+  (tpl.tasks || []).forEach((t, i) => {
+    const dayIndex = (t.weekday - startWeekday + 7) % 7;
+    if (dayIndex >= dayCount) { skipped += 1; return; }
+    const b = {
+      id: `tpl${t.id}-${i}`,
+      dayIndex,
+      start: t.start_time ? parseInt(t.start_time.slice(0, 2), 10) : 8,
+      duration: (t.duration_minutes || 60) / 60,
+      kind: t.kind || 'study',
+      examScope: t.exam_scope || '',
+      subject: t.subject != null ? String(t.subject) : '',
+      subjectLabel: t.subject_label,
+      type: t.task_type != null ? String(t.task_type) : '',
+      typeName: t.task_type_name,
+      topic: t.title || '',
+      book: t.book != null ? t.book : null,
+      bookLabel: t.book_label || null,
+    };
+    blocks.push({ ...b, subjectColor: blockColor(b) });
+  });
+  return { blocks, skipped };
 }
 
 export async function listTemplates() {
@@ -45,21 +65,21 @@ export async function listTemplates() {
   return data; // [{ id, name, schedule_type, tasks }]
 }
 
-export async function createTemplate(name, blocks, scheduleType = 'timed') {
+export async function createTemplate(name, blocks, startDate, scheduleType = 'timed') {
   const { data } = await api.post('/program-templates/', {
     name,
     schedule_type: scheduleType,
-    tasks: blocks.map(blockToTask),
+    tasks: toTasks(blocks, startDate),
   });
   return data;
 }
 
 /** Mevcut şablonu (aynı obje) günceller — adı korunur, görevler değişir. */
-export async function updateTemplate(id, name, blocks, scheduleType = 'timed') {
+export async function updateTemplate(id, name, blocks, startDate, scheduleType = 'timed') {
   const { data } = await api.patch(`/program-templates/${id}/`, {
     name,
     schedule_type: scheduleType,
-    tasks: blocks.map(blockToTask),
+    tasks: toTasks(blocks, startDate),
   });
   return data;
 }
@@ -87,18 +107,22 @@ export async function clearRoutine(id) {
   return data;
 }
 
-/** Board'daki planı öğrenciye atar. startDate verilmezse backend sıradaki boş haftayı seçer. */
-export async function assignBoard(studentId, blocks, startDate) {
-  const body = { student: Number(studentId), tasks: blocks.map(blockToTask) };
+/** Board'daki planı öğrenciye atar. Bloklar tahtanın penceresine (`boardStart`)
+ *  göre weekday'e çevrilir; hedef pencere `startDate` + `dayCount` ile verilir.
+ *  Hedef aralık mevcut bir programla örtüşürse backend 400 döner. */
+export async function assignBoard(studentId, blocks, boardStart, { startDate, dayCount } = {}) {
+  const body = { student: Number(studentId), tasks: toTasks(blocks, boardStart) };
   if (startDate) body.start_date = startDate;
+  if (dayCount) body.day_count = dayCount;
   const { data } = await api.post('/programs/assign/', body);
   return data;
 }
 
 /** Kayıtlı şablonu doğrudan öğrenciye atar. */
-export async function assignTemplate(templateId, studentId, startDate) {
+export async function assignTemplate(templateId, studentId, { startDate, dayCount } = {}) {
   const body = { student: Number(studentId), template: templateId };
   if (startDate) body.start_date = startDate;
+  if (dayCount) body.day_count = dayCount;
   const { data } = await api.post('/programs/assign/', body);
   return data;
 }
