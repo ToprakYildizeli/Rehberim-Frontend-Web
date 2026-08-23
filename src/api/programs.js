@@ -56,7 +56,28 @@ export function windowRangeText(startDate, dayCount) {
   return `${first.dayNum} ${first.monthShort} – ${last.dayNum} ${last.monthShort}`;
 }
 
-const hourOf = (t) => (t ? parseInt(t.slice(0, 2), 10) : 0);
+/** Süreler ve başlangıçlar tahtada **dakika** cinsinden tutulur: rehber 20 dk gibi
+ *  serbest süreler girebildiği için saat cinsinden kesirli sayı tutmak yuvarlama
+ *  hatası üretirdi. `startMin` = gece yarısından beri geçen dakika. */
+export const SLOT_MIN = 15;                       // tahtanın çözünürlüğü
+export const minutesOf = (t) =>
+  (t ? parseInt(t.slice(0, 2), 10) * 60 + parseInt(t.slice(3, 5), 10) : 0);
+export const fmtMin = (m) => `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`;
+
+/** 90 → "1s 30dk" · 60 → "1 saat" · 20 → "20 dk" */
+export function fmtDuration(min) {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h === 0) return `${m} dk`;
+  if (m === 0) return h === 1 ? '1 saat' : `${h} saat`;
+  return `${h}s ${m}dk`;
+}
+
+/** Toplam dakikayı okunur saate çevirir: 255 → "4,25 saat" */
+export function fmtHours(min) {
+  const h = min / 60;
+  return `${(Math.round(h * 100) / 100).toString().replace('.', ',')} saat`;
+}
 
 /** Backend Task → board bloğu (denormalize gösterim alanlarıyla). */
 function mapTaskToBlock(task, startDate) {
@@ -64,8 +85,8 @@ function mapTaskToBlock(task, startDate) {
     id: `t${task.id}`,
     taskId: task.id,
     dayIndex: daysBetween(startDate, task.date),
-    start: hourOf(task.start_time),
-    duration: (task.duration_minutes || 60) / 60,
+    startMin: minutesOf(task.start_time),
+    durationMin: task.duration_minutes || 60,
     kind: task.kind || 'study',
     examScope: task.exam_scope || '',
     countsAsStudy: task.counts_as_study !== false,
@@ -91,19 +112,19 @@ export function blockToTaskPayload(b, startDate) {
     book: !isExternal && b.book ? Number(b.book) : null,
     title: b.topic || '',
     date: addDays(startDate, b.dayIndex),
-    start_time: `${pad2(Math.floor(b.start))}:00`,
-    duration_minutes: Math.round(b.duration * 60),
+    start_time: fmtMin(b.startMin),
+    duration_minutes: b.durationMin,
   };
 }
 
-/** Board bloklarının çalışma saati toplamı — dış meşguliyetler sayılmaz. */
-export function studyHours(blocks) {
-  return (blocks || []).reduce((sum, b) => (b.kind === 'external' ? sum : sum + b.duration), 0);
+/** Board bloklarının çalışma süresi (dk) — dış meşguliyetler sayılmaz. */
+export function studyMinutes(blocks) {
+  return (blocks || []).reduce((sum, b) => (b.kind === 'external' ? sum : sum + b.durationMin), 0);
 }
 
-/** Dış meşguliyet bloklarının toplamı (ayrı gösterilir). */
-export function externalHours(blocks) {
-  return (blocks || []).reduce((sum, b) => (b.kind === 'external' ? sum + b.duration : sum), 0);
+/** Dış meşguliyet bloklarının toplamı (dk; ayrı gösterilir). */
+export function externalMinutes(blocks) {
+  return (blocks || []).reduce((sum, b) => (b.kind === 'external' ? sum + b.durationMin : sum), 0);
 }
 
 // Diff için scope başına son yüklenen durum: { programId, startDate, dayCount, blocks }
@@ -201,7 +222,7 @@ export async function persistStudentSchedule(studentId, nextBlocks, win) {
   const startDate = entry.startDate;
 
   const changed = (a, b) =>
-    a.dayIndex !== b.dayIndex || a.start !== b.start || a.duration !== b.duration ||
+    a.dayIndex !== b.dayIndex || a.startMin !== b.startMin || a.durationMin !== b.durationMin ||
     a.subject !== b.subject || a.type !== b.type || a.topic !== b.topic ||
     a.book !== b.book || a.kind !== b.kind || a.examScope !== b.examScope;
 

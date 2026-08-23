@@ -9,7 +9,7 @@ import {
 import { getStudent } from '../api/students';
 import { listStudentBooks, getBook } from '../api/books';
 import { listStudentExams } from '../api/exams';
-import { getStudentPrograms, windowDays } from '../api/programs';
+import { getStudentPrograms, windowDays, fmtMin, fmtDuration } from '../api/programs';
 import { listSubjects, listTopics, blockLabel } from '../api/catalog';
 import { getTopicLevels, setTopicLevel } from '../api/topicProgress';
 import s from './OgrenciDetay.module.css';
@@ -618,7 +618,7 @@ function WeekBoard({ program }) {
       {days.map((day) => {
         const items = program.blocks
           .filter((b) => b.dayIndex === day.index)
-          .sort((a, b) => a.start - b.start);
+          .sort((a, b) => a.startMin - b.startMin);
         return (
           <div className={s.day} key={day.index}>
             <span className={s.dayName}>{day.short} {day.dayNum}</span>
@@ -627,7 +627,7 @@ function WeekBoard({ program }) {
             ) : (
               items.map((b) => (
                 <div className={s.block} key={b.id} style={{ borderLeftColor: b.subjectColor }}>
-                  <span className={s.blockTime}>{String(b.start).padStart(2, '0')}:00</span>
+                  <span className={s.blockTime}>{fmtMin(b.startMin)} · {fmtDuration(b.durationMin)}</span>
                   <span className={s.blockSubject}>{blockLabel(b)}</span>
                   {b.kind !== 'external' && b.topic && <span className={s.blockTopic}>{b.topic}</span>}
                   {b.bookLabel && <span className={s.blockBook}>{b.bookLabel}</span>}

@@ -12,8 +12,8 @@ import { listStudents } from '../api/students';
 import { getSchedule, saveSchedule, setGeneralWindow } from '../api/schedule';
 import {
   suggestNextWeekStart, getStudentPrograms, updateProgramWindow,
-  windowDays, windowRangeText, studyHours, externalHours,
-  addDays, DEFAULT_DAY_COUNT,
+  windowDays, windowRangeText, studyMinutes, externalMinutes,
+  addDays, fmtMin, fmtDuration, fmtHours, SLOT_MIN, DEFAULT_DAY_COUNT,
 } from '../api/programs';
 import {
   listTemplates, createTemplate, updateTemplate, deleteTemplate, templateToBlocks,
@@ -37,6 +37,15 @@ const CATEGORIES = [
 ];
 /** Program uzunluğu seçenekleri (backend 1-31 kabul eder). */
 const DAY_COUNTS = [3, 5, 7, 10, 14];
+/** Tahta düzeni: satırlar saat ya da ders (yol haritası A2). */
+const VIEWS = [
+  { value: 'hours', label: 'Saat satırlı' },
+  { value: 'subjects', label: 'Ders satırlı' },
+];
+/** Sık kullanılan süreler — serbest dakika girişinin yanındaki kısayollar. */
+const DURATION_PRESETS = [15, 20, 30, 45, 60, 90, 120];
+const MIN_DURATION = 5;
+const MAX_DURATION = 12 * 60;
 
 /** Backend hata gövdesinden ilk okunabilir mesajı çıkarır. */
 function apiMessage(err, fallback) {
@@ -60,18 +69,41 @@ const FORMAT_TO_TYPE = {
 };
 
 const fmtHour = (h) => `${String(h).padStart(2, '0')}:00`;
-const timeRange = (b) => `${fmtHour(b.start)}-${fmtHour(b.start + b.duration)}`;
+const timeRange = (b) => `${fmtMin(b.startMin)}-${fmtMin(b.startMin + b.durationMin)}`;
+
+/** Tahtanın son dakikası (son saat satırının sonu) — bloklar bunu aşamaz. */
+const BOARD_END_MIN = (HOURS[HOURS.length - 1] + 1) * 60;
+const BOARD_START_MIN = HOURS[0] * 60;
 
 /** True when [start, start+duration) on `dayIndex` collides with an existing block.
  *  Dış meşguliyet blokları da sayılır — okuldayken çalışma bloğu konulamaz. */
-function overlaps(blocks, dayIndex, start, duration, ignoreId) {
+function overlaps(blocks, dayIndex, startMin, durationMin, ignoreId) {
   return blocks.some(
     (b) =>
       b.id !== ignoreId &&
       b.dayIndex === dayIndex &&
-      start < b.start + b.duration &&
-      b.start < start + duration
+      startMin < b.startMin + b.durationMin &&
+      b.startMin < startMin + durationMin
   );
+}
+
+/** Verilen günde bloğun sığacağı ilk boş başlangıç (yoksa null).
+ *
+ *  Adaylar: 15 dk'lık ızgara **artı mevcut blokların bitiş saatleri**. Bitişler de
+ *  aday olmasa 20 dk'lık bloklar ızgaraya oturmak zorunda kalır ve aralarında
+ *  gereksiz boşluk kalırdı (09:00, 09:30, 10:00 yerine 09:00, 09:20, 09:40). */
+function firstFreeSlot(blocks, dayIndex, durationMin, ignoreId) {
+  const sameDay = blocks.filter((b) => b.dayIndex === dayIndex && b.id !== ignoreId);
+  const candidates = new Set();
+  for (let t = BOARD_START_MIN; t + durationMin <= BOARD_END_MIN; t += SLOT_MIN) {
+    candidates.add(t);
+  }
+  sameDay.forEach((b) => {
+    const end = b.startMin + b.durationMin;
+    if (end >= BOARD_START_MIN && end + durationMin <= BOARD_END_MIN) candidates.add(end);
+  });
+  const sorted = [...candidates].sort((a, b) => a - b);
+  return sorted.find((t) => !overlaps(sameDay, dayIndex, t, durationMin)) ?? null;
 }
 
 export default function DersProgrami() {
@@ -102,9 +134,11 @@ export default function DersProgrami() {
   const [topics, setTopics] = useState([]);
   const [catalogError, setCatalogError] = useState(false);
 
+  const [view, setView] = useState('hours');
   const [draft, setDraft] = useState({
     kind: 'study', examScope: 'tyt', externalTitle: '',
-    category: 'tyt', subject: '', type: '', topic: '', book: '', duration: 1, days: [],
+    category: 'tyt', subject: '', type: '', topic: '', book: '',
+    durationMin: 60, days: [],
   });
 
   const lastWeek = useRef(null);
@@ -213,7 +247,10 @@ export default function DersProgrami() {
   }, [scope]);
 
   const commit = useCallback(
-    (next) => {
+    (raw) => {
+      // Ders satırlı görünümde satır değiştirmek bloğun türünü de değiştirebilir;
+      // dış bloğun adı boş kalmasın (backend başlık ister).
+      const next = raw.map(ensureBlockValid);
       setBlocks(next);                       // iyimser güncelleme
       saveSchedule(scope, next, win)
         .then((saved) => {
@@ -325,8 +362,8 @@ export default function DersProgrami() {
   }
 
   // Çalışma saati dış meşguliyetleri saymaz; onlar ayrı gösterilir.
-  const totalHours = useMemo(() => studyHours(blocks ?? []), [blocks]);
-  const outsideHours = useMemo(() => externalHours(blocks ?? []), [blocks]);
+  const totalMin = useMemo(() => studyMinutes(blocks ?? []), [blocks]);
+  const outsideMin = useMemo(() => externalMinutes(blocks ?? []), [blocks]);
   const days = useMemo(
     () => (win.startDate ? windowDays(win.startDate, win.dayCount) : []),
     [win.startDate, win.dayCount]
@@ -345,19 +382,34 @@ export default function DersProgrami() {
     const { active, over } = event;
     if (!over) return;
 
-    const [dayStr, hourStr] = String(over.id).split(':');
-    const dayIndex = Number(dayStr);
-    const start = Number(hourStr);
     const payload = active.data.current;
-    const duration = payload.duration ?? 1;
+    const durationMin = payload.durationMin ?? 60;
+    // Droppable id iki biçimde gelir:
+    //   saat düzeni  → "gun:dakika"            (15 dk'lık dilim)
+    //   ders düzeni  → "gun:row:<satır anahtarı>" (saat serbest → ilk boş dilim)
+    const parts = String(over.id).split(':');
+    const dayIndex = Number(parts[0]);
 
-    if (start + duration > HOURS[HOURS.length - 1] + 1) return;
-    if (overlaps(blocks, dayIndex, start, duration, payload.blockId)) return;
+    let startMin;
+    let rowFields = null;
+    if (parts[1] === 'row') {
+      startMin = firstFreeSlot(blocks, dayIndex, durationMin, payload.blockId);
+      if (startMin === null) return;                       // o güne sığmıyor
+      rowFields = subjectRowFields(parts.slice(2).join(':'), subjects);
+    } else {
+      startMin = Number(parts[1]);
+    }
+
+    if (startMin + durationMin > BOARD_END_MIN) return;
+    if (overlaps(blocks, dayIndex, startMin, durationMin, payload.blockId)) return;
 
     if (payload.dragKind === 'new') {
-      commit([...blocks, { ...blockFromPayload(payload), id: `b${Date.now()}`, dayIndex, start, duration }]);
+      const base = { ...blockFromPayload(payload), ...(rowFields || {}) };
+      commit([...blocks, { ...base, id: `b${Date.now()}`, dayIndex, startMin, durationMin }]);
     } else {
-      commit(blocks.map((b) => (b.id === payload.blockId ? { ...b, dayIndex, start } : b)));
+      commit(blocks.map((b) =>
+        b.id === payload.blockId ? { ...b, ...(rowFields || {}), dayIndex, startMin } : b
+      ));
     }
   }
 
@@ -381,15 +433,17 @@ export default function DersProgrami() {
     const base = draftFields;
     let next = [...blocks];
     draft.days.forEach((dayIndex) => {
-      const slot = HOURS.find(
-        (h) =>
-          h + draft.duration <= HOURS[HOURS.length - 1] + 1 &&
-          !overlaps(next, dayIndex, h, draft.duration)
-      );
-      if (slot === undefined) return;
+      const slot = firstFreeSlot(next, dayIndex, draft.durationMin);
+      if (slot === null) return;
       next = [
         ...next,
-        { ...base, id: `b${Date.now()}-${dayIndex}`, dayIndex, start: slot, duration: draft.duration },
+        {
+          ...base,
+          id: `b${Date.now()}-${dayIndex}`,
+          dayIndex,
+          startMin: slot,
+          durationMin: draft.durationMin,
+        },
       ];
     });
     commit(next);
@@ -450,6 +504,27 @@ export default function DersProgrami() {
     return draftBlockFields(draft, subjectMap, taskTypeMap);
   }, [isBookMode, activeBook, bookBlockFields, draft, subjectMap, taskTypeMap]);
 
+  // Ders satırlı görünümün satırları: tahtadaki blokların dersleri + taslağınki
+  // (taslak satırı da olsun ki oraya sürükleyip bırakılabilsin).
+  const subjectRows = useMemo(() => {
+    const rows = new Map();
+    const add = (b) => {
+      const key = subjectRowKey(b);
+      if (rows.has(key)) return;
+      rows.set(key, {
+        key,
+        label: subjectRowLabel(b),
+        color: b.subjectColor,
+        order: subjectRowOrder(b),
+      });
+    };
+    (blocks ?? []).forEach(add);
+    if (draftFields) add(draftFields);
+    return [...rows.values()].sort(
+      (a, b) => a.order - b.order || a.label.localeCompare(b.label, 'tr')
+    );
+  }, [blocks, draftFields]);
+
   // Kitap modunda seçili ders/kitap kütüphaneyle tutarlı kalsın (öğrenci değişince
   // ya da moda ilk geçişte ilk uygun ders+kitaba düşer).
   useEffect(() => {
@@ -496,8 +571,10 @@ export default function DersProgrami() {
 
         <div className={s.toolbarRight}>
           <span className={s.totalPill}>
-            Çalışma: {totalHours} saat
-            {outsideHours > 0 && <span className={s.totalOutside}> · +{outsideHours} dış</span>}
+            Çalışma: {fmtHours(totalMin)}
+            {outsideMin > 0 && (
+              <span className={s.totalOutside}> · +{fmtHours(outsideMin)} dış</span>
+            )}
           </span>
           <Button variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
             <Bookmark size={13} /> Şablon Kaydet
@@ -552,6 +629,9 @@ export default function DersProgrami() {
                 : 'Atamadan önce serbestçe değiştirebilirsin'}
             </span>
           </span>
+          <Field label="Tahta düzeni" className={s.windowView}>
+            <PillGroup options={VIEWS} value={view} onChange={setView} />
+          </Field>
           {mode === 'ogrenci' && activeStudent && (
             <span className={s.windowStudent}>{activeStudent.name}</span>
           )}
@@ -581,10 +661,19 @@ export default function DersProgrami() {
                   </span>
                 ))}
 
-                {HOURS.map((hour) => (
-                  <Row key={hour} hour={hour} days={days} blocks={blocks} onRemove={removeBlock} />
-                ))}
+                {view === 'hours'
+                  ? HOURS.map((hour) => (
+                    <HourRow key={hour} hour={hour} days={days} blocks={blocks} onRemove={removeBlock} />
+                  ))
+                  : subjectRows.map((row) => (
+                    <SubjectRow key={row.key} row={row} days={days} blocks={blocks} onRemove={removeBlock} />
+                  ))}
               </div>
+              {view === 'subjects' && subjectRows.length === 0 && (
+                <p className={s.previewHint}>
+                  Ders satırlı görünüm için önce bir blok ekleyin ya da sağdaki taslağı sürükleyin.
+                </p>
+              )}
             </Card>
 
             <div className={s.rail}>
@@ -735,24 +824,50 @@ export default function DersProgrami() {
                     </>
                     )}
 
-                    <Field label="Süre">
-                      <Select
-                        value={draft.duration}
-                        onChange={(e) =>
-                          setDraft((d) => ({ ...d, duration: Number(e.target.value) }))
-                        }
-                      >
-                        <option value={1}>1 Saat</option>
-                        <option value={2}>2 Saat</option>
-                        <option value={3}>3 Saat</option>
-                      </Select>
+                    <Field label={`Süre — ${fmtDuration(draft.durationMin)}`}>
+                      <div className={s.durationRow}>
+                        <Input
+                          type="number"
+                          className={s.durationInput}
+                          value={draft.durationMin}
+                          min={MIN_DURATION}
+                          max={MAX_DURATION}
+                          step={5}
+                          onChange={(e) => {
+                            // Yazarken boş/yarım değere izin ver; sınırlama blur'da.
+                            const n = Number(e.target.value);
+                            setDraft((d) => ({ ...d, durationMin: Number.isNaN(n) ? d.durationMin : n }));
+                          }}
+                          onBlur={(e) => {
+                            const n = Number(e.target.value);
+                            const clamped = Math.min(MAX_DURATION,
+                              Math.max(MIN_DURATION, Number.isFinite(n) && n > 0 ? Math.round(n) : 60));
+                            setDraft((d) => ({ ...d, durationMin: clamped }));
+                          }}
+                          aria-label="Süre (dakika)"
+                        />
+                        <span className={s.durationUnit}>dk</span>
+                      </div>
+                      <div className={s.durationPresets}>
+                        {DURATION_PRESETS.map((n) => (
+                          <button
+                            key={n}
+                            type="button"
+                            className={`${s.durationPreset} ${draft.durationMin === n ? s.durationPresetOn : ''}`}
+                            aria-pressed={draft.durationMin === n}
+                            onClick={() => setDraft((d) => ({ ...d, durationMin: n }))}
+                          >
+                            {n < 60 ? n : fmtDuration(n)}
+                          </button>
+                        ))}
+                      </div>
                     </Field>
                   </div>
 
                   <p className={s.previewLabel}>Sürüklenebilir blok</p>
                   {draftFields ? (
                     <>
-                      <DraftBlock fields={draftFields} duration={draft.duration} />
+                      <DraftBlock fields={draftFields} durationMin={draft.durationMin} />
                       <p className={s.previewHint}>
                         Bu bloğu bir güne sürükle ya da aşağıdan gün seç
                       </p>
@@ -1136,16 +1251,22 @@ function blockFromPayload(payload) {
   };
 }
 
-function Row({ hour, days, blocks, onRemove }) {
+/** Bir saat satırı. Hücre 15 dk'lık dört bırakma dilimine bölünür ki 20 dk'lık
+ *  bloklar da saat başına oturmak zorunda kalmasın. */
+function HourRow({ hour, days, blocks, onRemove }) {
+  const from = hour * 60;
   return (
     <>
       <span className={s.hourLabel}>{fmtHour(hour)}</span>
       {days.map((day) => (
-        <Cell
+        <HourCell
           key={`${day.index}:${hour}`}
           day={day.index}
-          hour={hour}
-          block={blocks.find((b) => b.dayIndex === day.index && b.start === hour)}
+          from={from}
+          // Blok, başladığı saatin hücresinde çizilir; taşma bir sonraki satıra sarkar.
+          items={blocks.filter(
+            (b) => b.dayIndex === day.index && b.startMin >= from && b.startMin < from + 60
+          )}
           onRemove={onRemove}
         />
       ))}
@@ -1153,15 +1274,145 @@ function Row({ hour, days, blocks, onRemove }) {
   );
 }
 
-function Cell({ day, hour, block, onRemove }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `${day}:${hour}` });
+const SLOTS_PER_HOUR = Math.round(60 / SLOT_MIN);
+
+function HourCell({ day, from, items, onRemove }) {
+  return (
+    <div className={s.cell} data-cell={`${day}:${from}`}>
+      {Array.from({ length: SLOTS_PER_HOUR }, (_, i) => (
+        <QuarterSlot key={i} day={day} startMin={from + i * SLOT_MIN} index={i} />
+      ))}
+      {items.map((b) => <PlacedBlock key={b.id} block={b} hourStart={from} onRemove={onRemove} />)}
+    </div>
+  );
+}
+
+function QuarterSlot({ day, startMin, index }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `${day}:${startMin}` });
   return (
     <div
       ref={setNodeRef}
-      data-cell={`${day}:${hour}`}
-      className={`${s.cell} ${isOver ? s.cellOver : ''}`}
+      className={`${s.slot} ${isOver ? s.slotOver : ''}`}
+      style={{ top: `${(index / SLOTS_PER_HOUR) * 100}%` }}
+    />
+  );
+}
+
+/* ---------------- Ders satırlı görünüm (A2) ----------------
+   Aynı görevler; satırlar saat yerine DERS. Dış meşguliyetler ve genel denemeler
+   bir dersle eşleşmediğinden kendi satırlarını alır. */
+
+/** Bloğun hangi ders satırına düştüğü. */
+function subjectRowKey(b) {
+  if (b.kind === 'external') return 'ext';
+  if (b.examScope) return `exam-${b.examScope}`;
+  return `sub-${b.subject || ''}`;
+}
+
+/** Satır başlığı — blok adı değil, satırın kendi adı (aynı satırda çok blok olur). */
+function subjectRowLabel(b) {
+  if (b.kind === 'external') return 'Dış meşguliyet';
+  if (b.examScope) return blockLabel(b);
+  return b.subjectLabel || 'Dersi yok';
+}
+
+/** Sıralama: dersler önce, sonra genel denemeler, en sonda dış meşguliyet. */
+function subjectRowOrder(b) {
+  if (b.kind === 'external') return 2;
+  if (b.examScope) return 1;
+  return 0;
+}
+
+/** Bir satıra bırakılan bloğun alması gereken alanlar (satır = ders/tür). */
+function subjectRowFields(key, subjects) {
+  if (key === 'ext') {
+    return { kind: 'external', examScope: '', subject: '', subjectLabel: null,
+      type: '', typeName: null, book: null, bookLabel: null,
+      subjectColor: blockColor({ kind: 'external' }) };
+  }
+  if (key.startsWith('exam-')) {
+    const examScope = key.slice(5);
+    return { kind: 'exam', examScope, subject: '', subjectLabel: null,
+      type: '', typeName: null, book: null, bookLabel: null,
+      subjectColor: blockColor({ examScope }) };
+  }
+  const id = key.slice(4);
+  const sub = subjects.find((x) => String(x.id) === id);
+  return { kind: 'study', examScope: '', subject: id,
+    subjectLabel: sub?.label, subjectColor: sub?.color };
+}
+
+/** Dış bloğun adı boş kalamaz (backend başlık ister) — düşülecek son çare. */
+function ensureBlockValid(b) {
+  if (b.kind === 'external' && !(b.topic || '').trim()) {
+    return { ...b, topic: b.subjectLabel || 'Dış meşguliyet' };
+  }
+  return b;
+}
+
+function SubjectRow({ row, days, blocks, onRemove }) {
+  return (
+    <>
+      <span className={s.rowLabel} title={row.label}>
+        <span className={s.rowDot} style={{ background: row.color }} />
+        {row.label}
+      </span>
+      {days.map((day) => (
+        <SubjectCell
+          key={`${day.index}:${row.key}`}
+          dayIndex={day.index}
+          rowKey={row.key}
+          items={blocks
+            .filter((b) => b.dayIndex === day.index && subjectRowKey(b) === row.key)
+            .sort((a, b) => a.startMin - b.startMin)}
+          onRemove={onRemove}
+        />
+      ))}
+    </>
+  );
+}
+
+function SubjectCell({ dayIndex, rowKey, items, onRemove }) {
+  // Saat serbest: bu hücreye bırakılan blok o günün ilk boş dilimine yerleşir.
+  const { setNodeRef, isOver } = useDroppable({ id: `${dayIndex}:row:${rowKey}` });
+  return (
+    <div ref={setNodeRef} className={`${s.subjCell} ${isOver ? s.cellOver : ''}`}>
+      {items.map((b) => <SubjectChip key={b.id} block={b} onRemove={onRemove} />)}
+    </div>
+  );
+}
+
+function SubjectChip({ block, onRemove }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: block.id,
+    data: {
+      dragKind: 'move',
+      blockId: block.id,
+      durationMin: block.durationMin,
+      subjectLabel: blockLabel(block),
+      subjectColor: block.subjectColor,
+    },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${s.chipBlock} ${isDragging ? s.blockDragging : ''}`}
+      style={{ borderLeftColor: block.subjectColor }}
+      {...listeners}
+      {...attributes}
     >
-      {block && <PlacedBlock block={block} onRemove={onRemove} />}
+      <span className={s.chipTime}>{fmtMin(block.startMin)}</span>
+      <span className={s.chipLabel}>{blockLabel(block)}</span>
+      <span className={s.chipDur}>{fmtDuration(block.durationMin)}</span>
+      <button
+        type="button"
+        className={s.chipRemove}
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => onRemove(block.id)}
+        aria-label={`${blockLabel(block)} bloğunu kaldır`}
+      >
+        <X size={10} />
+      </button>
     </div>
   );
 }
@@ -1173,28 +1424,38 @@ function blockMetaText(b) {
   return `${b.bookLabel || b.typeName || ''}${b.topic ? ` · ${b.topic}` : ''}`;
 }
 
-function PlacedBlock({ block, onRemove }) {
+function PlacedBlock({ block, hourStart, onRemove }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
     data: {
       dragKind: 'move',
       blockId: block.id,
-      duration: block.duration,
+      durationMin: block.durationMin,
       subjectLabel: blockLabel(block),
       subjectColor: block.subjectColor,
     },
   });
   const label = blockLabel(block);
   const meta = blockMetaText(block);
+  // Saat satırı 1 saat = ROW_H piksel; blok saat içindeki dakikasından başlar.
+  const offset = ((block.startMin - hourStart) / 60) * ROW_H;
+  const height = (block.durationMin / 60) * ROW_H - 4;
+  const isShort = block.durationMin < 45;
 
   return (
     <div
       ref={setNodeRef}
       data-block={block.id}
-      className={`${s.block} ${isDragging ? s.blockDragging : ''} ${block.kind === 'external' ? s.blockExternal : ''}`}
+      className={[
+        s.block,
+        isDragging ? s.blockDragging : '',
+        block.kind === 'external' ? s.blockExternal : '',
+        isShort ? s.blockShort : '',
+      ].filter(Boolean).join(' ')}
       style={{
         background: block.subjectColor,
-        height: block.duration * ROW_H - 4,
+        top: offset + 2,
+        height: Math.max(height, 14),
       }}
       {...listeners}
       {...attributes}
@@ -1202,8 +1463,8 @@ function PlacedBlock({ block, onRemove }) {
       <span className={s.blockSubject}>
         {block.kind === 'external' ? '🚫 ' : block.book ? '📖 ' : ''}{label}
       </span>
-      {block.duration > 1 && meta && <span className={s.blockMeta}>{meta}</span>}
-      <span className={s.blockTime}>{timeRange(block)}</span>
+      {block.durationMin >= 90 && meta && <span className={s.blockMeta}>{meta}</span>}
+      {!isShort && <span className={s.blockTime}>{timeRange(block)}</span>}
       <button
         type="button"
         className={s.blockRemove}
@@ -1219,13 +1480,13 @@ function PlacedBlock({ block, onRemove }) {
 
 /** Önizleme bloğu: moda göre üretilen alanları (ders akışı veya kitap) sürüklenebilir
  *  bir blok olarak gösterir; bir güne bırakılınca yeni blok oluşur. */
-function DraftBlock({ fields, duration }) {
+function DraftBlock({ fields, durationMin }) {
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: 'draft',
     // `dragKind` sürükleme türü (yeni/taşı); `fields.kind` bloğun kendi türü.
     // subjectLabel sürükleme katmanının (DragOverlay) gösterdiği ad — dış blokta
     // ders olmadığı için blockLabel ile çözülür.
-    data: { dragKind: 'new', duration, ...fields, subjectLabel: blockLabel(fields) },
+    data: { dragKind: 'new', durationMin, ...fields, subjectLabel: blockLabel(fields) },
   });
   const meta = blockMetaText(fields);
 
@@ -1242,7 +1503,7 @@ function DraftBlock({ fields, duration }) {
         {fields.kind === 'external' ? '🚫 ' : fields.book ? '📖 ' : ''}{blockLabel(fields)}
       </span>
       <span className={s.previewMeta}>
-        {meta ? `${meta} · ` : ''}{duration} saat
+        {meta ? `${meta} · ` : ''}{fmtDuration(durationMin)}
       </span>
     </div>
   );

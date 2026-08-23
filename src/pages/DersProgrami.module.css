@@ -142,6 +142,18 @@
   transition: background 0.12s;
 }
 
+/* Saat hücresi 15 dk'lık dört bırakma dilimine bölünür: 20 dk'lık bloklar da
+   saat başına oturmak zorunda kalmasın. Dilimler görünmez, yalnız hedeftir. */
+.slot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 25%;
+  z-index: 1;
+}
+
+.slotOver { background: var(--accent-subtle); }
+
 /* Satırın ilk hücresine sol kenarlık. Sütun sayısı değişken olduğu için
    nth-child aritmetiği yerine "saat etiketinden hemen sonraki hücre" kuralı. */
 .hourLabel + .cell { border-left: 1px solid var(--border); }
@@ -571,3 +583,112 @@
     transparent 6px 12px
   );
 }
+
+/* ---------- Serbest süre girişi (A4) ---------- */
+.durationRow { display: flex; align-items: center; gap: 6px; }
+.durationInput { width: 90px; }
+.durationUnit { font-size: 0.75rem; color: var(--text-muted); }
+
+.durationPresets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.durationPreset {
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.66rem;
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.durationPreset:hover { border-color: var(--accent); color: var(--accent); }
+
+.durationPresetOn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Kısa bloklar (45 dk altı) tek satıra sığmalı; saat aralığı gizlenir. */
+.blockShort {
+  padding: 2px 5px;
+  justify-content: center;
+}
+
+.blockShort .blockSubject { font-size: 0.6rem; }
+
+/* ---------- Ders satırlı görünüm (A2) ---------- */
+.windowView { margin: 0; }
+
+.rowLabel {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-2) var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rowDot { width: 7px; height: 7px; border-radius: 2px; flex-shrink: 0; }
+
+.subjCell {
+  min-height: 42px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  transition: background 0.12s;
+}
+
+.rowLabel + .subjCell { border-left: 1px solid var(--border); }
+
+.chipBlock {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-alt);
+  border-left: 3px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 16px 3px 5px;
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  cursor: grab;
+  position: relative;
+  touch-action: none;
+}
+
+.chipBlock:active { cursor: grabbing; }
+
+.chipTime { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.chipLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chipDur { margin-left: auto; color: var(--text-muted); white-space: nowrap; }
+
+.chipRemove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 1px;
+  display: flex;
+  border-radius: 3px;
+}
+
+.chipRemove:hover { color: var(--error); background: var(--error-bg); }
