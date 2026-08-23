@@ -9,10 +9,9 @@ import {
 import { getStudent } from '../api/students';
 import { listStudentBooks, getBook } from '../api/books';
 import { listStudentExams } from '../api/exams';
-import { getStudentPrograms } from '../api/programs';
-import { listSubjects, listTopics } from '../api/catalog';
+import { getStudentPrograms, windowDays } from '../api/programs';
+import { listSubjects, listTopics, blockLabel } from '../api/catalog';
 import { getTopicLevels, setTopicLevel } from '../api/topicProgress';
-import { DAYS } from '../mocks/data';
 import s from './OgrenciDetay.module.css';
 
 const FIELD_LABEL = { say: 'Sayısal', ea: 'Eşit Ağırlık', soz: 'Sözel' };
@@ -604,30 +603,33 @@ function ProgramTab({ studentId }) {
             ))}
           </Select>
         )}
-        {active && <WeekBoard blocks={active.blocks} />}
+        {active && <WeekBoard program={active} />}
       </div>
     </TabState>
   );
 }
 
-function WeekBoard({ blocks }) {
+/** Programın günleri — uzunluk esnek olduğundan sabit 7 gün değil, pencerenin
+ *  kendi günleri (windowDays) çizilir. */
+function WeekBoard({ program }) {
+  const days = windowDays(program.startDate, program.dayCount);
   return (
-    <div className={s.week}>
-      {DAYS.map((day) => {
-        const items = blocks
-          .filter((b) => b.day === day.id)
+    <div className={s.week} style={{ '--cols': days.length }}>
+      {days.map((day) => {
+        const items = program.blocks
+          .filter((b) => b.dayIndex === day.index)
           .sort((a, b) => a.start - b.start);
         return (
-          <div className={s.day} key={day.id}>
-            <span className={s.dayName}>{day.short}</span>
+          <div className={s.day} key={day.index}>
+            <span className={s.dayName}>{day.short} {day.dayNum}</span>
             {items.length === 0 ? (
               <span className={s.dayEmpty}>—</span>
             ) : (
               items.map((b) => (
                 <div className={s.block} key={b.id} style={{ borderLeftColor: b.subjectColor }}>
                   <span className={s.blockTime}>{String(b.start).padStart(2, '0')}:00</span>
-                  <span className={s.blockSubject}>{b.subjectLabel || '—'}</span>
-                  {b.topic && <span className={s.blockTopic}>{b.topic}</span>}
+                  <span className={s.blockSubject}>{blockLabel(b)}</span>
+                  {b.kind !== 'external' && b.topic && <span className={s.blockTopic}>{b.topic}</span>}
                   {b.bookLabel && <span className={s.blockBook}>{b.bookLabel}</span>}
                 </div>
               ))
