@@ -89,6 +89,7 @@ function mapTaskToBlock(task, startDate) {
     topic: task.title || '',
     book: task.book != null ? task.book : null,
     bookLabel: task.book_label || null,
+    isCompleted: !!task.is_completed,
   };
   return { ...b, subjectColor: blockColor(b) };
 }
@@ -162,8 +163,31 @@ export async function getStudentPrograms(studentId) {
       endDate: p.end_date,
       dayCount: p.day_count || DEFAULT_DAY_COUNT,
       isCurrent: p.start_date <= now && now <= p.end_date,
+      // Haftalık onay (B1): onay ancak pencere kapandıktan sonra verilebilir.
+      isApproved: !!p.is_approved,
+      isFinished: !!p.is_finished,
+      approvedAt: p.approved_at || null,
+      approvedByName: p.approved_by_name || null,
       blocks: (p.tasks || []).map((t) => mapTaskToBlock(t, p.start_date)),
     }));
+}
+
+/** Bir görevi tamamlandı/tamamlanmadı işaretler (rehber, onay öncesi düzeltme). */
+export async function setTaskCompleted(taskId, isCompleted) {
+  const { data } = await api.patch(`/tasks/${taskId}/`, { is_completed: isCompleted });
+  return !!data.is_completed;
+}
+
+/** Haftalık onay (B1). `approved=false` onayı geri alır. Backend program objesi döner. */
+export async function setProgramApproval(programId, approved) {
+  const url = `/programs/${programId}/approve/`;
+  const { data } = approved ? await api.post(url) : await api.delete(url);
+  return {
+    isApproved: !!data.is_approved,
+    isFinished: !!data.is_finished,
+    approvedAt: data.approved_at || null,
+    approvedByName: data.approved_by_name || null,
+  };
 }
 
 /** Atama için önerilen başlangıç: öğrenciye program atanmamış ilk gün.

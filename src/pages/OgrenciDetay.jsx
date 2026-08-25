@@ -1,18 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft, ChevronRight, ChevronDown, BookOpen, ClipboardList, CalendarDays, Target, Check, ArrowUpDown,
+  ChevronLeft, ChevronRight, ChevronDown, BookOpen, ClipboardList, CalendarDays, Target, Check,
+  ArrowUpDown, ShieldCheck, Lock,
 } from 'lucide-react';
 import {
-  Card, Avatar, Badge, Select, PillGroup, EmptyState, Spinner, ProgressBar, SearchInput,
+  Card, Avatar, Badge, Button, Select, PillGroup, EmptyState, Spinner, ProgressBar, SearchInput,
 } from '../components/ui';
 import { getStudent } from '../api/students';
 import { listStudentBooks, getBook } from '../api/books';
 import { listStudentExams } from '../api/exams';
-import { getStudentPrograms, windowDays, fmtMin } from '../api/programs';
+import {
+  getStudentPrograms, setProgramApproval, setTaskCompleted, windowDays, fmtMin,
+} from '../api/programs';
 import { listSubjects, listTopics, blockLabel } from '../api/catalog';
 import { getTopicLevels, setTopicLevel } from '../api/topicProgress';
 import s from './OgrenciDetay.module.css';
+
+const cx = (...parts) => parts.filter(Boolean).join(' ');
 
 const FIELD_LABEL = { say: 'Sayısal', ea: 'Eşit Ağırlık', soz: 'Sözel' };
 const MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -576,10 +581,17 @@ function ProgramTab({ studentId }) {
     [programs, activeId]
   );
 
+  /** Tek bir programı yerinde günceller (onay ya da görev işareti sonrası). */
+  const patchProgram = (programId, patch) =>
+    setPrograms((prev) => (prev || []).map(
+      (p) => (p.id === programId ? { ...p, ...patch } : p)
+    ));
+
   const options = useMemo(
     () => (programs || []).map((p) => ({
       value: p.id,
-      label: `${fmtDate(p.startDate)} – ${fmtDate(p.endDate)}${p.isCurrent ? ' • Güncel' : ''}`,
+      label: `${fmtDate(p.startDate)} – ${fmtDate(p.endDate)}`
+        + `${p.isCurrent ? ' • Güncel' : ''}${p.isApproved ? ' • Onaylı' : ''}`,
     })),
     [programs]
   );
@@ -603,16 +615,113 @@ function ProgramTab({ studentId }) {
             ))}
           </Select>
         )}
-        {active && <WeekBoard program={active} />}
+        {active && (
+          <>
+            <ApprovalBar program={active} onChange={(patch) => patchProgram(active.id, patch)} />
+            <WeekBoard
+              program={active}
+              onToggleTask={(taskId, next) => patchProgram(active.id, {
+                blocks: active.blocks.map(
+                  (b) => (b.taskId === taskId ? { ...b, isCompleted: next } : b)
+                ),
+              })}
+            />
+          </>
+        )}
       </div>
     </TabState>
   );
 }
 
+/** Haftalık onay çubuğu (B1): uyum özeti + onay/geri alma.
+ *
+ *  Onay, "öğrencinin yaptım dedikleri gerçekten yapılmış" beyanıdır; bu yüzden
+ *  yalnızca **pencere kapandıktan sonra** verilebilir (backend de zorlar) ve
+ *  onaydan sonra öğrenci görevlere dokunamaz. */
+function ApprovalBar({ program, onChange }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  const total = program.blocks.filter((b) => b.countsAsStudy).length;
+  const done = program.blocks.filter((b) => b.countsAsStudy && b.isCompleted).length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
+  async function toggle(approved) {
+    setBusy(true);
+    setError('');
+    try {
+      onChange(await setProgramApproval(program.id, approved));
+    } catch (err) {
+      const data = err?.response?.data;
+      const first = data && typeof data === 'object' ? Object.values(data)[0] : data;
+      setError(String(Array.isArray(first) ? first[0] : first || 'İşlem tamamlanamadı.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className={s.approvalBar}>
+      <div className={s.approvalInfo}>
+        {program.isApproved
+          ? <Badge tone="success"><ShieldCheck size={12} /> Onaylandı</Badge>
+          : <Badge tone={program.isFinished ? 'warning' : 'neutral'}>
+              {program.isFinished ? 'Onay bekliyor' : 'Devam ediyor'}
+            </Badge>}
+        <span className={s.approvalStat}>
+          {total ? `${done}/${total} görev tamamlandı · %${pct}` : 'Bu programda çalışma bloğu yok'}
+        </span>
+        {program.isApproved && program.approvedByName && (
+          <span className={s.approvalNote}>
+            {program.approvedByName} onayladı{program.approvedAt ? ` · ${fmtDate(program.approvedAt.slice(0, 10))}` : ''}
+          </span>
+        )}
+        {!program.isApproved && !program.isFinished && (
+          <span className={s.approvalNote}>Onay, program {fmtDate(program.endDate)} tarihinde bittikten sonra verilebilir.</span>
+        )}
+      </div>
+      <div className={s.approvalActions}>
+        {error && <span className={s.approvalError}>{error}</span>}
+        {program.isApproved ? (
+          <Button variant="subtle" size="sm" disabled={busy} onClick={() => toggle(false)}>
+            Onayı geri al
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            disabled={busy || !program.isFinished}
+            title={program.isFinished ? undefined : 'Program henüz bitmedi'}
+            onClick={() => toggle(true)}
+          >
+            <Check size={14} /> Haftayı onayla
+          </Button>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 /** Programın günleri — uzunluk esnek olduğundan sabit 7 gün değil, pencerenin
- *  kendi günleri (windowDays) çizilir. */
-function WeekBoard({ program }) {
+ *  kendi günleri (windowDays) çizilir. Onaydan **önce** rehber her bloğu
+ *  tamamlandı/tamamlanmadı olarak düzeltebilir; onaydan sonra tahta salt-okunur
+ *  görünür (rehber yine yetkilidir ama mühürü kazara bozmasın diye kilitli). */
+function WeekBoard({ program, onToggleTask }) {
   const days = windowDays(program.startDate, program.dayCount);
+  const [busyTask, setBusyTask] = useState(null);
+  const locked = program.isApproved;
+
+  async function toggle(block) {
+    if (locked || busyTask) return;
+    setBusyTask(block.taskId);
+    try {
+      onToggleTask(block.taskId, await setTaskCompleted(block.taskId, !block.isCompleted));
+    } catch {
+      /* sunucu reddettiyse tahta olduğu gibi kalır */
+    } finally {
+      setBusyTask(null);
+    }
+  }
+
   return (
     <div className={s.week} style={{ '--cols': days.length }}>
       {days.map((day) => {
@@ -626,12 +735,26 @@ function WeekBoard({ program }) {
               <span className={s.dayEmpty}>—</span>
             ) : (
               items.map((b) => (
-                <div className={s.block} key={b.id} style={{ borderLeftColor: b.subjectColor }}>
-                  <span className={s.blockTime}>{fmtMin(b.startMin)}</span>
+                <button
+                  type="button"
+                  className={cx(s.block, b.isCompleted && s.blockDone, locked && s.blockLocked)}
+                  key={b.id}
+                  style={{ borderLeftColor: b.subjectColor }}
+                  disabled={locked || busyTask === b.taskId}
+                  onClick={() => toggle(b)}
+                  aria-pressed={b.isCompleted}
+                  title={locked
+                    ? 'Onaylanmış program kilitlidir'
+                    : (b.isCompleted ? 'Yapılmadı olarak işaretle' : 'Yapıldı olarak işaretle')}
+                >
+                  <span className={s.blockTime}>
+                    {b.isCompleted ? <Check size={10} /> : (locked ? <Lock size={10} /> : null)}
+                    {fmtMin(b.startMin)}
+                  </span>
                   <span className={s.blockSubject}>{blockLabel(b)}</span>
                   {b.kind !== 'external' && b.topic && <span className={s.blockTopic}>{b.topic}</span>}
                   {b.bookLabel && <span className={s.blockBook}>{b.bookLabel}</span>}
-                </div>
+                </button>
               ))
             )}
           </div>
