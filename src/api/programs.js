@@ -168,14 +168,67 @@ export async function getStudentPrograms(studentId) {
       isFinished: !!p.is_finished,
       approvedAt: p.approved_at || null,
       approvedByName: p.approved_by_name || null,
+      // Uyum özeti (B2) sunucudan gelir — süre üzerinden hesaplanır, tarayıcıda tekrar
+      // hesaplanmaz ki panel, öğrenci sayfası ve veli aynı sayıyı görsün.
+      compliance: mapCompliance(p.compliance),
       blocks: (p.tasks || []).map((t) => mapTaskToBlock(t, p.start_date)),
     }));
+}
+
+/** Backend uyum özeti → kamelCase. Boş programda `percent` null gelir. */
+function mapCompliance(c) {
+  if (!c) return null;
+  return {
+    percent: c.percent,
+    basis: c.basis,                        // 'duration' | 'count' | 'empty'
+    totalMinutes: c.total_minutes,
+    completedMinutes: c.completed_minutes,
+    totalTasks: c.total_tasks,
+    completedTasks: c.completed_tasks,
+    studyHours: c.study_hours,
+    weeklyHours: c.weekly_hours,
+  };
+}
+
+/** Öğrencinin uyum geçmişi (B2): bitmiş haftaların serisi + ay ay ve genel özet.
+ *  Aylık/genel özet yalnız **onaylanmış** haftalardan çıkar (B1'in güven modeli). */
+export async function getComplianceHistory(studentId) {
+  const { data } = await api.get('/programs/compliance/', {
+    params: studentId ? { student: studentId } : undefined,
+  });
+  const sum = (o) => ({
+    percent: o.percent,
+    studyHours: o.study_hours,
+    programCount: o.program_count,
+    totalMinutes: o.total_minutes,
+    completedMinutes: o.completed_minutes,
+  });
+  return {
+    pendingApproval: data.pending_approval,
+    programs: (data.programs || []).map((p) => ({
+      id: p.id,
+      startDate: p.start_date,
+      endDate: p.end_date,
+      dayCount: p.day_count,
+      isApproved: p.is_approved,
+      ...mapCompliance(p),
+    })),
+    months: (data.months || []).map((m) => ({ month: m.month, ...sum(m) })),
+    overall: sum(data.overall || {}),
+  };
 }
 
 /** Bir görevi tamamlandı/tamamlanmadı işaretler (rehber, onay öncesi düzeltme). */
 export async function setTaskCompleted(taskId, isCompleted) {
   const { data } = await api.patch(`/tasks/${taskId}/`, { is_completed: isCompleted });
   return !!data.is_completed;
+}
+
+/** Tek programın güncel uyum özetini çeker — görev işaretlendikten sonra yüzdeyi
+ *  tarayıcıda yeniden hesaplamak yerine sunucudan almak için. */
+export async function getProgramCompliance(programId) {
+  const { data } = await api.get(`/programs/${programId}/`);
+  return mapCompliance(data.compliance);
 }
 
 /** Haftalık onay (B1). `approved=false` onayı geri alır. Backend program objesi döner. */
@@ -187,6 +240,7 @@ export async function setProgramApproval(programId, approved) {
     isFinished: !!data.is_finished,
     approvedAt: data.approved_at || null,
     approvedByName: data.approved_by_name || null,
+    compliance: mapCompliance(data.compliance),
   };
 }
 

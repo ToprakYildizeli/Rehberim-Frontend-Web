@@ -350,6 +350,72 @@
 .approvalNote { font-size: 0.72rem; color: var(--text-muted); }
 .approvalActions { display: flex; align-items: center; gap: var(--space-2); }
 .approvalError { font-size: 0.72rem; color: var(--danger); }
+.approvalSub { font-weight: 500; color: var(--text-muted); }
+
+/* ---------- Uyum geçmişi (B2) ---------- */
+.statRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+.statWarn { border-color: var(--warning); }
+.statLabel { font-size: 0.7rem; font-weight: 600; color: var(--text-muted); }
+.statValue { font-size: 1.35rem; font-weight: 800; color: var(--text); line-height: 1.1; }
+.statHint { font-size: 0.68rem; color: var(--text-muted); }
+
+.chartTitle {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: var(--space-4) 0 var(--space-2);
+}
+.chartNote { font-size: 0.68rem; font-weight: 500; color: var(--text-muted); margin: 6px 0 0; }
+.chartWrap { overflow-x: auto; }
+/* viewBox oranı korunarak ölçekleniyor; üst sınır olmadan geniş ekranda
+   gereksiz yükseliyor ve etiketler büyüyordu. */
+.chart { display: block; width: 100%; max-width: 860px; min-width: 420px; height: auto; }
+/* Izgara ve eksen geri planda; veri önde. */
+.grid { stroke: var(--border); stroke-width: 1; }
+.axisLabel { font-size: 9px; fill: var(--text-muted); }
+.pointLabel { font-size: 10px; font-weight: 700; fill: var(--text); }
+.line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.dot { fill: var(--accent); stroke: var(--bg-card); stroke-width: 2; }
+/* Onaysız hafta: içi boş — renk tek başına ayırt edici olmasın. */
+.dotOpen { fill: var(--bg-card); stroke: var(--accent); stroke-width: 2; }
+
+.monthList { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.monthRow {
+  display: grid;
+  grid-template-columns: minmax(88px, auto) 1fr 42px minmax(96px, auto);
+  align-items: center;
+  gap: var(--space-3);
+}
+.monthName { font-size: 0.74rem; font-weight: 600; color: var(--text); }
+.monthTrack {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+.monthFill { display: block; height: 100%; border-radius: 4px; background: var(--accent); }
+.monthValue { font-size: 0.74rem; font-weight: 700; color: var(--text); text-align: right; }
+.monthHint { font-size: 0.68rem; color: var(--text-muted); }
+
+@media (max-width: 720px) {
+  .monthRow { grid-template-columns: minmax(80px, auto) 1fr 40px; }
+  .monthHint { display: none; }
+}
 
 /* Tahtadaki blok onay öncesi tıklanabilir (yapıldı/yapılmadı), onaydan sonra kilitli. */
 .block { text-align: left; font: inherit; cursor: pointer; }

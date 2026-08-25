@@ -11,13 +11,28 @@ import { getStudent } from '../api/students';
 import { listStudentBooks, getBook } from '../api/books';
 import { listStudentExams } from '../api/exams';
 import {
-  getStudentPrograms, setProgramApproval, setTaskCompleted, windowDays, fmtMin,
+  getComplianceHistory, getProgramCompliance, getStudentPrograms, setProgramApproval,
+  setTaskCompleted, windowDays, fmtMin,
 } from '../api/programs';
 import { listSubjects, listTopics, blockLabel } from '../api/catalog';
 import { getTopicLevels, setTopicLevel } from '../api/topicProgress';
 import s from './OgrenciDetay.module.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
+
+/** Dakika → "6,5 sa" / "45 dk". Uyum ve çalışma süreleri hep bu biçimde yazılır. */
+const fmtHours = (min) => {
+  if (!min) return '0 sa';
+  if (min < 60) return `${min} dk`;
+  return `${(min / 60).toFixed(1).replace('.', ',').replace(',0', '')} sa`;
+};
+
+const MONTH_NAMES = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+  'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+const fmtMonth = (ym) => {
+  const [y, m] = ym.split('-').map(Number);
+  return `${MONTH_NAMES[m - 1]} ${y}`;
+};
 
 const FIELD_LABEL = { say: 'Sayısal', ea: 'Eşit Ağırlık', soz: 'Sözel' };
 const MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
@@ -565,6 +580,8 @@ function ExamRow({ exam, groups, aytFields }) {
 function ProgramTab({ studentId }) {
   const [programs, setPrograms] = useState(null);
   const [activeId, setActiveId] = useState(null);
+  // Onay ya da görev işareti değişince geçmiş kartı yeniden çekilsin.
+  const [version, setVersion] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -582,10 +599,12 @@ function ProgramTab({ studentId }) {
   );
 
   /** Tek bir programı yerinde günceller (onay ya da görev işareti sonrası). */
-  const patchProgram = (programId, patch) =>
+  const patchProgram = (programId, patch) => {
     setPrograms((prev) => (prev || []).map(
       (p) => (p.id === programId ? { ...p, ...patch } : p)
     ));
+    setVersion((v) => v + 1);
+  };
 
   const options = useMemo(
     () => (programs || []).map((p) => ({
@@ -620,12 +639,18 @@ function ProgramTab({ studentId }) {
             <ApprovalBar program={active} onChange={(patch) => patchProgram(active.id, patch)} />
             <WeekBoard
               program={active}
-              onToggleTask={(taskId, next) => patchProgram(active.id, {
-                blocks: active.blocks.map(
-                  (b) => (b.taskId === taskId ? { ...b, isCompleted: next } : b)
-                ),
-              })}
+              onToggleTask={async (taskId, next) => {
+                patchProgram(active.id, {
+                  blocks: active.blocks.map(
+                    (b) => (b.taskId === taskId ? { ...b, isCompleted: next } : b)
+                  ),
+                });
+                // Yüzdeyi tarayıcıda tekrar hesaplamak yerine sunucudan al.
+                const fresh = await getProgramCompliance(active.id).catch(() => null);
+                if (fresh) patchProgram(active.id, { compliance: fresh });
+              }}
             />
+            <ComplianceHistory studentId={studentId} version={version} />
           </>
         )}
       </div>
@@ -642,9 +667,9 @@ function ApprovalBar({ program, onChange }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const total = program.blocks.filter((b) => b.countsAsStudy).length;
-  const done = program.blocks.filter((b) => b.countsAsStudy && b.isCompleted).length;
-  const pct = total ? Math.round((done / total) * 100) : 0;
+  // Uyum sunucuda **süre** üzerinden hesaplanır; burada tekrar hesaplanmaz ki
+  // panel, öğrenci sayfası ve veli aynı sayıyı görsün.
+  const c = program.compliance;
 
   async function toggle(approved) {
     setBusy(true);
@@ -668,9 +693,18 @@ function ApprovalBar({ program, onChange }) {
           : <Badge tone={program.isFinished ? 'warning' : 'neutral'}>
               {program.isFinished ? 'Onay bekliyor' : 'Devam ediyor'}
             </Badge>}
-        <span className={s.approvalStat}>
-          {total ? `${done}/${total} görev tamamlandı · %${pct}` : 'Bu programda çalışma bloğu yok'}
-        </span>
+        {c && c.percent != null ? (
+          <span className={s.approvalStat}>
+            %{c.percent} uyum
+            <span className={s.approvalSub}>
+              {c.basis === 'duration'
+                ? ` · ${fmtHours(c.completedMinutes)} / ${fmtHours(c.totalMinutes)} çalışma`
+                : ` · ${c.completedTasks}/${c.totalTasks} görev`}
+            </span>
+          </span>
+        ) : (
+          <span className={s.approvalNote}>Bu programda çalışma bloğu yok</span>
+        )}
         {program.isApproved && program.approvedByName && (
           <span className={s.approvalNote}>
             {program.approvedByName} onayladı{program.approvedAt ? ` · ${fmtDate(program.approvedAt.slice(0, 10))}` : ''}
@@ -761,6 +795,161 @@ function WeekBoard({ program, onToggleTask }) {
         );
       })}
     </div>
+  );
+}
+
+/* ---------------- Uyum geçmişi (B2) ---------------- */
+
+/** Öğrencinin uyum geçmişi: genel özet + haftalık zaman serisi + ay ay dağılım.
+ *
+ *  Yüzdeler sunucudan gelir ve **süre** üzerinden hesaplanır. Aylık ve genel
+ *  ortalamalar yalnız **onaylanmış** haftalardan çıkar (B1): onaysız haftanın
+ *  beyanı doğrulanmamıştır, uzun vadeli istatistiği kirletmemeli. Haftalık seride
+ *  onaysızlar da görünür ama içi boş nokta ile ayrışır. */
+function ComplianceHistory({ studentId, version }) {
+  const [data, setData] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    getComplianceHistory(studentId)
+      .then((d) => alive && setData(d))
+      .catch(() => alive && setFailed(true));
+    return () => { alive = false; };
+  }, [studentId, version]);
+
+  if (failed) return null;
+  if (!data) {
+    return <Card><div className={s.center}><Spinner /></div></Card>;
+  }
+  const points = data.programs.filter((p) => p.percent != null);
+  if (!points.length) {
+    return (
+      <Card>
+        <h3 className={s.sectionTitle}>Uyum Geçmişi</h3>
+        <p className={s.approvalNote}>
+          Henüz tamamlanmış bir program yok — hafta bittikçe burada uyum geçmişi birikir.
+        </p>
+      </Card>
+    );
+  }
+
+  const { overall, months, pendingApproval } = data;
+  return (
+    <Card>
+      <h3 className={s.sectionTitle}>Uyum Geçmişi</h3>
+
+      <div className={s.statRow}>
+        <Stat
+          label="Genel uyum"
+          value={overall.percent != null ? `%${overall.percent}` : '—'}
+          hint={`${overall.programCount} onaylı hafta`}
+        />
+        <Stat label="Planlanan çalışma" value={`${overall.studyHours} sa`} hint="onaylı haftalarda" />
+        <Stat label="Tamamlanan" value={fmtHours(overall.completedMinutes)} hint="onaylı haftalarda" />
+        {pendingApproval > 0 && (
+          <Stat label="Onay bekleyen" value={pendingApproval} hint="istatistiğe girmiyor" warn />
+        )}
+      </div>
+
+      <h4 className={s.chartTitle}>Haftalık uyum</h4>
+      <ComplianceLine points={points} />
+
+      {months.length > 0 && (
+        <>
+          <h4 className={s.chartTitle}>Ay ay uyum <span className={s.chartNote}>(yalnız onaylı haftalar)</span></h4>
+          <MonthBars months={months} />
+        </>
+      )}
+    </Card>
+  );
+}
+
+function Stat({ label, value, hint, warn }) {
+  return (
+    <div className={cx(s.stat, warn && s.statWarn)}>
+      <span className={s.statLabel}>{label}</span>
+      <span className={s.statValue}>{value}</span>
+      {hint && <span className={s.statHint}>{hint}</span>}
+    </div>
+  );
+}
+
+/** Haftalık uyum çizgisi. Tek seri olduğu için lejant yok — başlık seriyi adlandırıyor.
+ *  Onaysız haftalar içi boş nokta (ikincil kodlama), renk tek başına anlam taşımıyor. */
+function ComplianceLine({ points }) {
+  const W = 720;
+  const H = 190;
+  const PAD = { top: 12, right: 16, bottom: 26, left: 34 };
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+  const x = (i) => PAD.left + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
+  const y = (v) => PAD.top + plotH - (v / 100) * plotH;
+  const path = points.map((p, i) => `${i ? 'L' : 'M'}${x(i)} ${y(p.percent)}`).join(' ');
+  const last = points[points.length - 1];
+
+  return (
+    <div className={s.chartWrap}>
+      <svg className={s.chart} viewBox={`0 0 ${W} ${H}`} role="img"
+        aria-label={`Haftalık uyum yüzdesi grafiği, ${points.length} hafta, son hafta yüzde ${last.percent}`}>
+        {[0, 50, 100].map((v) => (
+          <g key={v}>
+            <line className={s.grid} x1={PAD.left} x2={W - PAD.right} y1={y(v)} y2={y(v)} />
+            <text className={s.axisLabel} x={PAD.left - 7} y={y(v) + 3.5} textAnchor="end">{v}</text>
+          </g>
+        ))}
+        <path className={s.line} d={path} />
+        {points.map((p, i) => (
+          <g key={p.id}>
+            <circle
+              className={p.isApproved ? s.dot : s.dotOpen}
+              cx={x(i)} cy={y(p.percent)} r={4.5}
+            >
+              <title>
+                {`${fmtDate(p.startDate)} – ${fmtDate(p.endDate)}\n`}
+                {`%${p.percent} uyum · ${fmtHours(p.completedMinutes)} / ${fmtHours(p.totalMinutes)}\n`}
+                {p.isApproved ? 'Onaylandı' : 'Onay bekliyor (ortalamaya girmiyor)'}
+              </title>
+            </circle>
+          </g>
+        ))}
+        {/* Yalnız ilk ve son etiketlenir; her noktaya sayı yazmak grafiği okunmaz yapar. */}
+        <text className={s.axisLabel} x={PAD.left} y={H - 8} textAnchor="start">
+          {fmtDate(points[0].startDate)}
+        </text>
+        {points.length > 1 && (
+          <text className={s.axisLabel} x={W - PAD.right} y={H - 8} textAnchor="end">
+            {fmtDate(last.startDate)}
+          </text>
+        )}
+        <text className={s.pointLabel} x={x(points.length - 1)} y={y(last.percent) - 10} textAnchor="end">
+          %{last.percent}
+        </text>
+      </svg>
+      <p className={s.chartNote}>
+        İçi dolu nokta onaylanmış haftayı, içi boş nokta onay bekleyeni gösterir.
+      </p>
+    </div>
+  );
+}
+
+/** Ay ay uyum — büyüklük karşılaştırması olduğu için çubuk. */
+function MonthBars({ months }) {
+  return (
+    <ul className={s.monthList}>
+      {months.map((m) => (
+        <li className={s.monthRow} key={m.month}>
+          <span className={s.monthName}>{fmtMonth(m.month)}</span>
+          <span className={s.monthTrack}>
+            <span className={s.monthFill} style={{ width: `${m.percent ?? 0}%` }} />
+          </span>
+          <span className={s.monthValue}>%{m.percent ?? 0}</span>
+          <span className={s.monthHint}>
+            {m.programCount} hafta · {m.studyHours} sa
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

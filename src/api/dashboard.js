@@ -139,12 +139,9 @@ export async function getDashboard() {
     // Pencere artık 7 gün olmak zorunda değil — bitişi sunucudan gelen `end_date` söyler.
     const current = b.programs.find((p) => p.start_date <= today && today <= p.end_date);
     const hasCurrentProgram = !!current;
-    let compliance = null;
-    if (current && current.tasks?.length) {
-      compliance = Math.round(current.tasks.filter((t) => t.is_completed).length / current.tasks.length * 100);
-    } else if (current) {
-      compliance = 0;
-    }
+    // Uyum yüzdesi sunucuda **süre** üzerinden hesaplanır (B2) — burada görev
+    // sayısıyla tekrar hesaplanmaz ki panel ile öğrenci sayfası aynı sayıyı göstersin.
+    const compliance = current ? (current.compliance?.percent ?? 0) : null;
 
     // TYT herkes için aynı ölçek. AYT'de ölçek alana göre değişir ve her öğrencinin
     // **üç alanda da** neti hesaplanır — seçilen alan "kimin listeleneceğini" değil,
