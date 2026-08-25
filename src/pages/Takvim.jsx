@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import {
-  Card, Button, Avatar, Badge, Field, Input, Select, EmptyState, Spinner,
+  Card, Button, Avatar, Field, Input, Select, EmptyState, Spinner,
 } from '../components/ui';
 import WheelPicker from '../components/ui/WheelPicker';
 import { listAppointments, createAppointment, deleteAppointment } from '../api/appointments';
@@ -21,7 +21,10 @@ const toKey = (y, m, d) =>
 /** Monday-first offset for the 1st of the month. */
 const leadingBlanks = (y, m) => (new Date(y, m, 1).getDay() + 6) % 7;
 
-const CATEGORY_TONE = { Toplantı: 'accent', Görüşme: 'violet', Deneme: 'warning', Diğer: 'neutral' };
+/** Bir gün hücresine sığan etkinlik kutusu sayısı; fazlası "+N daha" olur.
+ *  Hücre yüksekliği buna göre sabitlendiği için ikisi birlikte değişmeli
+ *  (bkz. `.cell` min-height, Takvim.module.css). */
+const CHIPS_PER_CELL = 2;
 const catColor = (c) =>
   (c === 'Görüşme' ? 'var(--violet)' : c === 'Deneme' ? 'var(--warning)' : 'var(--accent)');
 
@@ -132,6 +135,9 @@ export default function Takvim() {
             const day = i + 1;
             const key = toKey(cursor.year, cursor.month, day);
             const dayItems = byDate.get(key) ?? [];
+            // Hücreye kaç kutu sığdığı sabit; kalanı sessizce düşmesin diye sayılır.
+            const shown = dayItems.slice(0, CHIPS_PER_CELL);
+            const hidden = dayItems.length - shown.length;
             return (
               <button
                 type="button"
@@ -143,16 +149,22 @@ export default function Takvim() {
                 ].join(' ')}
                 onClick={() => setSelected(key)}
                 aria-pressed={key === selected}
+                aria-label={`${day} ${MONTHS[cursor.month]}, ${dayItems.length} etkinlik`}
               >
-                {day}
-                <span className={s.dots}>
-                  {dayItems.slice(0, 3).map((a) => (
+                <span className={s.cellDay}>{day}</span>
+                <span className={s.cellEvents}>
+                  {shown.map((a) => (
                     <span
-                      className={s.dot}
+                      className={s.chip}
                       key={a.id}
-                      style={{ background: catColor(a.category) }}
-                    />
+                      style={{ borderLeftColor: catColor(a.category) }}
+                      title={`${a.time} ${a.student?.name ?? ''} ${a.category}`.trim()}
+                    >
+                      {a.time && <span className={s.chipTime}>{a.time}</span>}
+                      <span className={s.chipText}>{a.student?.name ?? a.category}</span>
+                    </span>
                   ))}
+                  {hidden > 0 && <span className={s.chipMore}>+{hidden} daha</span>}
                 </span>
               </button>
             );
@@ -177,23 +189,17 @@ export default function Takvim() {
                 style={{ borderLeftColor: catColor(a.category) }}
               >
                 <span className={s.eventTime}>{a.time}</span>
-                {a.student ? (
-                  <>
-                    <Avatar name={a.student.name} color={a.student.color} size="sm" />
-                    <span className={s.eventBody}>
-                      <span className={s.eventName}>{a.student.name}</span>
-                      <p className={s.eventNote}>{a.note}</p>
-                    </span>
-                  </>
-                ) : (
-                  <span className={s.eventBody}>
-                    <span className={s.eventName}>{a.note || 'Kişisel etkinlik'}</span>
-                    <p className={s.eventNote}>Kişisel</p>
-                  </span>
+                {a.student && (
+                  <Avatar name={a.student.name} color={a.student.color} size="sm" />
                 )}
-                <Badge className={s.eventBadge} tone={CATEGORY_TONE[a.category] ?? 'neutral'}>
-                  {a.category}
-                </Badge>
+                {/* Başlık ana satır, kim/not ikinci satır. `category` backend'in
+                    serbest metin `title`'ı olduğu için rozete sığmıyordu. */}
+                <span className={s.eventBody}>
+                  <span className={s.eventName} title={a.category}>{a.category}</span>
+                  <p className={s.eventNote}>
+                    {[a.student?.name ?? 'Kişisel', a.note].filter(Boolean).join(' · ')}
+                  </p>
+                </span>
                 <button
                   type="button"
                   className={s.eventDelete}
