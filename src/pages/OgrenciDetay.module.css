@@ -352,6 +352,49 @@
 .approvalError { font-size: 0.72rem; color: var(--danger); }
 .approvalSub { font-weight: 500; color: var(--text-muted); }
 
+/* ---------- Başarımlar (C3) ---------- */
+.badgeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--space-3);
+}
+.badgeCard {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  min-width: 0;
+}
+/* Kazanılan başarım renkle DEĞİL, önce ikon ve "Kazanıldı" etiketiyle ayrışır;
+   renk yalnızca destekleyici. */
+.badgeCardEarned { border-color: var(--success); background: var(--success-bg); }
+.badgeIcon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bg-alt);
+  color: var(--text-muted);
+}
+.badgeCardEarned .badgeIcon { background: var(--success); color: #fff; }
+.badgeBody { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.badgeName {
+  font-size: 0.8rem; font-weight: 700; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.badgeDesc { font-size: 0.68rem; color: var(--text-muted); }
+.badgeEarned {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.68rem; font-weight: 700; color: var(--success-text);
+}
+/* ProgressBar `flex: 1` taşıyor; dikey bir flex içinde bu, yüksekliği yerine
+   sütun ekseninde büyüme demek olduğu için çubuk görünmez oluyordu. */
+.badgeBar { flex: 0 0 5px; margin: 2px 0; }
+
 /* ---------- Uyum geçmişi (B2) ---------- */
 .statRow {
   display: grid;

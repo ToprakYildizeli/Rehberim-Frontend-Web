@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, ChevronDown, BookOpen, ClipboardList, CalendarDays, Target, Check,
-  ArrowUpDown, ShieldCheck, Lock,
+  ArrowUpDown, ShieldCheck, Lock, Trophy,
 } from 'lucide-react';
 import {
   Card, Avatar, Badge, Button, Select, PillGroup, EmptyState, Spinner, ProgressBar, SearchInput,
@@ -16,6 +16,7 @@ import {
 } from '../api/programs';
 import { listSubjects, listTopics, blockLabel } from '../api/catalog';
 import { getTopicLevels, setTopicLevel } from '../api/topicProgress';
+import { getStudentAchievements } from '../api/achievements';
 import s from './OgrenciDetay.module.css';
 
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -47,6 +48,7 @@ const TABS = [
   { value: 'denemeler', label: 'Denemeler' },
   { value: 'program', label: 'Ders Programı' },
   { value: 'konular', label: 'Konu Takibi' },
+  { value: 'basarimlar', label: 'Başarımlar' },
 ];
 
 export default function OgrenciDetay() {
@@ -103,6 +105,7 @@ export default function OgrenciDetay() {
       {tab === 'kitaplar' && <KitaplarTab studentId={student.id} />}
       {tab === 'denemeler' && <DenemelerTab studentId={student.id} />}
       {tab === 'program' && <ProgramTab studentId={student.id} />}
+      {tab === 'basarimlar' && <BasarimlarTab studentId={student.id} />}
       {tab === 'konular' && <KonuTakibiTab student={student} />}
     </div>
   );
@@ -794,6 +797,115 @@ function WeekBoard({ program, onToggleTask }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* ---------------- Başarımlar (C3) ---------------- */
+
+/** Başarım eşikleri **rehbere** aittir; hoca ileride Ayarlar'dan ekleyip
+ *  çıkarabilecek (uçlar hazır: `src/api/achievements.js`). Burası yalnızca
+ *  öğrencinin durumunu gösterir — kazanım sunucuda anlık hesaplanır. */
+function BasarimlarTab({ studentId }) {
+  const [data, setData] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    getStudentAchievements(studentId)
+      .then((d) => alive && setData(d))
+      .catch(() => alive && setFailed(true));
+    return () => { alive = false; };
+  }, [studentId]);
+
+  if (failed) {
+    return <EmptyState icon={<Trophy size={22} />} title="Başarımlar yüklenemedi" />;
+  }
+  return (
+    <TabState
+      loading={!data}
+      empty={data && data.totalCount === 0}
+      emptyProps={{
+        icon: <Trophy size={22} />,
+        title: 'Başarım tanımlı değil',
+        text: 'Bu öğrenci için geçerli bir başarım listesi yok.',
+      }}
+    >
+      {data && <BasarimIcerik data={data} />}
+    </TabState>
+  );
+}
+
+function BasarimIcerik({ data }) {
+  const { facts } = data;
+  const earned = data.achievements.filter((a) => a.earned);
+  const pending = data.achievements.filter((a) => !a.earned);
+  return (
+    <div className={s.stack}>
+      <div className={s.statRow}>
+        <Stat
+          label="Kazanılan başarım"
+          value={`${data.earnedCount}/${data.totalCount}`}
+          hint={data.totalCount ? `%${Math.round(data.earnedCount / data.totalCount * 100)}` : null}
+        />
+        <Stat label="En iyi TYT net" value={fmtNet(facts.examNetTyt)} hint="tüm denemeler içinde" />
+        <Stat label="En iyi AYT net" value={fmtNet(facts.examNetAyt)} hint="tüm denemeler içinde" />
+        <Stat
+          label="Konu tamamlama"
+          value={facts.topicCompletion == null ? '—' : `%${facts.topicCompletion}`}
+          hint={`${facts.topicsDone}/${facts.topicsTotal} konu`}
+        />
+      </div>
+
+      {earned.length > 0 && (
+        <div>
+          <h4 className={s.chartTitle}>Kazanılanlar</h4>
+          <div className={s.badgeGrid}>
+            {earned.map((a) => <BasarimKarti key={a.id} a={a} />)}
+          </div>
+        </div>
+      )}
+
+      {pending.length > 0 && (
+        <div>
+          <h4 className={s.chartTitle}>
+            Sıradakiler <span className={s.chartNote}>(eşiğe en yakından uzağa)</span>
+          </h4>
+          <div className={s.badgeGrid}>
+            {pending.map((a) => <BasarimKarti key={a.id} a={a} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const fmtNet = (n) => (n == null ? '—' : String(n).replace('.', ','));
+
+/** Ölçüte göre ham değerin nasıl yazılacağı — net sayı, yüzde ise yüzde. */
+const fmtDeger = (a) => {
+  if (a.value == null) return 'veri yok';
+  return a.metric === 'exam_net' ? `${fmtNet(a.value)} net` : `%${a.value}`;
+};
+
+function BasarimKarti({ a }) {
+  return (
+    <div className={cx(s.badgeCard, a.earned && s.badgeCardEarned)}>
+      <span className={s.badgeIcon} aria-hidden="true">
+        <Trophy size={16} />
+      </span>
+      <span className={s.badgeBody}>
+        <span className={s.badgeName}>{a.name}</span>
+        {a.description && <span className={s.badgeDesc}>{a.description}</span>}
+        {a.earned ? (
+          <span className={s.badgeEarned}><Check size={11} /> Kazanıldı · {fmtDeger(a)}</span>
+        ) : (
+          <>
+            <ProgressBar className={s.badgeBar} value={a.progress} />
+            <span className={s.badgeDesc}>{fmtDeger(a)} · hedef {fmtNet(a.threshold)}</span>
+          </>
+        )}
+      </span>
     </div>
   );
 }
