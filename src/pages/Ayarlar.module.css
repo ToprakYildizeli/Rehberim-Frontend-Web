@@ -1,9 +1,72 @@
+/* İki sütun: solda ayar rafı, sağda içerik. Eskiden tek 640px'lik sütundu ve
+   geniş ekranda sağ taraf tamamen boş kalıyordu. */
 .page {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* ---- ayar rafı ---- */
+.nav {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
-  max-width: 640px;
+  gap: var(--space-1);
+  position: sticky;
+  top: var(--space-5);
 }
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: none;
+  border: none;
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.navItem:hover { background: var(--bg-alt); color: var(--text); }
+.navItem:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.navItemOn {
+  background: var(--accent-subtle);
+  color: var(--accent-text);
+}
+
+.navItemOn .navHint { color: var(--accent-text); opacity: 0.75; }
+
+.navText { display: flex; flex-direction: column; min-width: 0; }
+.navLabel { font-size: 0.85rem; font-weight: 600; }
+.navHint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 1px;
+  overflow-wrap: anywhere;
+}
+
+/* ---- içerik ---- */
+.contentHead { grid-column: 1 / -1; margin-bottom: calc(var(--space-2) * -1); }
+.contentTitle { font-size: 1.1rem; font-weight: 700; color: var(--text); margin: 0; }
+.contentHint { font-size: 0.8rem; color: var(--text-muted); margin: 3px 0 0; }
+
+/* Kartlar kalan genişliğe yayılıyor; dar olanlar yan yana geliyor.
+   `align-items: start` olmadan aynı satırdaki kartlar en uzununun boyuna
+   uzayıp altlarında boşluk bırakırdı. */
+.content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--space-5);
+  align-items: start;
+}
+
+/* Satır listeleri (öğrenci, davet, başarım) ve palet ızgarası tam genişlik. */
+.wide { grid-column: 1 / -1; }
 
 .form { display: flex; flex-direction: column; gap: var(--space-4); }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
@@ -53,6 +116,20 @@
   padding: var(--space-3) var(--space-4);
   margin: 0;
   line-height: 1.5;
+}
+
+/* Dar ekranda raf yatay bir şeride dönüşüyor; 220px'lik sütun burada içeriği
+   ezerdi. Sticky de kapatılıyor, yoksa kaydırırken içeriğin üstünü örter. */
+@media (max-width: 900px) {
+  .page { grid-template-columns: minmax(0, 1fr); }
+  .nav {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+  }
+  .navItem { flex-shrink: 0; }
+  .navHint { display: none; }
 }
 
 @media (max-width: 560px) {

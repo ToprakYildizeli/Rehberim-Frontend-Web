@@ -1,7 +1,9 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Copy, Lock, LogOut, Moon, Sun } from 'lucide-react';
-import { Card, CardHeader, Button, Field, Input, PillGroup } from '../components/ui';
+import {
+  Check, Copy, Lock, LogOut, Moon, Palette, ShieldCheck, Sun, User, Users,
+} from 'lucide-react';
+import { Card, CardHeader, Button, Field, Input } from '../components/ui';
 import AchievementsSection from '../components/settings/AchievementsSection';
 import CatalogSection from '../components/settings/CatalogSection';
 import ParentInvitesSection from '../components/settings/ParentInvitesSection';
@@ -38,10 +40,13 @@ export default function Ayarlar() {
   // "Rehberlik" yalnız rehberde var — öğrenci/veli bu ekranı görürse yalnız
   // kendi profilini ve görünümünü yönetir.
   const tabs = useMemo(() => [
-    { value: 'profil', label: 'Profil' },
-    ...(isCounselor ? [{ value: 'rehberlik', label: 'Rehberlik' }] : []),
-    { value: 'gorunum', label: 'Görünüm' },
-    { value: 'hesap', label: 'Hesap' },
+    { value: 'profil', label: 'Profil', icon: User, hint: 'Ad, kurum, şifre' },
+    ...(isCounselor
+      ? [{ value: 'rehberlik', label: 'Rehberlik', icon: Users,
+           hint: 'Öğrenciler, veliler, başarımlar' }]
+      : []),
+    { value: 'gorunum', label: 'Görünüm', icon: Palette, hint: 'Tema ve renkler' },
+    { value: 'hesap', label: 'Hesap', icon: ShieldCheck, hint: 'Oturum' },
   ], [isCounselor]);
   const [tab, setTab] = useState('profil');
 
@@ -105,15 +110,43 @@ export default function Ayarlar() {
     navigate('/giris', { replace: true });
   }
 
+  const active = tabs.find((x) => x.value === tab) ?? tabs[0];
+
   return (
     <div className={s.page}>
-      <PillGroup options={tabs} value={tab} onChange={setTab} />
+      {/* Ana kenar çubuğunun yanında ikinci bir raf. Yatay sekmeler içeriği
+          640px'lik bir sütuna sıkıştırıyordu; dikey nav ile kalan genişliğin
+          tamamı ayarlara kalıyor. */}
+      <nav className={s.nav} role="tablist" aria-orientation="vertical"
+           aria-label="Ayarlar bölümleri">
+        {tabs.map(({ value, label, icon: Icon, hint }) => (
+          <button
+            key={value}
+            role="tab"
+            aria-selected={value === tab}
+            className={`${s.navItem} ${value === tab ? s.navItemOn : ''}`}
+            onClick={() => setTab(value)}
+          >
+            <Icon size={16} />
+            <span className={s.navText}>
+              <span className={s.navLabel}>{label}</span>
+              <span className={s.navHint}>{hint}</span>
+            </span>
+          </button>
+        ))}
+      </nav>
+
+      <div className={s.content}>
+        <header className={s.contentHead}>
+          <h2 className={s.contentTitle}>{active.label}</h2>
+          <p className={s.contentHint}>{active.hint}</p>
+        </header>
 
       {/* ---------------------------------------------------------- PROFİL */}
       {tab === 'profil' && (
         <>
       <Card>
-        <CardHeader title="Profil" subtitle="Hesap bilgileriniz" />
+        <CardHeader title="Kimlik bilgileri" subtitle="Ad, kurum ve giriş bilgileriniz" />
         <div className={s.form}>
           <div className={s.row}>
             <Field label="Ad" error={errors.first_name}>
@@ -168,9 +201,11 @@ export default function Ayarlar() {
 
       {tab === 'rehberlik' && isCounselor && (
         <>
-          <StudentsSection />
-          <ParentInvitesSection />
-          <AchievementsSection />
+          {/* Satır listeleri geniş olunca okunur; kataloglar dar rozet
+              kümeleri olduğu için yan yana sığıyor. */}
+          <div className={s.wide}><StudentsSection /></div>
+          <div className={s.wide}><ParentInvitesSection /></div>
+          <div className={s.wide}><AchievementsSection /></div>
           <CatalogSection
             title="Çalışma türleri"
             subtitle="Ders Programı'nda blok açarken seçilen metodlar"
@@ -193,8 +228,8 @@ export default function Ayarlar() {
 
       {/* ------------------------------------------------------ GÖRÜNÜM */}
       {tab === 'gorunum' && (
-      <Card>
-        <CardHeader title="Görünüm" subtitle="Erişilebilirlik ve tema tercihleri" />
+      <Card className={s.wide}>
+        <CardHeader title="Tema" subtitle="Aydınlık/karanlık ve renk teması" />
 
         <div className={s.option}>
           <div>
@@ -247,7 +282,7 @@ export default function Ayarlar() {
       {/* -------------------------------------------------------- HESAP */}
       {tab === 'hesap' && (
       <Card>
-        <CardHeader title="Hesap" />
+        <CardHeader title="Oturum" subtitle="Bu cihazdaki oturumunuz" />
         <div className={s.option}>
           <div>
             <p className={s.optionLabel}>Oturumu kapat</p>
@@ -259,6 +294,7 @@ export default function Ayarlar() {
         </div>
       </Card>
       )}
+      </div>
     </div>
   );
 }
