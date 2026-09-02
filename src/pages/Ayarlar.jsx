@@ -1,32 +1,44 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Moon, Sun } from 'lucide-react';
+import { Check, Copy, Lock, LogOut, Moon, Sun } from 'lucide-react';
 import { Card, CardHeader, Button, Field, Input } from '../components/ui';
-import { updateMe } from '../api/auth';
+import { changePassword, updateMe } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import s from './Ayarlar.module.css';
 
-/** Düzenlenebilir alanlar (auth-contract §5.4b). Kullanıcı adı salt-okunur. */
-const EDITABLE = ['first_name', 'last_name', 'email'];
+/** Sunucuda düzenlenebilir profil alanları (auth-contract §5.4b, v2.1).
+ *  `email` ve `username` bilerek yok: ikisi de kilitli. */
+const EDITABLE = ['first_name', 'last_name', 'institution'];
+
+/** Sunucunun alan bazlı hata gövdesini ({"alan": ["mesaj"]}) forma çevirir. */
+function fieldErrors(data) {
+  if (!data || typeof data !== 'object' || data.detail) return null;
+  return Object.fromEntries(
+    Object.entries(data).map(([k, v]) => [k, Array.isArray(v) ? v[0] : String(v)])
+  );
+}
 
 export default function Ayarlar() {
   const navigate = useNavigate();
-  const { user, updateUser, clearSession } = useAuth();
-  const { theme, toggle } = useTheme();
+  const { user, updateUser, saveSession, clearSession } = useAuth();
+  const { theme, toggle, palette, setPalette, palettes } = useTheme();
+
+  const isCounselor = user?.role === 'counselor';
+  const inviteCode = user?.profile?.invite_code ?? null;
 
   const saved = useMemo(
     () => ({
       first_name: user?.first_name ?? '',
       last_name: user?.last_name ?? '',
-      email: user?.email ?? '',
+      institution: user?.profile?.institution ?? '',
     }),
     [user]
   );
 
   const [profile, setProfile] = useState(saved);
   const [errors, setErrors] = useState({});
-  const [status, setStatus] = useState(null);   // 'saving' | 'saved' | null
+  const [status, setStatus] = useState(null);          // 'saving' | 'saved' | null
   const [formError, setFormError] = useState(null);
 
   const isDirty = EDITABLE.some((k) => profile[k] !== saved[k]);
@@ -53,22 +65,15 @@ export default function Ayarlar() {
       setProfile({
         first_name: updated.first_name ?? '',
         last_name: updated.last_name ?? '',
-        email: updated.email ?? '',
+        institution: updated.profile?.institution ?? '',
       });
       setStatus('saved');
     } catch (err) {
       setStatus(null);
       const data = err?.response?.data;
-      if (data && typeof data === 'object' && !data.detail) {
-        // { "email": ["Bu e-posta ile zaten bir hesap var."] }
-        setErrors(
-          Object.fromEntries(
-            Object.entries(data).map(([k, v]) => [k, Array.isArray(v) ? v[0] : String(v)])
-          )
-        );
-      } else {
-        setFormError(data?.detail ?? 'Profil kaydedilemedi. Lütfen tekrar dene.');
-      }
+      const byField = fieldErrors(data);
+      if (byField) setErrors(byField);
+      else setFormError(data?.detail ?? 'Profil kaydedilemedi. Lütfen tekrar dene.');
     }
   }
 
@@ -79,6 +84,7 @@ export default function Ayarlar() {
 
   return (
     <div className={s.page}>
+      {/* ---------------------------------------------------------- PROFİL */}
       <Card>
         <CardHeader title="Profil" subtitle="Hesap bilgileriniz" />
         <div className={s.form}>
@@ -90,15 +96,30 @@ export default function Ayarlar() {
               <Input name="last_name" value={profile.last_name} onChange={handleChange} />
             </Field>
           </div>
-          <Field label="Kullanıcı adı">
-            <Input name="username" value={user?.username ?? ''} readOnly disabled />
-          </Field>
-          <Field label="E-posta" error={errors.email}>
-            <Input name="email" type="email" value={profile.email} onChange={handleChange} />
-          </Field>
+
+          {isCounselor && (
+            <Field label="Kurum / Okul" error={errors.institution}>
+              <Input
+                name="institution"
+                value={profile.institution}
+                onChange={handleChange}
+                placeholder="örn. Bilkent Erzurum Koleji"
+              />
+            </Field>
+          )}
+
+          <div className={s.row}>
+            <Field label="Kullanıcı adı">
+              <Input value={user?.username ?? ''} readOnly disabled />
+            </Field>
+            <Field label="E-posta">
+              <Input value={user?.email ?? ''} readOnly disabled />
+            </Field>
+          </div>
 
           <p className={s.note}>
-            Kullanıcı adı giriş kimliğin olduğu için değiştirilemez.
+            <Lock size={12} /> Kullanıcı adı giriş kimliğin olduğu için değiştirilemez.
+            E-posta da kilitlidir — şifre sıfırlama ileride bu adrese bağlanacak.
           </p>
 
           {formError && <p className={s.formError}>{formError}</p>}
@@ -112,11 +133,17 @@ export default function Ayarlar() {
         </div>
       </Card>
 
+      <PasswordCard onRotated={saveSession} user={user} />
+
+      {isCounselor && inviteCode && <InviteCodeCard code={inviteCode} />}
+
+      {/* ------------------------------------------------------ GÖRÜNÜM */}
       <Card>
-        <CardHeader title="Görünüm" subtitle="Arayüz tercihleri" />
+        <CardHeader title="Görünüm" subtitle="Erişilebilirlik ve tema tercihleri" />
+
         <div className={s.option}>
           <div>
-            <p className={s.optionLabel}>Tema</p>
+            <p className={s.optionLabel}>Aydınlık / Karanlık</p>
             <p className={s.optionHint}>
               {theme === 'light' ? 'Açık tema kullanılıyor' : 'Koyu tema kullanılıyor'}
             </p>
@@ -126,8 +153,42 @@ export default function Ayarlar() {
             {theme === 'light' ? 'Koyu temaya geç' : 'Açık temaya geç'}
           </Button>
         </div>
+
+        <div className={s.paletteBlock}>
+          <p className={s.optionLabel}>Renk teması</p>
+          <p className={s.optionHint}>
+            Seçim anında uygulanır ve bu tarayıcıda saklanır.
+          </p>
+          <div className={s.paletteGrid} role="radiogroup" aria-label="Renk teması">
+            {palettes.map((p) => {
+              const [bg, accent, side] = p.swatch[theme];
+              const selected = p.id === palette;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  className={`${s.paletteCard} ${selected ? s.paletteCardOn : ''}`}
+                  onClick={() => setPalette(p.id)}
+                >
+                  <span className={s.swatch} style={{ background: bg }}>
+                    <span className={s.swatchSide} style={{ background: side }} />
+                    <span className={s.swatchDot} style={{ background: accent }} />
+                  </span>
+                  <span className={s.paletteName}>
+                    {p.name}
+                    {selected && <Check size={13} />}
+                  </span>
+                  <span className={s.paletteHint}>{p.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </Card>
 
+      {/* -------------------------------------------------------- HESAP */}
       <Card>
         <CardHeader title="Hesap" />
         <div className={s.option}>
@@ -141,5 +202,123 @@ export default function Ayarlar() {
         </div>
       </Card>
     </div>
+  );
+}
+
+/* ============================================================ ŞİFRE ==== */
+
+const EMPTY_PW = { current_password: '', new_password: '', repeat: '' };
+
+/**
+ * Şifre değiştirme. Sunucu yanıtı taze bir token çifti içeriyor; `onRotated`
+ * ile oturuma yazılmazsa kullanıcı şifresini değiştirdikten sonra bir sonraki
+ * refresh'te kendi oturumundan düşer.
+ */
+function PasswordCard({ onRotated, user }) {
+  const [form, setForm] = useState(EMPTY_PW);
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState(null);
+  const [status, setStatus] = useState(null);          // 'saving' | 'saved' | null
+
+  const filled = form.current_password && form.new_password && form.repeat;
+  const mismatch = form.repeat.length > 0 && form.new_password !== form.repeat;
+
+  const onChange = (e) => {
+    const { name, value } = e.target;
+    setForm((f) => ({ ...f, [name]: value }));
+    setErrors((p) => ({ ...p, [name]: undefined }));
+    setStatus(null);
+    setFormError(null);
+  };
+
+  async function submit() {
+    if (mismatch) return;
+    setStatus('saving');
+    setErrors({});
+    setFormError(null);
+    try {
+      const tokens = await changePassword(form.current_password, form.new_password);
+      onRotated(tokens.access, tokens.refresh, user);
+      setForm(EMPTY_PW);
+      setStatus('saved');
+    } catch (err) {
+      setStatus(null);
+      const data = err?.response?.data;
+      const byField = fieldErrors(data);
+      if (byField) setErrors(byField);
+      else setFormError(data?.detail ?? 'Şifre değiştirilemedi. Lütfen tekrar dene.');
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Şifre" subtitle="Giriş şifrenizi değiştirin" />
+      <div className={s.form}>
+        <Field label="Mevcut şifre" error={errors.current_password}>
+          <Input
+            name="current_password" type="password" autoComplete="current-password"
+            value={form.current_password} onChange={onChange}
+          />
+        </Field>
+        <div className={s.row}>
+          <Field label="Yeni şifre" error={errors.new_password}>
+            <Input
+              name="new_password" type="password" autoComplete="new-password"
+              value={form.new_password} onChange={onChange}
+            />
+          </Field>
+          <Field label="Yeni şifre (tekrar)" error={mismatch ? 'Şifreler eşleşmiyor.' : undefined}>
+            <Input
+              name="repeat" type="password" autoComplete="new-password"
+              value={form.repeat} onChange={onChange}
+            />
+          </Field>
+        </div>
+
+        {formError && <p className={s.formError}>{formError}</p>}
+
+        <div className={s.actions}>
+          <Button onClick={submit} disabled={!filled || mismatch || status === 'saving'}>
+            {status === 'saving' ? 'Değiştiriliyor…' : 'Şifreyi Değiştir'}
+          </Button>
+          {status === 'saved' && <span className={s.savedHint}>Şifreniz değiştirildi</span>}
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+/* ======================================================= DAVET KODU ==== */
+
+/** Rehberin davet kodu — öğrenci bununla bağlanır, veli de bu kodu kullanır.
+ *  Kod değişmezdir; yenileme düğmesi bilerek yoktur. */
+function InviteCodeCard({ code }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);                 // izin yoksa kullanıcı elle seçebilir
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Davet kodu" subtitle="Öğrenci ve veliler bu kodla size bağlanır" />
+      <div className={s.option}>
+        <code className={s.code}>{code}</code>
+        <Button variant="ghost" size="sm" onClick={copy}>
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+          {copied ? 'Kopyalandı' : 'Kopyala'}
+        </Button>
+      </div>
+      <p className={s.note}>
+        Bu kod hesabınıza özeldir ve <strong>değişmez</strong>. Öğrenciniz kayıt
+        olurken, velisi de çocuğuna bağlanırken bu kodu girer.
+      </p>
+    </Card>
   );
 }

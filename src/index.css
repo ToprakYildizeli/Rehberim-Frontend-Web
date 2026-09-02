@@ -157,6 +157,248 @@
   --subj-genel: #5b6678;
 }
 
+
+/* ============================================================================
+   RENK PALETLERİ
+   ----------------------------------------------------------------------------
+   Yukarıdaki `:root` ve `[data-theme="dark"]` blokları **klasik** paletin ta
+   kendisidir; aşağıdaki bloklar yalnızca paletin karakterini taşıyan token'ları
+   ezer (zemin, kart, kenarlık, vurgu ailesi, kenar çubuğu, gölge). Ölçekler,
+   durum renkleri ve ders renkleri paletten bağımsızdır — bir blok "tamamlanmış"
+   yeşili her palette aynı anlama gelmeli.
+
+   Seçici neden `[data-theme="..."][data-palette="..."]`?
+   ThemeContext `data-theme`'i HER ZAMAN açıkça yazıyor (light ya da dark), bu
+   yüzden iki nitelik birlikte kullanılabiliyor. Özgüllük 0,2,0 → iki temel bloğu
+   da (0,1,0) geçer, yani bu blokların dosya içindeki SIRASI önemsizdir. Tek
+   nitelikle yazılsaydı sıraya bağımlı, kırılgan bir yapı olurdu.
+   ========================================================================== */
+
+/* ---- PASTEL — yumuşak, sıcak beyaz zemin, leylak vurgu ---- */
+[data-theme="light"][data-palette="pastel"] {
+  --bg: #fbf8f6;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-alt: #f4eee9;
+  --text: #3c3742;
+  --text-secondary: #6d6675;
+  --text-muted: #a49daa;
+  --text-label: #514a58;
+  --border: #ece2dc;
+  --border-input: #ddd0ca;
+  --accent: #a17fc4;
+  --accent-hover: #8b64b2;
+  --accent-subtle: #f7f2fb;
+  --accent-badge: #efe6f8;
+  --accent-text: #6b4e8f;
+  --shadow: 0 4px 24px rgba(126, 96, 148, 0.10);
+  --shadow-lg: 0 20px 60px rgba(126, 96, 148, 0.16);
+  --hero-gradient: linear-gradient(155deg, #f9f2fb 0%, #fbf8f6 45%, #fdf3ee 100%);
+  --preview-bg: #ffffff;
+  --preview-bar: #f4eee9;
+  --preview-border: #ece2dc;
+  --preview-progress-bg: #ece2dc;
+  --cta-from: #8b64b2;
+  --cta-to: #b47a9c;
+  --footer-bg: #3c3742;
+  --footer-text: #a49daa;
+  --sidebar-bg: #6d5b84;
+  --sidebar-text: #cfc4dc;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #86709e;
+  --sidebar-hover: rgba(255, 255, 255, 0.10);
+  --sidebar-border: rgba(255, 255, 255, 0.12);
+  --topbar-bg: #ffffff;
+  --canvas-bg: #f7f1ed;
+}
+
+[data-theme="dark"][data-palette="pastel"] {
+  --bg: #17141c;
+  --bg-card: #201c28;
+  --bg-input: #262130;
+  --bg-alt: #1b1722;
+  --text: #e9e3ef;
+  --text-secondary: #a79fb2;
+  --text-muted: #766e82;
+  --text-label: #cec6d6;
+  --border: #332c3e;
+  --border-input: #453c53;
+  --accent: #c4a7e0;
+  --accent-hover: #b394d4;
+  --accent-subtle: rgba(196, 167, 224, 0.12);
+  --accent-badge: #3a2f4a;
+  --accent-text: #d9c5ec;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.40);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.58);
+  --hero-gradient: linear-gradient(155deg, #1d1526 0%, #17141c 45%, #241823 100%);
+  --preview-bg: #241f2d;
+  --preview-bar: #1b1722;
+  --preview-border: #332c3e;
+  --preview-progress-bg: #332c3e;
+  --cta-from: #4a3560;
+  --cta-to: #603b52;
+  --footer-bg: #100d14;
+  --footer-text: #766e82;
+  --sidebar-bg: #1d1826;
+  --sidebar-text: #9b90a9;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #3d3150;
+  --sidebar-hover: rgba(255, 255, 255, 0.06);
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --topbar-bg: #201c28;
+  --canvas-bg: #17141c;
+}
+
+/* ---- SOFT — düşük kontrast, sıcak nötr, adaçayı vurgu ---- */
+[data-theme="light"][data-palette="soft"] {
+  --bg: #f6f7f3;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-alt: #edf0e8;
+  --text: #232e28;
+  --text-secondary: #57655d;
+  --text-muted: #93a099;
+  --text-label: #3b4741;
+  --border: #dfe5da;
+  --border-input: #ccd5c6;
+  --accent: #5b8c6e;
+  --accent-hover: #4a7459;
+  --accent-subtle: #eef5f0;
+  --accent-badge: #e2efe7;
+  --accent-text: #3d6b4e;
+  --shadow: 0 4px 24px rgba(47, 68, 56, 0.08);
+  --shadow-lg: 0 20px 60px rgba(47, 68, 56, 0.14);
+  --hero-gradient: linear-gradient(155deg, #eef5f0 0%, #f6f7f3 45%, #f4f3ea 100%);
+  --preview-bg: #ffffff;
+  --preview-bar: #edf0e8;
+  --preview-border: #dfe5da;
+  --preview-progress-bg: #dfe5da;
+  --cta-from: #4a7459;
+  --cta-to: #6b8f5a;
+  --footer-bg: #232e28;
+  --footer-text: #93a099;
+  --sidebar-bg: #2f4438;
+  --sidebar-text: #b3c4b9;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #46604f;
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --topbar-bg: #ffffff;
+  --canvas-bg: #f2f5ee;
+}
+
+[data-theme="dark"][data-palette="soft"] {
+  --bg: #10160f;
+  --bg-card: #18211a;
+  --bg-input: #1e2820;
+  --bg-alt: #141b15;
+  --text: #e3ebe4;
+  --text-secondary: #9dab9f;
+  --text-muted: #6c7a6e;
+  --text-label: #c6d2c7;
+  --border: #27342a;
+  --border-input: #364637;
+  --accent: #7fb994;
+  --accent-hover: #6aa681;
+  --accent-subtle: rgba(127, 185, 148, 0.12);
+  --accent-badge: #24402e;
+  --accent-text: #a3d1b3;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.38);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.56);
+  --hero-gradient: linear-gradient(155deg, #121c14 0%, #10160f 45%, #171c12 100%);
+  --preview-bg: #1b251d;
+  --preview-bar: #141b15;
+  --preview-border: #27342a;
+  --preview-progress-bg: #27342a;
+  --cta-from: #2c4a37;
+  --cta-to: #3f5533;
+  --footer-bg: #0a0f09;
+  --footer-text: #6c7a6e;
+  --sidebar-bg: #141d16;
+  --sidebar-text: #8b9c8e;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #2b3d2f;
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --topbar-bg: #18211a;
+  --canvas-bg: #10160f;
+}
+
+/* ---- MODERN — yüksek kontrast, nötr gri, keskin mor vurgu ---- */
+[data-theme="light"][data-palette="modern"] {
+  --bg: #ffffff;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-alt: #f4f4f5;
+  --text: #09090b;
+  --text-secondary: #52525b;
+  --text-muted: #a1a1aa;
+  --text-label: #27272a;
+  --border: #e4e4e7;
+  --border-input: #d4d4d8;
+  --accent: #7c3aed;
+  --accent-hover: #6d28d9;
+  --accent-subtle: #f5f3ff;
+  --accent-badge: #ede9fe;
+  --accent-text: #5b21b6;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 28px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.08), 0 24px 64px rgba(0, 0, 0, 0.14);
+  --hero-gradient: linear-gradient(155deg, #f5f3ff 0%, #ffffff 45%, #fafafa 100%);
+  --preview-bg: #ffffff;
+  --preview-bar: #f4f4f5;
+  --preview-border: #e4e4e7;
+  --preview-progress-bg: #e4e4e7;
+  --cta-from: #6d28d9;
+  --cta-to: #9333ea;
+  --footer-bg: #09090b;
+  --footer-text: #a1a1aa;
+  --sidebar-bg: #09090b;
+  --sidebar-text: #a1a1aa;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #27272a;
+  --sidebar-hover: rgba(255, 255, 255, 0.07);
+  --sidebar-border: rgba(255, 255, 255, 0.09);
+  --topbar-bg: #ffffff;
+  --canvas-bg: #fafafa;
+}
+
+[data-theme="dark"][data-palette="modern"] {
+  --bg: #09090b;
+  --bg-card: #131316;
+  --bg-input: #18181b;
+  --bg-alt: #0f0f11;
+  --text: #fafafa;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --text-label: #d4d4d8;
+  --border: #27272a;
+  --border-input: #3f3f46;
+  --accent: #a78bfa;
+  --accent-hover: #8b5cf6;
+  --accent-subtle: rgba(167, 139, 250, 0.12);
+  --accent-badge: #3b2d63;
+  --accent-text: #c4b5fd;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 8px 28px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.5), 0 24px 64px rgba(0, 0, 0, 0.6);
+  --hero-gradient: linear-gradient(155deg, #140f24 0%, #09090b 45%, #0f0f11 100%);
+  --preview-bg: #18181b;
+  --preview-bar: #0f0f11;
+  --preview-border: #27272a;
+  --preview-progress-bg: #27272a;
+  --cta-from: #4c1d95;
+  --cta-to: #6b21a8;
+  --footer-bg: #050506;
+  --footer-text: #71717a;
+  --sidebar-bg: #050506;
+  --sidebar-text: #8f8f99;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #27272a;
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --topbar-bg: #131316;
+  --canvas-bg: #09090b;
+}
+
 :root { color-scheme: light; }
 [data-theme="dark"] { color-scheme: dark; }
 

@@ -26,9 +26,21 @@ export function getMe(accessToken) {
   });
 }
 
-/** PATCH /api/auth/me/ — ad/soyad/e-posta günceller, güncel kullanıcı objesini döner.
- *  Kısmi: yalnızca gönderilen alanlar değişir (auth-contract §5.4b). */
+/** PATCH /api/auth/me/ — ad/soyad (rehberse kurum) günceller, güncel kullanıcı
+ *  objesini döner. Kısmi: yalnızca gönderilen alanlar değişir (auth-contract §5.4b).
+ *  **E-posta buradan değişmez** (v2.1) — gönderilirse sunucu sessizce yok sayar. */
 export async function updateMe(fields) {
   const { data } = await api.patch('/auth/me/', fields);
+  return data;
+}
+
+/** POST /api/auth/change-password/ — mevcut + yeni şifre.
+ *  Yanıt taze bir token çifti içerir; çağıran bunları saklamalı, yoksa kullanıcı
+ *  bir sonraki istekte değil ama refresh sırasında düşer. */
+export async function changePassword(currentPassword, newPassword) {
+  const { data } = await api.post('/auth/change-password/', {
+    current_password: currentPassword,
+    new_password: newPassword,
+  });
   return data;
 }

@@ -58,3 +58,95 @@
 @media (max-width: 560px) {
   .row { grid-template-columns: 1fr; }
 }
+
+/* ---- palet seçici ---- */
+.paletteBlock { padding: var(--space-4) 0 0; }
+
+.paletteGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.paletteCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  text-align: left;
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.paletteCard:hover { border-color: var(--border-input); transform: translateY(-1px); }
+.paletteCard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.paletteCardOn {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-subtle);
+}
+
+/* Önizleme: kenar çubuğu şeridi + vurgu noktası olan minyatür bir ekran. */
+.swatch {
+  position: relative;
+  display: block;
+  height: 42px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.swatchSide {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+}
+
+.swatchDot {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin-top: -7px;
+  border-radius: var(--radius-pill);
+}
+
+.paletteName {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.paletteHint {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* ---- davet kodu ---- */
+.code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--accent-text);
+  background: var(--accent-badge);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
+  user-select: all;
+}
+
+.note svg {
+  vertical-align: -2px;
+  margin-right: var(--space-1);
+  color: var(--text-muted);
+}
