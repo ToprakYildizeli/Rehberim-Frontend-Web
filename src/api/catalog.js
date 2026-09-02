@@ -69,6 +69,27 @@ export async function listTaskTypes() {
   return data.map((x) => ({ id: x.id, name: x.name }));
 }
 
+/** GET /api/publishers/ → [{ id, name }] (kitap eklerken dropdown). */
+export async function listPublishers() {
+  const { data } = await api.get('/publishers/');
+  return data.map((x) => ({ id: x.id, name: x.name }));
+}
+
+/* Katalog ekleme (Faz D2). İkisi de GLOBAL: eklenen kayıt tüm rehberlerin
+   listesine düşer. Bu yüzden düzenleme/silme ucu yoktur — tek bir hatalı istek
+   herkesin listesini kalıcı bozmasın diye. Sunucu, yakın-tekrarları Türkçe
+   farkında (İ→i, I→ı) harf duyarsız karşılaştırmayla reddeder. */
+
+export async function createTaskType(name) {
+  const { data } = await api.post('/task-types/', { name });
+  return { id: data.id, name: data.name };
+}
+
+export async function createPublisher(name) {
+  const { data } = await api.post('/publishers/', { name });
+  return { id: data.id, name: data.name };
+}
+
 /** GET /api/topics/?subject=<id>[&grade=&curriculum=] → dersin konu kataloğu.
  *  Ders Programı yalnızca `subjectId` verir ({ id, name } yeterli). Konu Takibi
  *  ayrıca grade/curriculum geçip sıralı tam objeyi kullanır. */

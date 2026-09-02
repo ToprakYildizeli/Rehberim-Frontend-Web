@@ -1,0 +1,167 @@
+/* Ayarlar bölümlerinin ortak stilleri. Sayfaya özgü olanlar (profil formu,
+   palet seçici) Ayarlar.module.css'te kalıyor. */
+
+.loading {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) 0;
+}
+
+.note {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-4) 0 0;
+  line-height: 1.55;
+}
+
+.error {
+  font-size: 0.8rem;
+  color: var(--error);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin: var(--space-3) 0 0;
+}
+
+/* ---- satır listeleri (öğrenci, davet, başarım) ---- */
+.rows {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.row:last-child { border-bottom: none; }
+
+.rowMain { flex: 1; min-width: 0; }
+
+.rowTitle {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.rowHint {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  margin: 2px 0 0;
+}
+
+.rowLabel { color: var(--text-secondary); font-weight: 500; }
+
+.rowActions { display: flex; align-items: center; gap: var(--space-1); flex-shrink: 0; }
+
+/* ---- katalog rozetleri ---- */
+/* Yayınevi kataloğu ~70 satır: sınırsız bırakılırsa kart sayfayı boğuyor.
+   Kendi içinde kaydırılıyor, sayfa gövdesi değil. */
+.chips {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  max-height: 168px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.chip {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  padding: 5px var(--space-3);
+}
+
+.chipEmpty { font-size: 0.78rem; color: var(--text-muted); }
+
+.addRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.addRow > :first-child { flex: 1; }
+
+/* ---- veli davet formu ---- */
+.inviteForm {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border);
+}
+
+.inviteCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--accent-text);
+  background: var(--accent-badge);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+  flex-shrink: 0;
+  user-select: all;
+}
+
+/* Kullanılmış kod artık işe yaramaz — vurgu rengini bırakıp nötrleşiyor. */
+.inviteCodeUsed {
+  color: var(--text-muted);
+  background: var(--bg-alt);
+  text-decoration: line-through;
+}
+
+/* ---- modal içerikleri ---- */
+.modalTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 var(--space-3);
+}
+
+.modalText {
+  font-size: 0.83rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-3);
+}
+
+.modalForm { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.modalRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--space-3);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 620px) {
+  .inviteForm { grid-template-columns: 1fr; }
+  .row { flex-wrap: wrap; }
+}

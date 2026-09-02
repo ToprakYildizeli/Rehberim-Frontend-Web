@@ -39,3 +39,10 @@ export async function getStudent(id) {
   const list = await listStudents();
   return list.find((x) => x.id === Number(id)) ?? null;
 }
+
+/** DELETE /api/students/{id}/ — öğrenciyi rehberin listesinden çıkarır.
+ *  Öğrenci hesabı SİLİNMEZ; yalnız bağ kopar, verisi yerinde kalır ve başka
+ *  bir rehberin davet koduyla yeniden bağlanabilir. */
+export async function removeStudent(id) {
+  await api.delete(`/students/${id}/`);
+}

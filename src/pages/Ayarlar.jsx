@@ -1,7 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Copy, Lock, LogOut, Moon, Sun } from 'lucide-react';
-import { Card, CardHeader, Button, Field, Input } from '../components/ui';
+import { Card, CardHeader, Button, Field, Input, PillGroup } from '../components/ui';
+import AchievementsSection from '../components/settings/AchievementsSection';
+import CatalogSection from '../components/settings/CatalogSection';
+import ParentInvitesSection from '../components/settings/ParentInvitesSection';
+import StudentsSection from '../components/settings/StudentsSection';
+import {
+  createPublisher, createTaskType, listPublishers, listTaskTypes,
+} from '../api/catalog';
 import { changePassword, updateMe } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -26,6 +33,22 @@ export default function Ayarlar() {
 
   const isCounselor = user?.role === 'counselor';
   const inviteCode = user?.profile?.invite_code ?? null;
+
+  // Sekmeler: tek akışta sekiz bölüm kaydırmakla gezilemeyecek kadar uzundu.
+  // "Rehberlik" yalnız rehberde var — öğrenci/veli bu ekranı görürse yalnız
+  // kendi profilini ve görünümünü yönetir.
+  const tabs = useMemo(() => [
+    { value: 'profil', label: 'Profil' },
+    ...(isCounselor ? [{ value: 'rehberlik', label: 'Rehberlik' }] : []),
+    { value: 'gorunum', label: 'Görünüm' },
+    { value: 'hesap', label: 'Hesap' },
+  ], [isCounselor]);
+  const [tab, setTab] = useState('profil');
+
+  // CatalogSection `load`'u bağımlılık olarak izliyor; satır içi ok fonksiyonu
+  // her render'da yeni referans üretip sonsuz yeniden yüklemeye yol açardı.
+  const loadTaskTypes = useCallback(listTaskTypes, []);
+  const loadPublishers = useCallback(listPublishers, []);
 
   const saved = useMemo(
     () => ({
@@ -84,7 +107,11 @@ export default function Ayarlar() {
 
   return (
     <div className={s.page}>
+      <PillGroup options={tabs} value={tab} onChange={setTab} />
+
       {/* ---------------------------------------------------------- PROFİL */}
+      {tab === 'profil' && (
+        <>
       <Card>
         <CardHeader title="Profil" subtitle="Hesap bilgileriniz" />
         <div className={s.form}>
@@ -136,8 +163,36 @@ export default function Ayarlar() {
       <PasswordCard onRotated={saveSession} user={user} />
 
       {isCounselor && inviteCode && <InviteCodeCard code={inviteCode} />}
+        </>
+      )}
+
+      {tab === 'rehberlik' && isCounselor && (
+        <>
+          <StudentsSection />
+          <ParentInvitesSection />
+          <AchievementsSection />
+          <CatalogSection
+            title="Çalışma türleri"
+            subtitle="Ders Programı'nda blok açarken seçilen metodlar"
+            load={loadTaskTypes}
+            create={createTaskType}
+            addLabel="Yeni çalışma türü"
+            hint="Bu liste tüm rehberler için ortaktır — eklediğiniz tür herkeste
+                  görünür. Bu yüzden silme yoktur; yazmadan önce bir kez daha bakın."
+          />
+          <CatalogSection
+            title="Yayınevleri"
+            subtitle="Kitaplığa kitap eklenirken seçilen yayınevleri"
+            load={loadPublishers}
+            create={createPublisher}
+            addLabel="Yeni yayınevi"
+            hint="Çalışma türleri gibi bu liste de tüm rehberlerde ortaktır."
+          />
+        </>
+      )}
 
       {/* ------------------------------------------------------ GÖRÜNÜM */}
+      {tab === 'gorunum' && (
       <Card>
         <CardHeader title="Görünüm" subtitle="Erişilebilirlik ve tema tercihleri" />
 
@@ -187,8 +242,10 @@ export default function Ayarlar() {
           </div>
         </div>
       </Card>
+      )}
 
       {/* -------------------------------------------------------- HESAP */}
+      {tab === 'hesap' && (
       <Card>
         <CardHeader title="Hesap" />
         <div className={s.option}>
@@ -201,6 +258,7 @@ export default function Ayarlar() {
           </Button>
         </div>
       </Card>
+      )}
     </div>
   );
 }
