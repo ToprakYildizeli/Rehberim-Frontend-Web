@@ -753,8 +753,6 @@ export default function DersProgrami() {
           </>
         )}
 
-        <div className={s.ribbonSpacer} />
-
         {/* İstatistik ve eylemler tek grup: ayrı dursalar şerit sardığında
             biri üstte biri altta kalıyor. */}
         <div className={s.ribbonEnd}>

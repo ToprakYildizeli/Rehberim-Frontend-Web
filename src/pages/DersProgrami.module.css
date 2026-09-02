@@ -25,14 +25,34 @@
    Önce iki ayrı çubuktu ve birlikte 117px yer kaplıyordu; tahta bu yüzden
    ekrandan taşıyordu. Word'ün şerit çubuğu gibi gruplar ayıraçla bölünüyor. */
 .ribbon {
+  /* Şeritteki HER denetim aynı boyda. Serbest bırakıldığında boylar 27–40px
+     arasında dağılıyordu (sayı girişi 39, iki satırlık tarih aralığı 40,
+     düğmeler 27) ve `align-items: center` her birini kendi satır kutusunda
+     ortaladığı için satır tırtıklı görünüyordu. */
+  --ctl-h: 34px;
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  /* Gruplar arası boşluk dar: içerik 1477px ve 1728px'lik ekranda tek satıra
+     7px kala kalıyordu. Daha dar ekranlarda iki satıra sarıyor, o da düzgün —
+     üstte ayarlar, altta sağa yaslı eylemler. */
+  gap: var(--space-2);
+  row-gap: var(--space-2);
   flex-wrap: wrap;
   padding: var(--space-2) var(--space-3);
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
+}
+
+/* Boy dayatması: sarmalayıcılar ve içlerindeki gerçek denetimler. */
+.ribbon .inlineField,
+.ribbon .windowRange,
+.ribbon .totalStat,
+.ribbon .action,
+.ribbon .studentSelect,
+.ribbon .dayCountInput,
+.ribbon .dayCountInput input {
+  height: var(--ctl-h);
 }
 
 .ribbonGroup { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
@@ -41,7 +61,7 @@
 .ribbonEnd {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   flex-wrap: wrap;
   justify-content: flex-end;
   margin-left: auto;
@@ -49,14 +69,10 @@
 
 .ribbonSep {
   width: 1px;
-  align-self: stretch;
-  margin: 2px 0;
+  height: var(--ctl-h);
   background: var(--border);
   flex-shrink: 0;
 }
-
-/* Eylemleri sağa iter; şerit sardığında da doğru davranır. */
-.ribbonSpacer { flex: 1 1 var(--space-4); }
 
 /* Etiket üstte değil yanda: şeritte dikey yer yok. */
 .inlineField { display: flex; align-items: center; gap: var(--space-2); }
@@ -620,13 +636,13 @@
 
 /* ---------- Esnek program penceresi (A1) ---------- */
 
+/* Tek satır: alt alta iken 40px oluyor ve şeridin en uzun öğesi olarak
+   satır kutusunu büyütüyordu. */
 .windowRange {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 var(--space-2) 8px;
-  border-left: 1px solid var(--border);
-  padding-left: var(--space-4);
+  align-items: baseline;
+  gap: var(--space-2);
+  white-space: nowrap;
 }
 
 .windowRangeText { font-size: 0.85rem; font-weight: 700; color: var(--text); white-space: nowrap; }
@@ -757,7 +773,7 @@
 /* Çalışma özeti bir düğme değil; düğmelerle aynı yükseklikte bir gösterge. */
 .totalStat {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
   padding: 6px 12px;
   border: 1px solid var(--border);
