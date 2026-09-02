@@ -1,4 +1,12 @@
-.page { display: flex; flex-direction: column; gap: var(--space-4); }
+/* `min-height: 0` zinciri: tuval → sayfa → layout. Biri atlanırsa flex öğesinin
+   varsayılan `auto` min-height'ı taşmayı yukarı geçirir ve sabitleme çalışmaz. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  height: 100%;
+  min-height: 0;
+}
 
 /* ---------- Toolbar ---------- */
 .toolbar {
@@ -21,16 +29,50 @@
 }
 
 /* ---------- Layout ---------- */
+/* Tahta 07:00–22:00 arası 16 satır; sayfayı büyütmesine izin verilirse 1440x900
+   bir ekranda ~200px taşıyor ve araç çubuğu ile blok formu kaydırıp gözden
+   kayboluyor. Oysa sürükle-bırak tam da bu ikisinin aynı anda görünmesini
+   gerektiriyor: blok sağdaki formdan alınıp tahtaya bırakılıyor.
+
+   Bu yüzden tahta, tuvalde kalan yüksekliği doldurup taşan kısmı KENDİ içinde
+   kaydırıyor. Yükseklik sabit bir sayıyla değil, kabuğun (`layout.module.css`)
+   sabit yüksekliğinden akan `flex: 1` ile hesaplanıyor — araç çubuğuna bir alan
+   eklenirse burada güncellenecek bir sayı olmuyor. */
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 272px;
   gap: var(--space-4);
-  align-items: start;
+  align-items: stretch;
+  flex: 1;                    /* tuvalde kalan yüksekliği doldur */
+  min-height: 360px;
 }
 
-.gridCard { padding: var(--space-3); overflow-x: auto; }
+/* `min-height: 0` olmadan ızgara öğeleri içerikleri kadar büyür ve max-height
+   hiç devreye girmez — ızgara/flex öğelerinin varsayılan min-height'ı auto. */
+.gridCard {
+  padding: var(--space-3);
+  overflow: auto;
+  min-height: 0;
+}
 
-.rail { display: flex; flex-direction: column; gap: var(--space-4); }
+.rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+/* Dar/kısa ekranda sabitleme fayda değil zarar: 512px'lik bir tahta iki satır
+   gösterir. O boyutlarda sayfa akışına dönülüyor. */
+@media (max-height: 700px), (max-width: 900px) {
+  .layout {
+    max-height: none;
+    align-items: start;
+  }
+  .gridCard { overflow: visible; overflow-x: auto; }
+  .rail { overflow-y: visible; }
+}
 
 /* TYT/AYT toggle: alanı tam kaplasın, iki pill eşit genişlikte */
 .catToggle { width: 100%; }

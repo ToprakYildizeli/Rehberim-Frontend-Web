@@ -1,5 +1,11 @@
+/* Gerçek bir uygulama kabuğu: yükseklik görünen alana sabit, kaydırma
+   `.canvas` içinde. Eskiden `min-height: 100vh` idi ve belge kayıyordu; bu
+   yüzden hiçbir sayfa "kalan yüksekliği doldur" diyemiyor, Ders Programı gibi
+   uzun içerikler kendi içinde kayacakken sayfayı itiyordu. Üst çubuk zaten
+   `.canvas` dışında olduğu için sabit kalıyor. */
 .shell {
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: var(--canvas-bg);
   display: flex;
   flex-direction: column;
@@ -163,6 +169,7 @@
 .main {
   flex: 1;
   min-width: 0;
+  min-height: 0;              /* flex öğesinin varsayılan auto min-height'ı taşmayı geçirir */
   display: flex;
   flex-direction: column;
 }
@@ -285,10 +292,14 @@
 .menuDanger { color: var(--danger); }
 .menuDanger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
 
+/* Uygulamanın kaydırma kabı burasıdır. `min-height: 0` olmadan içerik kabı
+   büyütür ve `overflow: auto` hiç devreye girmez. */
 .canvas {
   flex: 1;
   padding: var(--space-6);
   min-width: 0;
+  min-height: 0;
+  overflow: auto;
 }
 
 /* ---------- Mobile ---------- */

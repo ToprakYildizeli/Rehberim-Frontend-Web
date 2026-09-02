@@ -56,14 +56,17 @@
 .contentHint { font-size: 0.8rem; color: var(--text-muted); margin: 3px 0 0; }
 
 /* Kartlar kalan genişliğe yayılıyor; dar olanlar yan yana geliyor.
-   `align-items: start` olmadan aynı satırdaki kartlar en uzununun boyuna
-   uzayıp altlarında boşluk bırakırdı. */
+   Aynı satırdaki kartlar **eşit yükseklikte**: `align-items` verilmiyor, ızgaranın
+   varsayılan `stretch`'i kartları satır boyuna uzatıyor. Önce `align-items: start`
+   yazmıştım ve 457px'lik profil kartının yanında 304px'lik şifre kartı tırtıklı
+   duruyordu. */
 .content {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: var(--space-5);
-  align-items: start;
 }
+
+.content > * { min-width: 0; }
 
 /* Satır listeleri (öğrenci, davet, başarım) ve palet ızgarası tam genişlik. */
 .wide { grid-column: 1 / -1; }
