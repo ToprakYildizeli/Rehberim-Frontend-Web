@@ -276,10 +276,14 @@ export default function Panel() {
 
 function KpiCard({ icon, value, label, tone }) {
   return (
-    <Card className={s.kpiCard}>
+    <Card pad={false} className={s.kpiCard}>
       <span className={`${s.kpiIcon} ${s[`kpi_${tone}`]}`}>{icon}</span>
-      <span className={s.kpiValue}>{value}</span>
-      <span className={s.kpiLabel}>{label}</span>
+      {/* Sayı ve etiket ikonun YANINDA, altında değil: dikey yığın kutuyu
+          130px'e çıkarıp sağını boş bırakıyordu. */}
+      <span className={s.kpiText}>
+        <span className={s.kpiValue}>{value}</span>
+        <span className={s.kpiLabel}>{label}</span>
+      </span>
     </Card>
   );
 }
