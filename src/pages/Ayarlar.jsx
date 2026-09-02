@@ -178,8 +178,7 @@ export default function Ayarlar() {
           </div>
 
           <p className={s.note}>
-            <Lock size={12} /> Kullanıcı adı giriş kimliğin olduğu için değiştirilemez.
-            E-posta da kilitlidir — şifre sıfırlama ileride bu adrese bağlanacak.
+            <Lock size={12} /> Kullanıcı adı ve e-posta değiştirilemez.
           </p>
 
           {formError && <p className={s.formError}>{formError}</p>}
@@ -212,8 +211,7 @@ export default function Ayarlar() {
             load={loadTaskTypes}
             create={createTaskType}
             addLabel="Yeni çalışma türü"
-            hint="Bu liste tüm rehberler için ortaktır — eklediğiniz tür herkeste
-                  görünür. Bu yüzden silme yoktur; yazmadan önce bir kez daha bakın."
+            hint="Bu liste tüm rehberlerde ortaktır; eklenen kayıt silinemez."
           />
           <CatalogSection
             title="Yayınevleri"
@@ -221,7 +219,7 @@ export default function Ayarlar() {
             load={loadPublishers}
             create={createPublisher}
             addLabel="Yeni yayınevi"
-            hint="Çalışma türleri gibi bu liste de tüm rehberlerde ortaktır."
+            hint="Bu liste tüm rehberlerde ortaktır; eklenen kayıt silinemez."
           />
         </>
       )}
@@ -246,9 +244,6 @@ export default function Ayarlar() {
 
         <div className={s.paletteBlock}>
           <p className={s.optionLabel}>Renk teması</p>
-          <p className={s.optionHint}>
-            Seçim anında uygulanır ve bu tarayıcıda saklanır.
-          </p>
           <div className={s.paletteGrid} role="radiogroup" aria-label="Renk teması">
             {palettes.map((p) => {
               const [bg, accent, side] = p.swatch[theme];
@@ -409,10 +404,6 @@ function InviteCodeCard({ code }) {
           {copied ? 'Kopyalandı' : 'Kopyala'}
         </Button>
       </div>
-      <p className={s.note}>
-        Bu kod hesabınıza özeldir ve <strong>değişmez</strong>. Öğrenciniz kayıt
-        olurken, velisi de çocuğuna bağlanırken bu kodu girer.
-      </p>
     </Card>
   );
 }

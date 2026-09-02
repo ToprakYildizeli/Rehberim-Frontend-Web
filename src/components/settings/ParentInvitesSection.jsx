@@ -147,10 +147,7 @@ export default function ParentInvitesSection() {
         </ul>
       )}
 
-      <p className={s.note}>
-        Kod <strong>tek kullanımlıktır</strong> ve yalnız o öğrenciye açılır.
-        Kullanıldıktan sonra iptal edilemez, kayıt olarak listede kalır.
-      </p>
+      <p className={s.note}>Kod tek kullanımlıktır ve yalnız o öğrenciye açılır.</p>
     </Card>
   );
 }

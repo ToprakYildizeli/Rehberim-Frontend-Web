@@ -21,13 +21,6 @@
   color: var(--text-muted);
   margin: 0;
 }
-.inviteHint {
-  font-size: 0.82rem;
-  color: var(--text-secondary);
-  margin: 4px 0 0;
-  max-width: 46ch;
-}
-
 .inviteActions { display: flex; align-items: center; gap: var(--space-3); flex-shrink: 0; }
 
 .inviteCode {

@@ -114,9 +114,6 @@ function InviteCodeCard() {
     <Card className={s.inviteCard}>
       <div className={s.inviteText}>
         <p className={s.inviteLabel}>Davet Kodun</p>
-        <p className={s.inviteHint}>
-          Öğrencin mobil uygulamada kayıt olduktan sonra bu kodu girerek sana bağlanır.
-        </p>
       </div>
       <div className={s.inviteActions}>
         <code className={s.inviteCode}>{code}</code>

@@ -150,12 +150,6 @@ export default function AchievementsSection() {
         </ul>
       )}
 
-      <p className={s.note}>
-        Başarımlar yalnız <strong>sizin</strong> öğrencilerinize uygulanır. Kazanım
-        saklanmaz, her görüntülemede hesaplanır — eşiği değiştirmek öğrencilerin
-        durumunu anında ve geriye dönük günceller.
-      </p>
-
       <Modal open={!!editing} onClose={() => !busy && setEditing(null)} width={480}>
         <h3 className={s.modalTitle}>
           {editing?.id ? 'Başarımı düzenle' : 'Yeni başarım'}
