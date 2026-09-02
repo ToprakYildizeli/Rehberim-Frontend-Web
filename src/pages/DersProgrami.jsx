@@ -675,8 +675,13 @@ export default function DersProgrami() {
 
   return (
     <div className={s.page}>
-      <div className={s.toolbar}>
-        <div className={s.toolbarLeft}>
+      <div className={s.screen}>
+      {/* Tek şerit: mod, pencere ve eylemler ayrı satırlara bölünmüyor. Önce iki
+          ayrı çubuktu (mod + pencere) ve ikisi birlikte 117px yer kaplayıp tahtayı
+          ekrandan taşırıyordu. Gruplar arasına ince ayıraç konuyor; alan
+          yetmezse şerit sarar. */}
+      <div className={s.ribbon}>
+        <div className={s.ribbonGroup}>
           <PillGroup options={MODES} value={mode} onChange={switchMode} />
           {mode === 'ogrenci' && (
             <Select
@@ -703,78 +708,93 @@ export default function DersProgrami() {
           )}
         </div>
 
-        <div className={s.toolbarRight}>
-          <span className={s.totalStat}>
-            <span className={s.totalStatLabel}>Çalışma</span>
-            <span className={s.totalStatValue}>{fmtHours(totalMin)}</span>
-            {outsideMin > 0 && (
-              <span className={s.totalStatSub}>+{fmtHours(outsideMin)} dış</span>
-            )}
-          </span>
-          {/* Eylem düğmeleri tek tip: aynı boyut, aynı görünüm. Yalnız "Ata"
-              birincil eylem olduğu için dolgulu. */}
-          <div className={s.actions}>
-            <Button className={s.action} variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
-              <Bookmark size={13} /> Şablon Kaydet
+        {win.startDate && (
+          <>
+            <span className={s.ribbonSep} aria-hidden="true" />
+            <div className={s.ribbonGroup}>
+              {/* Etiketler Field'ın üstten bloklu düzeni yerine yan yana:
+                  şeritte dikey yer kalmıyor. */}
+              <label className={s.inlineField} title="Program başlangıç tarihi">
+                <DateField
+                  value={win.startDate}
+                  onChange={(iso) => changeWindow({ startDate: iso })}
+                  isDisabled={isStartBlocked}
+                  disabledHint={busyRanges.length
+                    ? 'Üstü çizili günler öğrencinin mevcut bir programıyla çakışıyor.'
+                    : undefined}
+                  ariaLabel="Program başlangıç tarihi"
+                />
+              </label>
+              <label className={s.inlineField}>
+                <span className={s.inlineLabel}>Gün</span>
+                <NumberInput
+                  className={s.dayCountInput}
+                  value={win.dayCount}
+                  min={MIN_DAYS}
+                  max={MAX_DAYS}
+                  onCommit={(n) => changeWindow({ dayCount: n })}
+                  aria-label="Gün sayısı"
+                />
+              </label>
+              <span className={s.windowRange}>
+                <span className={s.windowRangeText}>
+                  {windowRangeText(win.startDate, win.dayCount)}
+                </span>
+                <span className={s.windowRangeSub}>
+                  {programId != null ? 'Kayıtlı program' : 'Henüz atanmadı'}
+                </span>
+              </span>
+            </div>
+
+            <span className={s.ribbonSep} aria-hidden="true" />
+            <div className={s.ribbonGroup}>
+              <PillGroup options={VIEWS} value={view} onChange={setView} />
+            </div>
+          </>
+        )}
+
+        <div className={s.ribbonSpacer} />
+
+        {/* İstatistik ve eylemler tek grup: ayrı dursalar şerit sardığında
+            biri üstte biri altta kalıyor. */}
+        <div className={s.ribbonEnd}>
+        <span className={s.totalStat}>
+          <span className={s.totalStatLabel}>Çalışma</span>
+          <span className={s.totalStatValue}>{fmtHours(totalMin)}</span>
+          {outsideMin > 0 && (
+            <span className={s.totalStatSub}>+{fmtHours(outsideMin)} dış</span>
+          )}
+        </span>
+
+        {/* Eylem düğmeleri tek tip: aynı boyut, aynı görünüm. Yalnız "Ata"
+            birincil eylem olduğu için dolgulu. */}
+        <div className={s.actions}>
+          <Button className={s.action} variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
+            <Bookmark size={13} /> Şablon
+          </Button>
+          <TemplateMenu
+            templates={templates}
+            activeStudent={activeStudent}
+            onLoad={handleLoadTemplate}
+            onAssign={(tpl) => setAssignSource({ type: 'template', id: tpl.id, name: tpl.name })}
+            onDelete={handleDeleteTemplate}
+            onToggleRoutine={handleToggleRoutine}
+          />
+          {mode === 'ogrenci' && (
+            <Button className={s.action} variant="soft" size="sm" onClick={loadLastWeek} title="Geçen haftanın programını yükle">
+              <RotateCcw size={13} /> Geçen Hafta
             </Button>
-            <TemplateMenu
-              templates={templates}
-              activeStudent={activeStudent}
-              onLoad={handleLoadTemplate}
-              onAssign={(tpl) => setAssignSource({ type: 'template', id: tpl.id, name: tpl.name })}
-              onDelete={handleDeleteTemplate}
-              onToggleRoutine={handleToggleRoutine}
-            />
-            {mode === 'ogrenci' && (
-              <Button className={s.action} variant="soft" size="sm" onClick={loadLastWeek} title="Geçen haftanın programını yükle">
-                <RotateCcw size={13} /> Geçen Hafta
-              </Button>
-            )}
-            <Button className={s.action} variant="danger" size="sm" onClick={clearAll} title="Tümünü temizle">
-              <Trash2 size={13} /> Temizle
-            </Button>
-            <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
-              <Send size={13} /> Ata
-            </Button>
-          </div>
+          )}
+          <Button className={s.action} variant="danger" size="sm" onClick={clearAll} title="Tümünü temizle">
+            <Trash2 size={13} /> Temizle
+          </Button>
+          <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
+            <Send size={13} /> Ata
+          </Button>
+        </div>
         </div>
       </div>
 
-      {win.startDate && (
-        <div className={s.windowBar}>
-          <Field label="Başlangıç" className={s.windowField}>
-            <DateField
-              value={win.startDate}
-              onChange={(iso) => changeWindow({ startDate: iso })}
-              isDisabled={isStartBlocked}
-              disabledHint={busyRanges.length
-                ? 'Üstü çizili günler öğrencinin mevcut bir programıyla çakışıyor.'
-                : undefined}
-              ariaLabel="Program başlangıç tarihi"
-            />
-          </Field>
-          <Field label="Gün sayısı" className={s.windowDays}>
-            <NumberInput
-              value={win.dayCount}
-              min={MIN_DAYS}
-              max={MAX_DAYS}
-              onCommit={(n) => changeWindow({ dayCount: n })}
-              aria-label="Gün sayısı"
-            />
-          </Field>
-          <span className={s.windowRange}>
-            <span className={s.windowRangeText}>
-              {windowRangeText(win.startDate, win.dayCount)}
-            </span>
-            <span className={s.windowRangeSub}>
-              {programId != null ? 'Kayıtlı program' : 'Henüz atanmadı'}
-            </span>
-          </span>
-          <Field label="Tahta düzeni" className={s.windowView}>
-            <PillGroup options={VIEWS} value={view} onChange={setView} />
-          </Field>
-        </div>
-      )}
       {windowError && <p className={s.windowError}>{windowError}</p>}
 
       {!blocks ? (
@@ -1081,13 +1101,6 @@ export default function DersProgrami() {
             </div>
           </div>
 
-          <SummaryBar
-            current={blocks}
-            history={history}
-            subjectMap={subjectMap}
-            inStudent={mode === 'ogrenci'}
-          />
-
           <DragOverlay dropAnimation={null}>
             {activeDrag && (
               <div className={s.overlayBlock} style={{ background: activeDrag.subjectColor }}>
@@ -1097,6 +1110,16 @@ export default function DersProgrami() {
           </DragOverlay>
         </DndContext>
       )}
+      </div>
+
+      {/* Ekranın dışında: öğrenci modunda tahta bir ekranı tam kapladığı için
+          özet çubuğu kaydırılarak görülür. Sürükleme bağlamına ihtiyacı yok. */}
+      <SummaryBar
+        current={blocks}
+        history={history}
+        subjectMap={subjectMap}
+        inStudent={mode === 'ogrenci'}
+      />
 
       {assignSource && (
         <AssignModal
@@ -1377,14 +1400,10 @@ function SummaryBar({ current, history, subjectMap, inStudent }) {
   const lastWeek = history[curIdx + 1] || null;
   const totalBlocks = history.flatMap((p) => p.blocks || []);
 
-  if (!inStudent) {
-    // Genel modda geçen hafta/toplam kavramı yok → yalnız şu anki plan.
-    return (
-      <div className={s.sumBar}>
-        <SummaryColumn title="Bu Genel Plan" blocks={current || []} subjectMap={subjectMap} accent />
-      </div>
-    );
-  }
+  // Genel modda özet yok (kullanıcı kararı, 2 Eyl 2026): tek sütunlu "Bu Genel
+  // Plan" kutusu geçen hafta/toplam kıyası olmadığı için bilgi taşımıyordu ve
+  // ekranın tam sığmasını engelliyordu. Öğrenci modunda üç sütun anlamlı.
+  if (!inStudent) return null;
   return (
     <div className={s.sumBar}>
       <SummaryColumn title="Geçen Hafta" blocks={lastWeek?.blocks || []} subjectMap={subjectMap} />

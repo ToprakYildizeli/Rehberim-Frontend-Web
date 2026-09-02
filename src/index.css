@@ -56,14 +56,31 @@
   --cyan-bg: #ecfeff;
   --cyan-text: #0e7490;
 
+  /* ---- KATEGORİK RAMP ----
+     Grafik çizgileri, avatarlar ve ders blokları hep bu sekiz renkten beslenir.
+     Her renk paleti YALNIZCA bu rampı yeniden tanımlar; aşağıdaki ders
+     eşlemeleri ve JS tarafındaki avatar listesi kendiliğinden onu izler.
+     Böylece "tema değişince grafik de değişsin" tek yerden sağlanıyor.
+
+     Durum renkleri (success/warning/danger) bilerek rampın DIŞINDA: onlar
+     anlam taşıyor, "tamamlandı" yeşili her palette yeşil kalmalı. */
+  --cat-1: #3b5bdb;
+  --cat-2: #7c3aed;
+  --cat-3: #f59e0b;
+  --cat-4: #10b981;
+  --cat-5: #ef4444;
+  --cat-6: #06b6d4;
+  --cat-7: #ec4899;
+  --cat-8: #6366f1;
+
   /* ---- subjects (single source of truth: timetable, weekly strip, modal) ---- */
-  --subj-matematik: #3b5bdb;
-  --subj-turkce: #10b981;
-  --subj-fizik: #7c3aed;
-  --subj-geometri: #f59e0b;
-  --subj-kimya: #ef4444;
-  --subj-biyoloji: #ec4899;
-  --subj-genel: #475569;
+  --subj-matematik: var(--cat-1);
+  --subj-turkce: var(--cat-4);
+  --subj-fizik: var(--cat-2);
+  --subj-geometri: var(--cat-3);
+  --subj-kimya: var(--cat-5);
+  --subj-biyoloji: var(--cat-7);
+  --subj-genel: var(--text-muted);
 
   /* ---- scales (theme-independent) ---- */
   --space-1: 4px;
@@ -147,14 +164,15 @@
   --cyan-bg: rgba(6, 182, 212, 0.12);
   --cyan-text: #67e8f9;
 
-  /* ---- subjects ---- */
-  --subj-matematik: #4c6ef5;
-  --subj-turkce: #12b886;
-  --subj-fizik: #8b5cf6;
-  --subj-geometri: #f59e0b;
-  --subj-kimya: #ef4444;
-  --subj-biyoloji: #ec4899;
-  --subj-genel: #5b6678;
+  /* ---- kategorik ramp (koyu zeminde biraz daha parlak) ---- */
+  --cat-1: #4c6ef5;
+  --cat-2: #8b5cf6;
+  --cat-3: #f59e0b;
+  --cat-4: #12b886;
+  --cat-5: #ef4444;
+  --cat-6: #22d3ee;
+  --cat-7: #ec4899;
+  --cat-8: #818cf8;
 }
 
 
@@ -210,6 +228,16 @@
   --sidebar-border: rgba(255, 255, 255, 0.12);
   --topbar-bg: #ffffff;
   --canvas-bg: #f7f1ed;
+
+  /* kategorik ramp — grafikler ve ders blokları bunu izler */
+  --cat-1: #8b7fd4;
+  --cat-2: #c08bd0;
+  --cat-3: #e5a97c;
+  --cat-4: #7fbfa8;
+  --cat-5: #e08497;
+  --cat-6: #7fb4cf;
+  --cat-7: #d68fb8;
+  --cat-8: #a394d9;
 }
 
 [data-theme="dark"][data-palette="pastel"] {
@@ -247,6 +275,16 @@
   --sidebar-border: rgba(255, 255, 255, 0.07);
   --topbar-bg: #201c28;
   --canvas-bg: #17141c;
+
+  /* kategorik ramp — grafikler ve ders blokları bunu izler */
+  --cat-1: #a99ae8;
+  --cat-2: #d3a5e0;
+  --cat-3: #f0bd91;
+  --cat-4: #96d4bc;
+  --cat-5: #f09aab;
+  --cat-6: #97cbe4;
+  --cat-7: #e8a6cd;
+  --cat-8: #bcaeef;
 }
 
 /* ---- SOFT — düşük kontrast, sıcak nötr, adaçayı vurgu ---- */
@@ -285,6 +323,16 @@
   --sidebar-border: rgba(255, 255, 255, 0.10);
   --topbar-bg: #ffffff;
   --canvas-bg: #f2f5ee;
+
+  /* kategorik ramp — grafikler ve ders blokları bunu izler */
+  --cat-1: #4f7d8c;
+  --cat-2: #6b8f5a;
+  --cat-3: #c08a3e;
+  --cat-4: #5b8c6e;
+  --cat-5: #b4674f;
+  --cat-6: #5f93a3;
+  --cat-7: #9a6d84;
+  --cat-8: #7b7f5c;
 }
 
 [data-theme="dark"][data-palette="soft"] {
@@ -322,6 +370,16 @@
   --sidebar-border: rgba(255, 255, 255, 0.06);
   --topbar-bg: #18211a;
   --canvas-bg: #10160f;
+
+  /* kategorik ramp — grafikler ve ders blokları bunu izler */
+  --cat-1: #74a8b8;
+  --cat-2: #92b87f;
+  --cat-3: #dcac6b;
+  --cat-4: #7fb994;
+  --cat-5: #d18f76;
+  --cat-6: #85b7c7;
+  --cat-7: #bf94a9;
+  --cat-8: #a3a77e;
 }
 
 /* ---- MODERN — yüksek kontrast, nötr gri, keskin mor vurgu ---- */
@@ -360,6 +418,16 @@
   --sidebar-border: rgba(255, 255, 255, 0.09);
   --topbar-bg: #ffffff;
   --canvas-bg: #fafafa;
+
+  /* kategorik ramp — grafikler ve ders blokları bunu izler */
+  --cat-1: #7c3aed;
+  --cat-2: #2563eb;
+  --cat-3: #db2777;
+  --cat-4: #059669;
+  --cat-5: #ea580c;
+  --cat-6: #0891b2;
+  --cat-7: #9333ea;
+  --cat-8: #4f46e5;
 }
 
 [data-theme="dark"][data-palette="modern"] {
@@ -397,6 +465,204 @@
   --sidebar-border: rgba(255, 255, 255, 0.07);
   --topbar-bg: #131316;
   --canvas-bg: #09090b;
+
+  /* kategorik ramp — grafikler ve ders blokları bunu izler */
+  --cat-1: #a78bfa;
+  --cat-2: #60a5fa;
+  --cat-3: #f472b6;
+  --cat-4: #34d399;
+  --cat-5: #fb923c;
+  --cat-6: #22d3ee;
+  --cat-7: #c084fc;
+  --cat-8: #818cf8;
+}
+
+/* ---- OKYANUS — derin deniz mavisi, turkuaz vurgu ---- */
+[data-theme="light"][data-palette="okyanus"] {
+  --bg: #f4f8fa;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-alt: #e8f0f4;
+  --text: #12303a;
+  --text-secondary: #4a6672;
+  --text-muted: #8aa3ad;
+  --text-label: #2a4a56;
+  --border: #d8e6ec;
+  --border-input: #bcd2db;
+  --accent: #0e7490;
+  --accent-hover: #0b5c73;
+  --accent-subtle: #ecf7fa;
+  --accent-badge: #d7eef4;
+  --accent-text: #0b5163;
+  --shadow: 0 4px 24px rgba(14, 62, 78, 0.10);
+  --shadow-lg: 0 20px 60px rgba(14, 62, 78, 0.16);
+  --hero-gradient: linear-gradient(155deg, #e6f5fa 0%, #f4f8fa 45%, #eef7f4 100%);
+  --preview-bg: #ffffff;
+  --preview-bar: #e8f0f4;
+  --preview-border: #d8e6ec;
+  --preview-progress-bg: #d8e6ec;
+  --cta-from: #0b5c73;
+  --cta-to: #12776b;
+  --footer-bg: #12303a;
+  --footer-text: #8aa3ad;
+  --sidebar-bg: #123a4a;
+  --sidebar-text: #9dbcc8;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #1d5568;
+  --sidebar-hover: rgba(255, 255, 255, 0.08);
+  --sidebar-border: rgba(255, 255, 255, 0.10);
+  --topbar-bg: #ffffff;
+  --canvas-bg: #eef5f8;
+
+  /* kategorik ramp — grafikler ve ders blokları bunu izler */
+  --cat-1: #0e7490;
+  --cat-2: #2563eb;
+  --cat-3: #d97706;
+  --cat-4: #0d9488;
+  --cat-5: #dc2626;
+  --cat-6: #0284c7;
+  --cat-7: #7c3aed;
+  --cat-8: #65a30d;
+}
+
+[data-theme="dark"][data-palette="okyanus"] {
+  --bg: #0a1820;
+  --bg-card: #10242e;
+  --bg-input: #16303c;
+  --bg-alt: #0d1e27;
+  --text: #dcecf2;
+  --text-secondary: #93aeb9;
+  --text-muted: #647f8a;
+  --text-label: #bcd4dd;
+  --border: #1e3b47;
+  --border-input: #2b5061;
+  --accent: #22d3ee;
+  --accent-hover: #06b6d4;
+  --accent-subtle: rgba(34, 211, 238, 0.12);
+  --accent-badge: #14414f;
+  --accent-text: #7dd8e8;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.40);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.58);
+  --hero-gradient: linear-gradient(155deg, #0b2130 0%, #0a1820 45%, #0a1f1e 100%);
+  --preview-bg: #142934;
+  --preview-bar: #0d1e27;
+  --preview-border: #1e3b47;
+  --preview-progress-bg: #1e3b47;
+  --cta-from: #0e4a5c;
+  --cta-to: #135a52;
+  --footer-bg: #061119;
+  --footer-text: #647f8a;
+  --sidebar-bg: #0c1f29;
+  --sidebar-text: #85a3af;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #1a3f4e;
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --topbar-bg: #10242e;
+  --canvas-bg: #0a1820;
+
+  --cat-1: #22d3ee;
+  --cat-2: #60a5fa;
+  --cat-3: #fbbf24;
+  --cat-4: #2dd4bf;
+  --cat-5: #f87171;
+  --cat-6: #38bdf8;
+  --cat-7: #a78bfa;
+  --cat-8: #a3e635;
+}
+
+/* ---- GÜN BATIMI — sıcak kum zemin, mercan vurgu ---- */
+[data-theme="light"][data-palette="gunbatimi"] {
+  --bg: #fdf7f2;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --bg-alt: #f8ece2;
+  --text: #3a2a26;
+  --text-secondary: #6f574f;
+  --text-muted: #a89086;
+  --text-label: #55403a;
+  --border: #f0e0d4;
+  --border-input: #dfc9ba;
+  --accent: #d1603d;
+  --accent-hover: #b34c2c;
+  --accent-subtle: #fdf1ec;
+  --accent-badge: #fae0d6;
+  --accent-text: #9c4327;
+  --shadow: 0 4px 24px rgba(120, 70, 50, 0.10);
+  --shadow-lg: 0 20px 60px rgba(120, 70, 50, 0.16);
+  --hero-gradient: linear-gradient(155deg, #fdeee4 0%, #fdf7f2 45%, #fbf0e6 100%);
+  --preview-bg: #ffffff;
+  --preview-bar: #f8ece2;
+  --preview-border: #f0e0d4;
+  --preview-progress-bg: #f0e0d4;
+  --cta-from: #b34c2c;
+  --cta-to: #d98324;
+  --footer-bg: #3a2a26;
+  --footer-text: #a89086;
+  --sidebar-bg: #58323a;
+  --sidebar-text: #cbaba8;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #74434b;
+  --sidebar-hover: rgba(255, 255, 255, 0.09);
+  --sidebar-border: rgba(255, 255, 255, 0.11);
+  --topbar-bg: #ffffff;
+  --canvas-bg: #faf1e9;
+
+  /* kategorik ramp — grafikler ve ders blokları bunu izler */
+  --cat-1: #d1603d;
+  --cat-2: #b45309;
+  --cat-3: #ca8a04;
+  --cat-4: #4d7c5a;
+  --cat-5: #be123c;
+  --cat-6: #0f766e;
+  --cat-7: #9d5b8f;
+  --cat-8: #7c5cbf;
+}
+
+[data-theme="dark"][data-palette="gunbatimi"] {
+  --bg: #1c1310;
+  --bg-card: #261b17;
+  --bg-input: #2f221c;
+  --bg-alt: #201612;
+  --text: #f0e2da;
+  --text-secondary: #b39c92;
+  --text-muted: #806c64;
+  --text-label: #d8c5ba;
+  --border: #3a2a23;
+  --border-input: #4d382e;
+  --accent: #f0845c;
+  --accent-hover: #e06a41;
+  --accent-subtle: rgba(240, 132, 92, 0.12);
+  --accent-badge: #4a2b1f;
+  --accent-text: #f6a888;
+  --shadow: 0 4px 24px rgba(0, 0, 0, 0.42);
+  --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.60);
+  --hero-gradient: linear-gradient(155deg, #2a1712 0%, #1c1310 45%, #251a12 100%);
+  --preview-bg: #2b1f1a;
+  --preview-bar: #201612;
+  --preview-border: #3a2a23;
+  --preview-progress-bg: #3a2a23;
+  --cta-from: #7a3a22;
+  --cta-to: #8a5a1a;
+  --footer-bg: #130c0a;
+  --footer-text: #806c64;
+  --sidebar-bg: #241419;
+  --sidebar-text: #a68e8c;
+  --sidebar-text-active: #ffffff;
+  --sidebar-active: #45262d;
+  --sidebar-hover: rgba(255, 255, 255, 0.05);
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --topbar-bg: #261b17;
+  --canvas-bg: #1c1310;
+
+  --cat-1: #f0845c;
+  --cat-2: #f0a860;
+  --cat-3: #fbbf24;
+  --cat-4: #7fb994;
+  --cat-5: #fb7185;
+  --cat-6: #5eead4;
+  --cat-7: #d69ac8;
+  --cat-8: #b09cf0;
 }
 
 :root { color-scheme: light; }

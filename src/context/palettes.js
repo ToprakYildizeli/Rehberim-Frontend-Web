@@ -32,4 +32,16 @@ export const PALETTES = [
     hint: 'Yüksek kontrast, nötr gri, keskin mor vurgu',
     swatch: { light: ['#ffffff', '#7c3aed', '#09090b'], dark: ['#09090b', '#a78bfa', '#050506'] },
   },
+  {
+    id: 'okyanus',
+    name: 'Okyanus',
+    hint: 'Derin deniz mavisi, turkuaz vurgu — serin',
+    swatch: { light: ['#f4f8fa', '#0e7490', '#123a4a'], dark: ['#0a1820', '#22d3ee', '#0c1f29'] },
+  },
+  {
+    id: 'gunbatimi',
+    name: 'Gün Batımı',
+    hint: 'Sıcak kum zemin, mercan vurgu — canlı',
+    swatch: { light: ['#fdf7f2', '#d1603d', '#58323a'], dark: ['#1c1310', '#f0845c', '#241419'] },
+  },
 ];

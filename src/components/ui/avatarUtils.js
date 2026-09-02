@@ -1,6 +1,11 @@
+/* Kategorik ramp `index.css`'te tanımlı ve her renk paleti onu yeniden yazıyor;
+   burada sabit hex tutmak temayı avatarlarda ve grafik çizgilerinde kilitlerdi.
+   Dönen değer bir `var(...)` olduğu için tüketen yer onu CSS'e geçirmeli:
+   inline style de, SVG sunum niteliği de (stroke="var(--cat-1)") çalışıyor —
+   tarayıcıda ölçüldü. */
 const AVATAR_COLORS = [
-  '#3b5bdb', '#7c3aed', '#f59e0b', '#10b981',
-  '#ef4444', '#06b6d4', '#ec4899', '#6366f1',
+  'var(--cat-1)', 'var(--cat-2)', 'var(--cat-3)', 'var(--cat-4)',
+  'var(--cat-5)', 'var(--cat-6)', 'var(--cat-7)', 'var(--cat-8)',
 ];
 
 export function initialsOf(name = '') {

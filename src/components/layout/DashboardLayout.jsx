@@ -56,7 +56,7 @@ function ProfileMenu({ displayName }) {
         aria-expanded={open}
         aria-label={displayName}
       >
-        <Avatar name={displayName} size="sm" color="var(--violet)" />
+        <Avatar name={displayName} size="sm" color="var(--accent)" />
       </button>
       {open && (
         <div className={s.menu} role="menu">

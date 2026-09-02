@@ -64,7 +64,11 @@
 .switcherBtn:hover { color: var(--text); }
 
 .switcherActive {
-  background: var(--violet);
+  /* Kabuk öğesi — logo ve avatar gibi paleti izlesin. Sayfa içindeki `--violet`
+     kullanımları (deneme bloğu, görüşme etkinliği) bilerek dokunulmadı: onlar
+     kategoriyi AYIRT ETMEK için var, paletle kayarsa Görüşme ile Deneme
+     birbirine karışabilir. */
+  background: var(--accent);
   color: #fff;
   font-weight: 600;
 }
@@ -104,7 +108,9 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--violet);
+  /* Vurgu rengi — logo da seçilen paleti izlesin (kullanıcı isteği, 2 Eyl 2026).
+     Sabit `--violet` her palette mor kalıyordu. */
+  background: var(--accent);
   display: flex;
   align-items: center;
   justify-content: center;

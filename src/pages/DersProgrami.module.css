@@ -4,21 +4,71 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  height: 100%;
-  min-height: 0;
+  height: 100%;               /* tuvalin görünen yüksekliği — `.screen`'in dayanağı */
 }
 
-/* ---------- Toolbar ---------- */
-.toolbar {
+/* Şerit + tahta: tam olarak BİR ekran. Özet çubuğu bunun dışında kaldığı için
+   öğrenci modunda kaydırılarak görülüyor, genel modda ise özet hiç olmadığından
+   sayfa ekrana tam oturuyor.
+
+   Yükseklik `min-height: 100%` ile geliyor — şeridin kaç satır sardığını bilmek
+   gerekmiyor. Önce şerit yüksekliğini sabit bir token varsayıp calc() ile
+   çıkarıyordum; şerit 1440px'de iki satıra sarınca o varsayım çöktü. */
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 100%;
+}
+
+/* ---------- Şerit (tek satır: mod · pencere · tahta düzeni · eylemler) ----------
+   Önce iki ayrı çubuktu ve birlikte 117px yer kaplıyordu; tahta bu yüzden
+   ekrandan taşıyordu. Word'ün şerit çubuğu gibi gruplar ayıraçla bölünüyor. */
+.ribbon {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3);
   flex-wrap: wrap;
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
 }
 
-.toolbarLeft { display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; }
-.toolbarRight { display: flex; align-items: center; gap: var(--space-3); }
+.ribbonGroup { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+
+/* İstatistik + eylem düğmeleri: birlikte sarsınlar, birlikte sağa yaslansınlar. */
+.ribbonEnd {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.ribbonSep {
+  width: 1px;
+  align-self: stretch;
+  margin: 2px 0;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* Eylemleri sağa iter; şerit sardığında da doğru davranır. */
+.ribbonSpacer { flex: 1 1 var(--space-4); }
+
+/* Etiket üstte değil yanda: şeritte dikey yer yok. */
+.inlineField { display: flex; align-items: center; gap: var(--space-2); }
+
+.inlineLabel {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.dayCountInput { width: 62px; }
 
 .studentSelect { min-width: 190px; }
 
@@ -38,12 +88,13 @@
    kaydırıyor. Yükseklik sabit bir sayıyla değil, kabuğun (`layout.module.css`)
    sabit yüksekliğinden akan `flex: 1` ile hesaplanıyor — araç çubuğuna bir alan
    eklenirse burada güncellenecek bir sayı olmuyor. */
+/* Şeritten arta kalan yüksekliği doldurur; şerit kaç satır olursa olsun doğru. */
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 272px;
   gap: var(--space-4);
   align-items: stretch;
-  flex: 1;                    /* tuvalde kalan yüksekliği doldur */
+  flex: 1;
   min-height: 360px;
 }
 
@@ -65,9 +116,13 @@
 
 /* Dar/kısa ekranda sabitleme fayda değil zarar: 512px'lik bir tahta iki satır
    gösterir. O boyutlarda sayfa akışına dönülüyor. */
+/* Dar/kısa ekranda sabitleme fayda değil zarar: 400px'lik bir tahta iki satır
+   gösterir. O boyutlarda sayfa akışına dönülüyor. */
 @media (max-height: 700px), (max-width: 900px) {
+  .screen { min-height: 0; }
   .layout {
-    max-height: none;
+    flex: 0 0 auto;
+    min-height: 0;
     align-items: start;
   }
   .gridCard { overflow: visible; overflow-x: auto; }
@@ -564,22 +619,6 @@
 }
 
 /* ---------- Esnek program penceresi (A1) ---------- */
-.windowBar {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--space-4);
-  flex-wrap: wrap;
-  padding: var(--space-3) var(--space-4);
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-/* Pencere çubuğundaki alan etiketleri küçük ve sessiz; asıl bilgi değerlerde. */
-.windowBar label { font-size: 0.7rem; color: var(--text-muted); }
-
-.windowField { min-width: 180px; margin: 0; }
-.windowDays { width: 84px; margin: 0; }
 
 .windowRange {
   display: flex;
@@ -626,7 +665,6 @@
 .blockShort .blockSubject { font-size: 0.6rem; }
 
 /* ---------- Ders satırlı görünüm (A2) ---------- */
-.windowView { margin: 0; margin-left: auto; }
 
 .rowLabel {
   display: flex;
