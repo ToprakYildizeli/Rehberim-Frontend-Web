@@ -29,15 +29,13 @@
      arasında dağılıyordu (sayı girişi 39, iki satırlık tarih aralığı 40,
      düğmeler 27) ve `align-items: center` her birini kendi satır kutusunda
      ortaladığı için satır tırtıklı görünüyordu. */
+  /* Şeritteki HER denetim aynı boyda. Serbest bırakıldığında boylar 27–40px
+     arasında dağılıyordu (sayı girişi 39, iki satırlık tarih aralığı 40,
+     düğmeler 27) ve satır tırtıklı görünüyordu. */
   --ctl-h: 34px;
   display: flex;
-  align-items: center;
-  /* Gruplar arası boşluk dar: içerik 1477px ve 1728px'lik ekranda tek satıra
-     7px kala kalıyordu. Daha dar ekranlarda iki satıra sarıyor, o da düzgün —
-     üstte ayarlar, altta sağa yaslı eylemler. */
+  flex-direction: column;
   gap: var(--space-2);
-  row-gap: var(--space-2);
-  flex-wrap: wrap;
   padding: var(--space-2) var(--space-3);
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -55,16 +53,43 @@
   height: var(--ctl-h);
 }
 
+/* Form denetimlerinin varsayılan 10px dikey dolgusu, 14.4px metinle birlikte
+   37px ediyor; 34px'lik kutuda metnin altı kırpılıyordu. Dolgu sıfırlanınca
+   tarayıcı metni kutuda kendisi ortalıyor. */
+.ribbon .studentSelect,
+.ribbon .dayCountInput input {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
 .ribbonGroup { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
 
-/* İstatistik + eylem düğmeleri: birlikte sarsınlar, birlikte sağa yaslansınlar. */
+/* Her satır iki uca yaslı: solda bağlam, sağda o satırın çıktısı. Böylece
+   hiçbir satırın yarısı boş kalmıyor. */
+.ribbonRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  min-width: 0;
+}
+
+/* İkinci satır ilkinden ince bir çizgiyle ayrılıyor — iki satır olduğu
+   kazara sarmış gibi değil, kasıtlı görünsün. */
+.ribbonRow + .ribbonRow {
+  border-top: 1px solid var(--border);
+  padding-top: var(--space-2);
+}
+
+/* Sağ bölge: istatistik + eylemler. Izgara sütunu olduğu için hep sağda ve
+   dikeyde ortalı; ayarlar kaç satır sararsa sarsın yerinden oynamıyor. */
 .ribbonEnd {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
   justify-content: flex-end;
-  margin-left: auto;
 }
 
 .ribbonSep {
@@ -134,6 +159,12 @@
    gösterir. O boyutlarda sayfa akışına dönülüyor. */
 /* Dar/kısa ekranda sabitleme fayda değil zarar: 400px'lik bir tahta iki satır
    gösterir. O boyutlarda sayfa akışına dönülüyor. */
+/* Dar ekranda iki bölge yan yana sığmıyor; alt alta geçiyorlar. */
+@media (max-width: 1100px) {
+  .ribbon { grid-template-columns: minmax(0, 1fr); }
+  .ribbonEnd { justify-content: flex-start; }
+}
+
 @media (max-height: 700px), (max-width: 900px) {
   .screen { min-height: 0; }
   .layout {

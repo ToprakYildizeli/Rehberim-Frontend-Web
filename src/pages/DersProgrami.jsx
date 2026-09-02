@@ -680,37 +680,40 @@ export default function DersProgrami() {
           ayrı çubuktu (mod + pencere) ve ikisi birlikte 117px yer kaplayıp tahtayı
           ekrandan taşırıyordu. Gruplar arasına ince ayıraç konuyor; alan
           yetmezse şerit sarar. */}
+      {/* Şerit iki AÇIK satır. Tek saran flex satırıyken eylemler alta düşüyor
+          ve o satırın solu bomboş kalıyordu; ızgara denemesi ise ayarları
+          547px'e sıkıştırıp üç satıra çıkardı. Burada her satırın iki ucu da
+          dolu: solda bağlam, sağda o satırın çıktısı. */}
       <div className={s.ribbon}>
-        <div className={s.ribbonGroup}>
-          <PillGroup options={MODES} value={mode} onChange={switchMode} />
-          {mode === 'ogrenci' && (
-            <Select
-              className={s.studentSelect}
-              value={studentId}
-              onChange={(e) => {
-                setStudentId(e.target.value);
-                setParams({ ogrenci: e.target.value }, { replace: true });
-              }}
-              aria-label="Öğrenci seç"
-            >
-              {students.map((st) => (
-                <option value={st.id} key={st.id}>{st.name} · {st.grade}</option>
-              ))}
-            </Select>
-          )}
-          {loadedTemplate && (
-            <span className={s.tplBadge} title="Şablon Kaydet bu şablonu günceller">
-              <Bookmark size={12} /> {loadedTemplate.name}
-              <button type="button" className={s.tplBadgeX} onClick={() => setLoadedTemplate(null)} aria-label="Şablon bağını kaldır">
-                <X size={11} />
-              </button>
-            </span>
-          )}
-        </div>
+        <div className={s.ribbonRow}>
+          <div className={s.ribbonGroup}>
+            <PillGroup options={MODES} value={mode} onChange={switchMode} />
+            {mode === 'ogrenci' && (
+              <Select
+                className={s.studentSelect}
+                value={studentId}
+                onChange={(e) => {
+                  setStudentId(e.target.value);
+                  setParams({ ogrenci: e.target.value }, { replace: true });
+                }}
+                aria-label="Öğrenci seç"
+              >
+                {students.map((st) => (
+                  <option value={st.id} key={st.id}>{st.name} · {st.grade}</option>
+                ))}
+              </Select>
+            )}
+            {loadedTemplate && (
+              <span className={s.tplBadge} title="Şablon Kaydet bu şablonu günceller">
+                <Bookmark size={12} /> {loadedTemplate.name}
+                <button type="button" className={s.tplBadgeX} onClick={() => setLoadedTemplate(null)} aria-label="Şablon bağını kaldır">
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+          </div>
 
-        {win.startDate && (
-          <>
-            <span className={s.ribbonSep} aria-hidden="true" />
+          {win.startDate && (
             <div className={s.ribbonGroup}>
               {/* Etiketler Field'ın üstten bloklu düzeni yerine yan yana:
                   şeritte dikey yer kalmıyor. */}
@@ -745,51 +748,52 @@ export default function DersProgrami() {
                 </span>
               </span>
             </div>
-
-            <span className={s.ribbonSep} aria-hidden="true" />
-            <div className={s.ribbonGroup}>
-              <PillGroup options={VIEWS} value={view} onChange={setView} />
-            </div>
-          </>
-        )}
-
-        {/* İstatistik ve eylemler tek grup: ayrı dursalar şerit sardığında
-            biri üstte biri altta kalıyor. */}
-        <div className={s.ribbonEnd}>
-        <span className={s.totalStat}>
-          <span className={s.totalStatLabel}>Çalışma</span>
-          <span className={s.totalStatValue}>{fmtHours(totalMin)}</span>
-          {outsideMin > 0 && (
-            <span className={s.totalStatSub}>+{fmtHours(outsideMin)} dış</span>
           )}
-        </span>
-
-        {/* Eylem düğmeleri tek tip: aynı boyut, aynı görünüm. Yalnız "Ata"
-            birincil eylem olduğu için dolgulu. */}
-        <div className={s.actions}>
-          <Button className={s.action} variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
-            <Bookmark size={13} /> Şablon
-          </Button>
-          <TemplateMenu
-            templates={templates}
-            activeStudent={activeStudent}
-            onLoad={handleLoadTemplate}
-            onAssign={(tpl) => setAssignSource({ type: 'template', id: tpl.id, name: tpl.name })}
-            onDelete={handleDeleteTemplate}
-            onToggleRoutine={handleToggleRoutine}
-          />
-          {mode === 'ogrenci' && (
-            <Button className={s.action} variant="soft" size="sm" onClick={loadLastWeek} title="Geçen haftanın programını yükle">
-              <RotateCcw size={13} /> Geçen Hafta
-            </Button>
-          )}
-          <Button className={s.action} variant="danger" size="sm" onClick={clearAll} title="Tümünü temizle">
-            <Trash2 size={13} /> Temizle
-          </Button>
-          <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
-            <Send size={13} /> Ata
-          </Button>
         </div>
+
+        <div className={s.ribbonRow}>
+          <div className={s.ribbonGroup}>
+            {win.startDate && (
+              <PillGroup options={VIEWS} value={view} onChange={setView} />
+            )}
+          </div>
+
+          <div className={s.ribbonEnd}>
+            <span className={s.totalStat}>
+              <span className={s.totalStatLabel}>Çalışma</span>
+              <span className={s.totalStatValue}>{fmtHours(totalMin)}</span>
+              {outsideMin > 0 && (
+                <span className={s.totalStatSub}>+{fmtHours(outsideMin)} dış</span>
+              )}
+            </span>
+
+            {/* Eylem düğmeleri tek tip: aynı boyut, aynı görünüm. Yalnız "Ata"
+                birincil eylem olduğu için dolgulu. */}
+            <div className={s.actions}>
+              <Button className={s.action} variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
+                <Bookmark size={13} /> Şablon
+              </Button>
+              <TemplateMenu
+                templates={templates}
+                activeStudent={activeStudent}
+                onLoad={handleLoadTemplate}
+                onAssign={(tpl) => setAssignSource({ type: 'template', id: tpl.id, name: tpl.name })}
+                onDelete={handleDeleteTemplate}
+                onToggleRoutine={handleToggleRoutine}
+              />
+              {mode === 'ogrenci' && (
+                <Button className={s.action} variant="soft" size="sm" onClick={loadLastWeek} title="Geçen haftanın programını yükle">
+                  <RotateCcw size={13} /> Geçen Hafta
+                </Button>
+              )}
+              <Button className={s.action} variant="danger" size="sm" onClick={clearAll} title="Tümünü temizle">
+                <Trash2 size={13} /> Temizle
+              </Button>
+              <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
+                <Send size={13} /> Ata
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
 
