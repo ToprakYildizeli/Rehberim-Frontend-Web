@@ -171,6 +171,8 @@ select.control:focus { background-color: var(--bg-input); }
 .avatarSm { width: 32px; height: 32px; font-size: 0.68rem; }
 .avatarMd { width: 40px; height: 40px; font-size: 0.8rem; }
 .avatarLg { width: 52px; height: 52px; font-size: 1rem; }
+/* Ayarlar → Profil'deki büyük fotoğraf. */
+.avatarXl { width: 104px; height: 104px; font-size: 2rem; }
 
 /* ---------- Badge / Pill ---------- */
 .badge {
@@ -367,4 +369,13 @@ select.control:focus { background-color: var(--bg-input); }
   .btn, .control, .progressFill, .themeBtn { transition: none; }
   .overlay, .modal { animation: none; }
   .spinner { animation-duration: 2s; }
+}
+
+/* Profil fotoğrafı — yuvarlak çerçeveyi tamamen doldurur, oranı korur. */
+.avatarImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }

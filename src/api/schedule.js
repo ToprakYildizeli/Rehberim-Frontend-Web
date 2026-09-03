@@ -1,6 +1,6 @@
 import { delay } from './mockDelay';
 import {
-  getStudentProgram, persistStudentSchedule, mondayOf, today, DEFAULT_DAY_COUNT,
+  getStudentProgram, persistStudentSchedule, mondayOf, today, programDefaults,
 } from './programs';
 
 // Öğrenci seçilmeden hazırlanan "genel" tahta bir taslaktır: oturum içinde tutulur,
@@ -11,13 +11,18 @@ import {
 // gününe göre saklandığından, Pazartesi başlangıçlı bir pencerede gün indeksi ile
 // hafta günü birebir örtüşür ve kaydedilen şablon beklenen günlere oturur.
 const store = new Map();
-const generalWindow = { startDate: mondayOf(today()), dayCount: DEFAULT_DAY_COUNT };
+// `dayCount` başta boş: rehberin varsayılan gün sayısı tercihi sunucudan gelir,
+// modül yüklenirken senkron okunamaz. İlk `getSchedule` çağrısında doldurulur.
+const generalWindow = { startDate: mondayOf(today()), dayCount: null };
 
 export async function getSchedule(scope) {
   // scope bir öğrenci id ise gerçek program; değilse (genel) oturum-içi taslak.
   if (scope) return getStudentProgram(scope);
   await delay();
   if (!store.has('genel')) store.set('genel', []);
+  if (generalWindow.dayCount == null) {
+    generalWindow.dayCount = (await programDefaults()).dayCount;
+  }
   return { programId: null, ...generalWindow, blocks: store.get('genel') };
 }
 

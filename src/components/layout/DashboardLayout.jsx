@@ -26,7 +26,7 @@ const TITLES = {
 };
 
 /** Avatar → tema geçişi + çıkış tek bir menüde toplanır (üst bar dağınık durmasın). */
-function ProfileMenu({ displayName }) {
+function ProfileMenu({ displayName, avatar }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
   const { clearSession } = useAuth();
@@ -56,7 +56,7 @@ function ProfileMenu({ displayName }) {
         aria-expanded={open}
         aria-label={displayName}
       >
-        <Avatar name={displayName} size="sm" color="var(--accent)" />
+        <Avatar name={displayName} size="sm" color="var(--accent)" src={avatar} />
       </button>
       {open && (
         <div className={s.menu} role="menu">
@@ -171,7 +171,7 @@ export default function DashboardLayout() {
 
           <div className={s.topbarRight}>
             <SearchInput className={s.topSearch} placeholder="Öğrenci ara..." aria-label="Öğrenci ara" />
-            <ProfileMenu displayName={displayName} />
+            <ProfileMenu displayName={displayName} avatar={user?.avatar} />
           </div>
         </header>
 

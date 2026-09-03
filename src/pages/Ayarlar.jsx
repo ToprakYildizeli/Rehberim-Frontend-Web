@@ -1,11 +1,16 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Check, Copy, Lock, LogOut, Moon, Palette, ShieldCheck, Sun, User, Users,
+  Check, Copy, Lock, LogOut, Moon, Palette, ShieldCheck, SlidersHorizontal,
+  Sun, User, Users,
 } from 'lucide-react';
 import { Card, CardHeader, Button, Field, Input } from '../components/ui';
 import AchievementsSection from '../components/settings/AchievementsSection';
+import AvatarSection from '../components/settings/AvatarSection';
+import CalendarDataSection from '../components/settings/CalendarDataSection';
 import CatalogSection from '../components/settings/CatalogSection';
+import DangerZoneSection from '../components/settings/DangerZoneSection';
+import PreferencesSection from '../components/settings/PreferencesSection';
 import ParentInvitesSection from '../components/settings/ParentInvitesSection';
 import StudentsSection from '../components/settings/StudentsSection';
 import {
@@ -15,6 +20,7 @@ import { changePassword, updateMe } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import s from './Ayarlar.module.css';
+import st from '../components/settings/settings.module.css';
 
 /** Sunucuda düzenlenebilir profil alanları (auth-contract §5.4b, v2.1).
  *  `email` ve `username` bilerek yok: ikisi de kilitli. */
@@ -40,13 +46,17 @@ export default function Ayarlar() {
   // "Rehberlik" yalnız rehberde var — öğrenci/veli bu ekranı görürse yalnız
   // kendi profilini ve görünümünü yönetir.
   const tabs = useMemo(() => [
-    { value: 'profil', label: 'Profil', icon: User, hint: 'Ad, kurum, şifre' },
+    { value: 'profil', label: 'Profil', icon: User, hint: 'Fotoğraf, ad, kurum, şifre' },
     ...(isCounselor
-      ? [{ value: 'rehberlik', label: 'Rehberlik', icon: Users,
-           hint: 'Öğrenciler, veliler, başarımlar' }]
+      ? [
+        { value: 'rehberlik', label: 'Rehberlik', icon: Users,
+          hint: 'Öğrenciler, veliler, başarımlar' },
+        { value: 'tercihler', label: 'Tercihler', icon: SlidersHorizontal,
+          hint: 'Program varsayılanları, Panel bölümleri' },
+      ]
       : []),
     { value: 'gorunum', label: 'Görünüm', icon: Palette, hint: 'Tema ve renkler' },
-    { value: 'hesap', label: 'Hesap', icon: ShieldCheck, hint: 'Oturum' },
+    { value: 'hesap', label: 'Hesap', icon: ShieldCheck, hint: 'Oturum, veri, silme' },
   ], [isCounselor]);
   const [tab, setTab] = useState('profil');
 
@@ -110,6 +120,13 @@ export default function Ayarlar() {
     navigate('/giris', { replace: true });
   }
 
+  /** Hesap silindikten sonra: JWT durumsuz olduğu için token hâlâ elimizde
+   *  duruyor; oturumu istemci temizlemek zorunda (auth-contract §5.4d). */
+  async function handleAccountDeleted() {
+    await clearSession();
+    navigate('/giris', { replace: true });
+  }
+
   const active = tabs.find((x) => x.value === tab) ?? tabs[0];
 
   return (
@@ -136,7 +153,9 @@ export default function Ayarlar() {
         ))}
       </nav>
 
-      <div className={s.content}>
+      {/* Hesap sekmesi başlığıyla birlikte daralır: yalnız kartları ortalamak,
+          başlığı solda tek başına bırakıp hizasız gösteriyordu. */}
+      <div className={`${s.content} ${tab === 'hesap' ? st.narrowContent : ''}`}>
         <header className={s.contentHead}>
           <h2 className={s.contentTitle}>{active.label}</h2>
           <p className={s.contentHint}>{active.hint}</p>
@@ -145,9 +164,13 @@ export default function Ayarlar() {
       {/* ---------------------------------------------------------- PROFİL */}
       {tab === 'profil' && (
         <>
-      <Card>
-        <CardHeader title="Kimlik bilgileri" subtitle="Ad, kurum ve giriş bilgileriniz" />
-        <div className={s.form}>
+      {/* Kimlik kartı tam genişlik ve iki sütunlu: solda fotoğraf, sağda alanlar.
+          Şifre ile davet kodu altta yan yana durup satırı dolduruyor. */}
+      <Card className={s.wide}>
+        <CardHeader title="Kimlik bilgileri" subtitle="Fotoğraf, ad, kurum ve giriş bilgileriniz" />
+        <div className={st.identity}>
+          <AvatarSection user={user} onChange={updateUser} />
+          <div className={`${s.form} ${st.identityForm}`}>
           <div className={s.row}>
             <Field label="Ad" error={errors.first_name}>
               <Input name="first_name" value={profile.first_name} onChange={handleChange} />
@@ -189,6 +212,7 @@ export default function Ayarlar() {
             </Button>
             {status === 'saved' && <span className={s.savedHint}>Kaydedildi</span>}
           </div>
+          </div>
         </div>
       </Card>
 
@@ -223,6 +247,9 @@ export default function Ayarlar() {
           />
         </>
       )}
+
+      {/* ---------------------------------------------------- TERCİHLER */}
+      {tab === 'tercihler' && isCounselor && <PreferencesSection />}
 
       {/* ------------------------------------------------------ GÖRÜNÜM */}
       {tab === 'gorunum' && (
@@ -276,6 +303,7 @@ export default function Ayarlar() {
 
       {/* -------------------------------------------------------- HESAP */}
       {tab === 'hesap' && (
+      <>
       <Card>
         <CardHeader title="Oturum" subtitle="Bu cihazdaki oturumunuz" />
         <div className={s.option}>
@@ -283,11 +311,18 @@ export default function Ayarlar() {
             <p className={s.optionLabel}>Oturumu kapat</p>
             <p className={s.optionHint}>Bu cihazdaki oturumunuz sonlandırılır.</p>
           </div>
-          <Button variant="danger" size="sm" onClick={handleLogout}>
+          <Button variant="ghost" size="sm" onClick={handleLogout}>
             <LogOut size={14} /> Çıkış Yap
           </Button>
         </div>
       </Card>
+
+      {isCounselor && <CalendarDataSection />}
+
+      {/* Hesap silme en altta ve ayrı bir kartta: çıkış yapmakla aynı görsel
+          ağırlıkta durmamalı. */}
+      <DangerZoneSection onDeleted={handleAccountDeleted} />
+      </>
       )}
       </div>
     </div>

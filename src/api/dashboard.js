@@ -5,6 +5,7 @@ import api from './client';
 import { listStudents } from './students';
 import { listAppointments } from './appointments';
 import { listSubjects } from './catalog';
+import { getPreferences } from './preferences';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -81,13 +82,14 @@ function dimAvg(exams, type, subs) {
 
 /** Panoyu besleyen tüm türetilmiş veriyi döndürür. */
 export async function getDashboard() {
-  const [students, appts, programsRes, examsRes, tpRes, subjects] = await Promise.all([
+  const [students, appts, programsRes, examsRes, tpRes, subjects, prefs] = await Promise.all([
     listStudents(),
     listAppointments(),
     api.get('/programs/'),
     api.get('/exams/'),
     api.get('/topic-progress/'),
     listSubjects(),          // maksimum netler katalogtaki soru sayılarından gelir
+    getPreferences(),        // hangi uyarı kartı görünecek + eşikleri (D3)
   ]);
   // Ders etiketi → sınavdaki soru sayısı (= o dersten çıkarılabilecek en yüksek net).
   const maxByLabel = Object.fromEntries(subjects.map((x) => [x.label, x.questionCount]));
@@ -206,9 +208,11 @@ export async function getDashboard() {
     .filter((e) => e.hasCurrentProgram && e.compliance != null)
     .sort((a, b) => a.compliance - b.compliance);
 
-  // Net değişimi: herkes — son denemenin (aynı tür) öncekine göre farkı; en çok düşen başta
+  // Net değişimi: son denemenin (aynı tür) öncekine göre farkı; en çok düşen başta.
+  // Tercih açıksa yalnız düşenler kalır (yükselenler bir uyarı değil).
   const netChanges = enriched
     .filter((e) => e.netDelta != null)
+    .filter((e) => !prefs.net_change_drops_only || e.netDelta < 0)
     .sort((a, b) => a.netDelta - b.netDelta);
 
   // Konu takibi — konu ilerlemesi olan herkes, ortalama seviye yüksekten düşüğe
@@ -218,7 +222,7 @@ export async function getDashboard() {
 
   return {
     students: enriched, enrById, upcoming, kpis, needProgram,
-    complianceRanked, netChanges, konuRanked, netSeries,
+    complianceRanked, netChanges, konuRanked, netSeries, prefs,
     netDimGroups: {
       tyt: TYT_DIM_GROUPS.map(({ key, label, max }) => ({ key, label, max })),
       // AYT'de grup listesi ve maksimumlar alana göre değişir.

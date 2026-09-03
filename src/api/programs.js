@@ -6,6 +6,7 @@
    hafta günü tekrar edeceği için tek başına ayırt edici olmaz. */
 import api from './client';
 import { blockColor } from './catalog';
+import { getPreferences } from './preferences';
 
 const pad2 = (n) => String(n).padStart(2, '0');
 
@@ -30,7 +31,19 @@ export const mondayOf = (str) => addDays(str, -weekdayOf(str));
 const DAY_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
 const MONTH_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
+/** Tercih okunamadığında kullanılan gün sayısı. Rehberin Ayarlar'daki
+ *  `default_day_count` tercihi bunu ezer (bkz. `programDefaults`). */
 export const DEFAULT_DAY_COUNT = 7;
+
+/** Yeni program açılırken kullanılacak varsayılanlar — Ayarlar → Tercihler.
+ *  Tercihler modülü kendi içinde önbelleklediği için her çağrı istek atmaz. */
+export async function programDefaults() {
+  const prefs = await getPreferences();
+  return {
+    dayCount: prefs.default_day_count || DEFAULT_DAY_COUNT,
+    scheduleType: prefs.default_schedule_type || 'timed',
+  };
+}
 
 /** Pencerenin sütunları: [{ index, date, weekday, short, dayNum, monthShort }] */
 export function windowDays(startDate, dayCount) {
@@ -123,9 +136,9 @@ export function externalMinutes(blocks) {
 // Diff için scope başına son yüklenen durum: { programId, startDate, dayCount, blocks }
 const cache = new Map();
 
-function programToEntry(program) {
+function programToEntry(program, defaultDayCount = DEFAULT_DAY_COUNT) {
   const startDate = program ? program.start_date : today();
-  const dayCount = program ? program.day_count || DEFAULT_DAY_COUNT : DEFAULT_DAY_COUNT;
+  const dayCount = program ? program.day_count || defaultDayCount : defaultDayCount;
   return {
     programId: program ? program.id : null,
     startDate,
@@ -136,14 +149,17 @@ function programToEntry(program) {
 
 /** Öğrencinin güncel programını pencere + bloklar olarak döndürür. */
 export async function getStudentProgram(studentId) {
-  const { data } = await api.get('/programs/');
+  const [{ data }, defaults] = await Promise.all([
+    api.get('/programs/'),
+    programDefaults(),
+  ]);
   const now = today();
   const mine = data
     .filter((p) => String(p.student) === String(studentId))
     .sort((a, b) => (a.start_date < b.start_date ? 1 : -1));
   const current = mine.find((p) => p.start_date <= now && now <= p.end_date) || mine[0] || null;
 
-  const entry = programToEntry(current);
+  const entry = programToEntry(current, defaults.dayCount);
   cache.set(String(studentId), entry);
   // Referans kopyası döndür (board mutasyonu cache'i bozmasın)
   return { ...entry, blocks: entry.blocks.map((b) => ({ ...b })) };
@@ -278,11 +294,14 @@ export async function persistStudentSchedule(studentId, nextBlocks, win) {
   // Program yoksa ve eklenen blok varsa önce oluştur.
   let { programId } = entry;
   if (programId == null && nextBlocks.length > 0) {
+    // Program tipi rehberin tercihinden gelir (Ayarlar → Tercihler); pencere
+    // zaten tahtada seçilmiş durumda.
+    const { scheduleType } = await programDefaults();
     const { data } = await api.post('/programs/', {
       student: Number(studentId),
       start_date: win.startDate,
       day_count: win.dayCount,
-      schedule_type: 'timed',
+      schedule_type: scheduleType,
     });
     programId = data.id;
     entry.programId = data.id;

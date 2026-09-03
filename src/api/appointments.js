@@ -40,3 +40,37 @@ export async function deleteAppointment(id) {
   await api.delete(`/calendar/${id}/`);
   return { ok: true };
 }
+
+/* --- .ics dışa/içe aktarma (D3) ---------------------------------------------
+   Uç `Authorization` başlığı istediği için doğrudan bir `<a href>` ile
+   indirilemiyor; dosya axios ile blob olarak çekilip tarayıcıya geçici bir
+   object URL üzerinden verilir. */
+
+/** Takvimi .ics olarak indirir. `filters` = { student, from, to } (hepsi opsiyonel). */
+export async function exportCalendarIcs(filters = {}) {
+  const params = Object.fromEntries(
+    Object.entries(filters).filter(([, v]) => v != null && v !== '')
+  );
+  const { data } = await api.get('/calendar/export.ics', { params, responseType: 'blob' });
+  const url = URL.createObjectURL(data);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'rehberim-takvim.ics';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  // Nesne URL'i hemen bırakılırsa indirme bazı tarayıcılarda yarıda kalıyor.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** .ics dosyasını içe aktarır. `studentId` verilirse tüm etkinlikler ona bağlanır.
+ *  Dönen: { total, created, skipped }. */
+export async function importCalendarIcs(file, studentId = null) {
+  const body = new FormData();
+  body.append('file', file);
+  if (studentId) body.append('student', String(studentId));
+  const { data } = await api.post('/calendar/import-ics/', body, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}

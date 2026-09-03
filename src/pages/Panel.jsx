@@ -60,7 +60,16 @@ export default function Panel() {
 
   if (!data) return <div className={s.center}><Spinner size={24} /></div>;
 
-  const { kpis, upcoming, needProgram, complianceRanked, netChanges, konuRanked, netSeries, netDimGroups } = data;
+  const {
+    kpis, upcoming, needProgram, complianceRanked, netChanges, konuRanked,
+    netSeries, netDimGroups, prefs,
+  } = data;
+  // Panel'in **her** bölümü rehberin tercihine göre gizlenebilir
+  // (Ayarlar → Tercihler → Panel bölümleri). Satır kapsayıcıları, içindeki
+  // kartların hepsi kapalıysa hiç çizilmiyor — yoksa boş bir boşluk kalırdı.
+  const showActionRow = prefs.show_upcoming || prefs.show_missing_program
+    || prefs.show_net_change;
+  const showPairRow = prefs.show_compliance || prefs.show_topic_tracking;
   const metricDef = METRICS.find((x) => x.value === metric);
   // AYT'de grup listesi (ve maksimumları) seçili alana bağlı; TYT'de tek liste.
   const groupOpts = (netExam === 'ayt'
@@ -75,6 +84,7 @@ export default function Panel() {
   return (
     <div className={s.page}>
       {/* ── KPI şeridi ── */}
+      {prefs.show_kpis && (
       <div className={s.kpiRow}>
         <KpiCard icon={<Users size={18} />} value={kpis.count} label="Öğrenci" tone="accent" />
         <KpiCard icon={<CalendarPlus size={18} />} value={kpis.withoutProgram}
@@ -82,8 +92,10 @@ export default function Panel() {
         <KpiCard icon={<CalendarClock size={18} />} value={kpis.upcoming} label="Yaklaşan görüşme" tone="violet" />
         <KpiCard icon={<Gauge size={18} />} value={kpis.avgNet ?? '—'} label="Ort. net" tone="cyan" />
       </div>
+      )}
 
       {/* ── Öğrenci net grafiği (çok çizgili, seçilebilir) ── */}
+      {prefs.show_net_chart && (
       <Card>
         <div className={s.cmpHead}>
           <div>
@@ -103,9 +115,12 @@ export default function Panel() {
         </div>
         <MultiLineChart series={visible} />
       </Card>
+      )}
 
       {/* ── Aksiyon satırı ── */}
+      {showActionRow && (
       <div className={s.widgetRow}>
+        {prefs.show_upcoming && (
         <Card className={s.wCard}>
           <CardHeader title="Yaklaşan Görüşmeler" actions={<span className={s.countBadge}>{upcoming.length}</span>} />
           {upcoming.length === 0 ? (
@@ -129,7 +144,9 @@ export default function Panel() {
             </div>
           )}
         </Card>
+        )}
 
+        {prefs.show_missing_program && (
         <Card className={s.wCard}>
           <CardHeader title="Program Gerekenler" actions={<span className={`${s.countBadge} ${needProgram.length ? s.countDanger : ''}`}>{needProgram.length}</span>} />
           {needProgram.length === 0 ? (
@@ -151,7 +168,9 @@ export default function Panel() {
             </div>
           )}
         </Card>
+        )}
 
+        {prefs.show_net_change && (
         <Card className={s.wCard}>
           <CardHeader title="Net Değişimi (son denemeye göre)" actions={<span className={s.countBadge}>{netChanges.length}</span>} />
           {netChanges.length === 0 ? (
@@ -176,10 +195,14 @@ export default function Panel() {
             </div>
           )}
         </Card>
+        )}
       </div>
+      )}
 
       {/* ── Uyum (sıralı %) + Konu takibi (ort. seviye) ── */}
+      {showPairRow && (
       <div className={s.pairRow}>
+        {prefs.show_compliance && (
         <Card className={s.wCard}>
           <CardHeader title="Program Uyumu" actions={<span className={s.countBadge}>{complianceRanked.length}</span>} />
           {complianceRanked.length === 0 ? (
@@ -199,7 +222,9 @@ export default function Panel() {
             </div>
           )}
         </Card>
+        )}
 
+        {prefs.show_topic_tracking && (
         <Card className={s.wCard}>
           <CardHeader title="Konu Takibi — Ortalama Seviye" actions={<span className={s.countBadge}>{konuRanked.length}</span>} />
           {konuRanked.length === 0 ? (
@@ -219,9 +244,12 @@ export default function Panel() {
             </div>
           )}
         </Card>
+        )}
       </div>
+      )}
 
       {/* ── Ortalama üzerinden kıyaslama ── */}
+      {prefs.show_comparison && (
       <Card>
         <div className={s.cmpHead}>
           <div>
@@ -270,6 +298,7 @@ export default function Panel() {
           </div>
         )}
       </Card>
+      )}
     </div>
   );
 }

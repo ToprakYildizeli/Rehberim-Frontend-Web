@@ -44,3 +44,35 @@ export async function changePassword(currentPassword, newPassword) {
   });
   return data;
 }
+
+/** GET /api/auth/delete-account/ — hesap silinirse neyin gideceğinin özeti.
+ *  Alanlar role göre değişir (auth-contract §5.4d). */
+export async function getDeleteImpact() {
+  const { data } = await api.get('/auth/delete-account/');
+  return data;
+}
+
+/** POST /api/auth/delete-account/ — hesabı kalıcı olarak siler.
+ *  Şifre zorunlu. Başarılıysa çağıran oturumu **kendisi temizlemeli**: JWT
+ *  durumsuz olduğu için elindeki access token biçimsel olarak hâlâ duruyor. */
+export async function deleteAccount(password) {
+  const { data } = await api.post('/auth/delete-account/', { password });
+  return data;
+}
+
+/** POST /api/auth/me/avatar/ — profil fotoğrafı yükler, güncel kullanıcıyı döner.
+ *  JPG/PNG/WEBP/GIF, en fazla 2 MB (auth-contract §5.4e). */
+export async function uploadAvatar(file) {
+  const body = new FormData();
+  body.append('file', file);
+  const { data } = await api.post('/auth/me/avatar/', body, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data;
+}
+
+/** DELETE /api/auth/me/avatar/ — fotoğrafı kaldırır (fotoğraf yoksa da başarılı). */
+export async function removeAvatar() {
+  const { data } = await api.delete('/auth/me/avatar/');
+  return data;
+}

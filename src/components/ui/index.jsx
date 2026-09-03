@@ -133,18 +133,35 @@ export function SearchInput({ className, ...rest }) {
 }
 
 /* ---------- Avatar ---------- */
-const AVATAR_SIZES = { xs: s.avatarXs, sm: s.avatarSm, md: s.avatarMd, lg: s.avatarLg };
+const AVATAR_SIZES = {
+  xs: s.avatarXs, sm: s.avatarSm, md: s.avatarMd, lg: s.avatarLg, xl: s.avatarXl,
+};
 
-export function Avatar({ name = '', color, size = 'md', className, ...rest }) {
+/**
+ * Yuvarlak avatar. `src` verilirse profil fotoğrafı, verilmezse ada göre renkli
+ * baş harfler gösterilir.
+ *
+ * Fotoğraf yüklenemezse (dosya silinmiş, ağ hatası) baş harflere düşülür:
+ * kırık resim ikonu göstermek, hiç fotoğraf olmamasından kötüdür.
+ */
+export function Avatar({ name = '', color, size = 'md', src, className, ...rest }) {
+  const [failed, setFailed] = useState(false);
+  const showImage = src && !failed;
+
+  // `src` değişince (yeni fotoğraf yüklendi) hata durumu sıfırlanmalı.
+  useEffect(() => { setFailed(false); }, [src]);
+
   return (
     <span
       className={cx(s.avatar, AVATAR_SIZES[size], className)}
-      style={{ background: color || colorFor(name) }}
+      style={showImage ? undefined : { background: color || colorFor(name) }}
       title={name}
       aria-hidden="true"
       {...rest}
     >
-      {initialsOf(name)}
+      {showImage
+        ? <img src={src} alt="" className={s.avatarImg} onError={() => setFailed(true)} />
+        : initialsOf(name)}
     </span>
   );
 }
