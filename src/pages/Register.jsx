@@ -73,7 +73,7 @@ export default function Register() {
 
       <div className={styles.card}>
         <Link to="/" className={styles.logo} aria-label="Rehberim ana sayfa">
-          <Logo height={24} />
+          <Logo height={29} />
         </Link>
         <h1 className={styles.heading}>Hesap Oluşturun</h1>
         <p className={styles.sub}>Rehber hesabı açmak birkaç saniye sürer.</p>

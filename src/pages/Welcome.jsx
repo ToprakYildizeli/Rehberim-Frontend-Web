@@ -352,7 +352,7 @@ export default function Welcome() {
       {/* ── Navbar ── */}
       <nav className={styles.nav}>
         <div className={styles.navInner}>
-          <Logo height={26} className={styles.brand} />
+          <Logo height={31} className={styles.brand} />
           <div className={styles.navLinks}>
             <a href="#ozellikler" className={styles.navSection}>Özellikler</a>
             <a href="#roller" className={styles.navSection}>Kimler kullanır</a>
@@ -629,7 +629,7 @@ export default function Welcome() {
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <div className={styles.footerTop}>
-            <Logo height={22} className={styles.footerBrand} />
+            <Logo height={26} className={styles.footerBrand} />
             <div className={styles.footerLinks}>
               <a href="#ozellikler">Özellikler</a>
               <a href="#roller">Kimler kullanır</a>

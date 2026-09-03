@@ -40,7 +40,7 @@ export default function Login() {
 
       <div className={styles.card}>
         <Link to="/" className={styles.logo} aria-label="Rehberim ana sayfa">
-          <Logo height={24} />
+          <Logo height={29} />
         </Link>
         <h1 className={styles.heading}>Hoş geldiniz</h1>
         <p className={styles.sub}>Rehber hesabınızla giriş yapın.</p>

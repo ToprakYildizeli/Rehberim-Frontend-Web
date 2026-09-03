@@ -123,8 +123,8 @@ export default function DashboardLayout() {
         {/* Daraltılmış kenar çubuğunda yalnız kep sığıyor; açıkken tam logo. */}
         <NavLink to="/panel" className={s.brand} aria-label="Rehberim">
           {collapsed
-            ? <LogoMark size={22} className={s.brandLogo} />
-            : <Logo height={26} className={s.brandLogo} />}
+            ? <LogoMark size={26} className={s.brandLogo} />
+            : <Logo height={31} className={s.brandLogo} />}
         </NavLink>
 
         <nav className={s.nav}>
