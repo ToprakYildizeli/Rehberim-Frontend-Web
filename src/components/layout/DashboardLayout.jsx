@@ -123,7 +123,7 @@ export default function DashboardLayout() {
           <span className={s.brandMark}>
             <GraduationCap size={17} color="#fff" />
           </span>
-          {!collapsed && 'Rehberlik'}
+          {!collapsed && 'Rehberim'}
         </NavLink>
 
         <nav className={s.nav}>
