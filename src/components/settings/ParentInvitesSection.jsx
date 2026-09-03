@@ -146,8 +146,6 @@ export default function ParentInvitesSection() {
           ))}
         </ul>
       )}
-
-      <p className={s.note}>Kod tek kullanımlıktır ve yalnız o öğrenciye açılır.</p>
     </Card>
   );
 }

@@ -120,12 +120,6 @@ export default function CalendarDataSection() {
         </p>
       )}
       {error && <p className={s.error}>{error}</p>}
-
-      <p className={s.note}>
-        Aynı gün, saat ve başlığa sahip bir etkinlik zaten varsa tekrar eklenmez —
-        aynı dosyayı iki kez yüklemek takvimi ikizlemez. Saatli etkinlikler dilimsiz
-        (yerel) saatle yazılır; içe aktarımda UTC damgaları yerel saate çevrilir.
-      </p>
     </Card>
   );
 }

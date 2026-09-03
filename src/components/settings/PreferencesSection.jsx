@@ -42,6 +42,14 @@ const PANEL_SECTIONS = [
     hint: 'Seçilen metrikte öğrencileri sıralayan çubuk liste' },
 ];
 
+/** Bölüm değil **süzgeç**: Net Değişimi kartının içeriğini daraltır, kartı
+ *  gizlemez. Ekranda diğerleriyle aynı ızgarada duruyor. */
+const DROPS_ONLY = {
+  key: 'net_change_drops_only',
+  label: 'Yalnız net düşüşleri',
+  hint: "Net Değişimi'nde yükselenler gizlenir, düşenler kalır",
+};
+
 export default function PreferencesSection() {
   const [prefs, setPrefs] = useState(null);        // null = yükleniyor
   const [error, setError] = useState(null);
@@ -121,19 +129,18 @@ export default function PreferencesSection() {
             </Select>
           </Field>
         </div>
-        <p className={s.note}>
-          Bunlar yalnızca <strong>ön dolgu</strong>dur: atama sırasında her
-          programda değiştirilebilir. Mevcut programlar etkilenmez.
-        </p>
       </Card>
 
       <Card className={s.wide}>
         <CardHeader
           title="Panel bölümleri"
-          subtitle="Panel'de hangi bölümleri görmek istediğiniz — kapattığınız görünmez"
+          subtitle="Panel'de hangi bölümleri görmek istediğiniz"
         />
+        {/* Sekiz bölüm + net düşüş süzgeci = dokuz anahtar, 3x3 ızgara.
+            Süzgeç ayrı bir blokta dururken dokuzuncu bir "bölüm" gibi
+            okunuyordu; aynı listede eşit ağırlıkta duruyor. */}
         <ul className={s.toggleList}>
-          {PANEL_SECTIONS.map(({ key, label, hint }) => (
+          {[...PANEL_SECTIONS, DROPS_ONLY].map(({ key, label, hint }) => (
             <li key={key}>
               <Toggle
                 checked={prefs[key]}
@@ -144,21 +151,6 @@ export default function PreferencesSection() {
             </li>
           ))}
         </ul>
-
-        <p className={s.prefDivider}>Süzgeç</p>
-        <div className={s.prefRow}>
-          <Toggle
-            checked={prefs.net_change_drops_only}
-            onChange={(v) => save('net_change_drops_only', v)}
-            label="Yalnız net düşüşleri"
-            hint="Net Değişimi'nde yükselenler gizlenir, düşenler kalır"
-          />
-        </div>
-
-        <p className={s.note}>
-          Bu ayarlar bildirim göndermez — uygulamada e-posta/push yok, yalnızca
-          Panel'de neyin görüneceğini belirler. Hepsini kapatırsanız Panel boş kalır.
-        </p>
       </Card>
 
       {error && <p className={s.error}>{error}</p>}

@@ -50,9 +50,7 @@ export default function StudentsSection() {
       {students === null ? (
         <div className={s.loading}><Spinner /></div>
       ) : students.length === 0 ? (
-        <p className={s.note}>
-          Henüz öğrenciniz yok. Öğrenciler davet kodunuzla size bağlanır.
-        </p>
+        <p className={s.note}>Henüz öğrenciniz yok.</p>
       ) : (
         <ul className={s.rows}>
           {students.map((st) => (

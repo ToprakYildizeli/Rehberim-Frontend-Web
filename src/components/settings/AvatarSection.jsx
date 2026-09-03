@@ -7,7 +7,7 @@ import s from './settings.module.css';
 /**
  * Profil fotoğrafı — Profil sekmesindeki kimlik kartının sol tarafı.
  *
- * Sunucu kısıtları (JPG/PNG/WEBP/GIF, ≤2 MB) burada **tekrar edilmiyor**;
+ * Sunucu kısıtları (JPG/PNG/WEBP/GIF, ≤5 MB) burada **tekrar edilmiyor**;
  * dosya doğrudan gönderilip hata mesajı sunucudan gösteriliyor. İki yerde
  * tutulan kural zamanla ayrışır ve asıl doğrulama zaten sunucuda.
  *
@@ -67,7 +67,7 @@ export default function AvatarSection({ user, onChange }) {
         />
       </div>
 
-      <p className={s.avatarHint}>JPG, PNG, WEBP veya GIF · en fazla 2 MB</p>
+      <p className={s.avatarHint}>JPG, PNG, WEBP veya GIF · en fazla 5 MB</p>
       {error && <p className={s.error}>{error}</p>}
     </div>
   );

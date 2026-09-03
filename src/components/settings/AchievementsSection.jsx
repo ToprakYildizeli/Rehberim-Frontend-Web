@@ -122,7 +122,7 @@ export default function AchievementsSection() {
       {items === null ? (
         <div className={s.loading}><Spinner /></div>
       ) : items.length === 0 ? (
-        <p className={s.note}>Hiç başarımınız yok. Yeni ekleyerek başlayın.</p>
+        <p className={s.note}>Hiç başarımınız yok.</p>
       ) : (
         <ul className={s.rows}>
           {items.map((a) => (

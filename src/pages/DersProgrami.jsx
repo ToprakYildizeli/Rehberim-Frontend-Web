@@ -1205,9 +1205,6 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
             );
           })}
           {error && <p className={s.tplError}>{error}</p>}
-          <p className={s.tplHint}>
-            <Repeat size={11} /> Rutin: yeni hafta açıldığında görevler o haftaya kendiliğinden düşer.
-          </p>
         </div>
       )}
     </div>
@@ -1305,10 +1302,9 @@ function AssignModal({ source, students, defaultStudentId, blocks, boardStart, b
               />
             </Field>
           </div>
-          <p className={s.assignHint}>
-            {date ? `Bitiş: ${addDays(date, dayCount - 1)}. ` : ''}
-            Program atanmamış ilk gün önerildi; dilersen değiştir.
-          </p>
+          {date && (
+            <p className={s.assignHint}>Bitiş: {addDays(date, dayCount - 1)}</p>
+          )}
           {noBoard && <p className={s.assignHint}>Board boş — önce blok ekleyin.</p>}
           {error && <p className={s.assignError}>{error}</p>}
           <div className={s.assignActions}>

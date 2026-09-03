@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Check, Copy, Lock, LogOut, Moon, Palette, ShieldCheck, SlidersHorizontal,
+  Check, Copy, LogOut, Moon, Palette, ShieldCheck, SlidersHorizontal,
   Sun, User, Users,
 } from 'lucide-react';
 import { Card, CardHeader, Button, Field, Input } from '../components/ui';
@@ -200,9 +200,6 @@ export default function Ayarlar() {
             </Field>
           </div>
 
-          <p className={s.note}>
-            <Lock size={12} /> Kullanıcı adı ve e-posta değiştirilemez.
-          </p>
 
           {formError && <p className={s.formError}>{formError}</p>}
 
@@ -235,7 +232,6 @@ export default function Ayarlar() {
             load={loadTaskTypes}
             create={createTaskType}
             addLabel="Yeni çalışma türü"
-            hint="Bu liste tüm rehberlerde ortaktır; eklenen kayıt silinemez."
           />
           <CatalogSection
             title="Yayınevleri"
@@ -243,7 +239,6 @@ export default function Ayarlar() {
             load={loadPublishers}
             create={createPublisher}
             addLabel="Yeni yayınevi"
-            hint="Bu liste tüm rehberlerde ortaktır; eklenen kayıt silinemez."
           />
         </>
       )}
@@ -309,7 +304,6 @@ export default function Ayarlar() {
         <div className={s.option}>
           <div>
             <p className={s.optionLabel}>Oturumu kapat</p>
-            <p className={s.optionHint}>Bu cihazdaki oturumunuz sonlandırılır.</p>
           </div>
           <Button variant="ghost" size="sm" onClick={handleLogout}>
             <LogOut size={14} /> Çıkış Yap
