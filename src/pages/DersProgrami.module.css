@@ -361,8 +361,11 @@
 .blockRemove:hover { opacity: 1; background: rgba(0, 0, 0, 0.2); }
 
 /* ---------- Right rail ---------- */
-.railTitle { font-size: 0.9rem; font-weight: 700; color: var(--text); margin: 0; }
-.railSub { font-size: 0.72rem; color: var(--text-muted); margin: 3px 0 var(--space-5); }
+.railTitle {
+  font-size: 0.9rem; font-weight: 700; color: var(--text);
+  /* Alt boşluk eskiden .railSub'tan geliyordu; açıklama kalkınca başlığa taşındı. */
+  margin: 0 0 var(--space-5);
+}
 
 .railForm { display: flex; flex-direction: column; gap: var(--space-3); }
 

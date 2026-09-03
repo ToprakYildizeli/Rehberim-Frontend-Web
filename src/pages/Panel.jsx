@@ -100,7 +100,6 @@ export default function Panel() {
         <div className={s.cmpHead}>
           <div>
             <h2 className={s.cmpTitle}><LineChart size={16} /> Öğrenci Net Grafiği</h2>
-            <p className={s.cmpSub}>Deneme başına net; öğrenci ve sınav türünü seç</p>
           </div>
           <PillGroup options={NET_TYPES} value={netType} onChange={setNetType} />
         </div>

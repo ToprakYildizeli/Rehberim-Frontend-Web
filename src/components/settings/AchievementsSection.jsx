@@ -113,7 +113,6 @@ export default function AchievementsSection() {
     <Card>
       <CardHeader
         title="Başarımlar"
-        subtitle="Öğrencilerinizin kazanabileceği hedefler"
         actions={
           <Button size="sm" onClick={openNew}><Plus size={14} /> Yeni</Button>
         }

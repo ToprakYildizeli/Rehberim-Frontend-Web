@@ -39,21 +39,11 @@
   color: var(--accent-text);
 }
 
-.navItemOn .navHint { color: var(--accent-text); opacity: 0.75; }
-
-.navText { display: flex; flex-direction: column; min-width: 0; }
-.navLabel { font-size: 0.85rem; font-weight: 600; }
-.navHint {
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-top: 1px;
-  overflow-wrap: anywhere;
-}
+.navLabel { font-size: 0.85rem; font-weight: 600; min-width: 0; }
 
 /* ---- içerik ---- */
 .contentHead { grid-column: 1 / -1; margin-bottom: calc(var(--space-2) * -1); }
 .contentTitle { font-size: 1.1rem; font-weight: 700; color: var(--text); margin: 0; }
-.contentHint { font-size: 0.8rem; color: var(--text-muted); margin: 3px 0 0; }
 
 /* Kartlar kalan genişliğe yayılıyor; dar olanlar yan yana geliyor.
    Aynı satırdaki kartlar **eşit yükseklikte**: `align-items` verilmiyor, ızgaranın
@@ -132,7 +122,6 @@
     padding-bottom: var(--space-2);
   }
   .navItem { flex-shrink: 0; }
-  .navHint { display: none; }
 }
 
 @media (max-width: 560px) {
@@ -204,12 +193,6 @@
   font-size: 0.83rem;
   font-weight: 600;
   color: var(--text);
-}
-
-.paletteHint {
-  font-size: 0.72rem;
-  color: var(--text-muted);
-  line-height: 1.45;
 }
 
 /* ---- davet kodu ---- */

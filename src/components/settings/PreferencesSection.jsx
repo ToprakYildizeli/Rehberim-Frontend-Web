@@ -24,22 +24,14 @@ const SCHEDULE_TYPES = [
 /** Panel'deki **her** bölüm. Sıra, Panel'deki yerleşim sırasıdır — listede
  *  yukarıdan aşağı okumak ekranı yukarıdan aşağı okumakla aynı olsun diye. */
 const PANEL_SECTIONS = [
-  { key: 'show_kpis', label: 'Özet kutuları',
-    hint: 'Öğrenci sayısı, programsızlar, yaklaşan görüşme, ortalama net' },
-  { key: 'show_net_chart', label: 'Öğrenci Net Grafiği',
-    hint: 'Deneme başına net; öğrenci ve sınav türü seçilebilir' },
-  { key: 'show_upcoming', label: 'Yaklaşan Görüşmeler',
-    hint: 'Bugünden sonraki takvim etkinlikleri' },
-  { key: 'show_missing_program', label: 'Program Gerekenler',
-    hint: 'Bu hafta programı olmayan öğrenciler' },
-  { key: 'show_net_change', label: 'Net Değişimi',
-    hint: 'Son denemenin bir öncekine göre farkı' },
-  { key: 'show_compliance', label: 'Program Uyumu',
-    hint: 'Planlanan süreye göre tamamlanan çalışma' },
-  { key: 'show_topic_tracking', label: 'Konu Takibi',
-    hint: 'Ortalama konu seviyesi ve zayıf konu sayısı' },
-  { key: 'show_comparison', label: 'Öğrenci Kıyaslama',
-    hint: 'Seçilen metrikte öğrencileri sıralayan çubuk liste' },
+  { key: 'show_kpis', label: 'Özet kutuları' },
+  { key: 'show_net_chart', label: 'Öğrenci Net Grafiği' },
+  { key: 'show_upcoming', label: 'Yaklaşan Görüşmeler' },
+  { key: 'show_missing_program', label: 'Program Gerekenler' },
+  { key: 'show_net_change', label: 'Net Değişimi' },
+  { key: 'show_compliance', label: 'Program Uyumu' },
+  { key: 'show_topic_tracking', label: 'Konu Takibi' },
+  { key: 'show_comparison', label: 'Öğrenci Kıyaslama' },
 ];
 
 /** Bölüm değil **süzgeç**: Net Değişimi kartının içeriğini daraltır, kartı
@@ -47,7 +39,6 @@ const PANEL_SECTIONS = [
 const DROPS_ONLY = {
   key: 'net_change_drops_only',
   label: 'Yalnız net düşüşleri',
-  hint: "Net Değişimi'nde yükselenler gizlenir, düşenler kalır",
 };
 
 export default function PreferencesSection() {
@@ -103,10 +94,7 @@ export default function PreferencesSection() {
           varsayılanları" 1440px'de sağını boş bırakıyordu (D2'deki düzen
           geri bildiriminin aynısı). */}
       <Card className={s.wide}>
-        <CardHeader
-          title="Program varsayılanları"
-          subtitle="Yeni bir program açarken form bu değerlerle dolar"
-        />
+        <CardHeader title="Program varsayılanları" />
         {/* Alanlar içeriklerine göre dar: gün sayısı iki haneli bir sayı,
             kutunun kart genişliğine yayılması için sebep yok. */}
         <div className={s.prefRow}>
@@ -132,21 +120,17 @@ export default function PreferencesSection() {
       </Card>
 
       <Card className={s.wide}>
-        <CardHeader
-          title="Panel bölümleri"
-          subtitle="Panel'de hangi bölümleri görmek istediğiniz"
-        />
+        <CardHeader title="Panel bölümleri" />
         {/* Sekiz bölüm + net düşüş süzgeci = dokuz anahtar, 3x3 ızgara.
             Süzgeç ayrı bir blokta dururken dokuzuncu bir "bölüm" gibi
             okunuyordu; aynı listede eşit ağırlıkta duruyor. */}
         <ul className={s.toggleList}>
-          {[...PANEL_SECTIONS, DROPS_ONLY].map(({ key, label, hint }) => (
+          {[...PANEL_SECTIONS, DROPS_ONLY].map(({ key, label }) => (
             <li key={key}>
               <Toggle
                 checked={prefs[key]}
                 onChange={(v) => save(key, v)}
                 label={label}
-                hint={hint}
               />
             </li>
           ))}
@@ -162,7 +146,7 @@ export default function PreferencesSection() {
 /** Anahtar (switch) — görünüşü CSS'te, erişilebilirliği gerçek bir checkbox'ta.
  *  `role="switch"` yerine native checkbox: ekran okuyucular ikisini de anlıyor
  *  ama checkbox klavye davranışını (space) bedavaya getiriyor. */
-function Toggle({ checked, onChange, label, hint }) {
+function Toggle({ checked, onChange, label }) {
   return (
     <label className={s.toggle}>
       <input
@@ -172,10 +156,7 @@ function Toggle({ checked, onChange, label, hint }) {
         onChange={(e) => onChange(e.target.checked)}
       />
       <span className={s.toggleTrack} aria-hidden="true"><span className={s.toggleKnob} /></span>
-      <span className={s.toggleText}>
-        <span className={s.toggleLabel}>{label}</span>
-        {hint && <span className={s.toggleHint}>{hint}</span>}
-      </span>
+      <span className={s.toggleLabel}>{label}</span>
     </label>
   );
 }

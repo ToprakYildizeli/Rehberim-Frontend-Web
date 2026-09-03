@@ -472,7 +472,6 @@ button.row:hover { background: var(--bg-alt); }
   gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4);
 }
 .cmpTitle { display: flex; align-items: center; gap: 6px; font-size: 0.98rem; font-weight: 700; margin: 0; color: var(--text); }
-.cmpSub { font-size: 0.76rem; color: var(--text-muted); margin: 3px 0 0; }
 .rankList { display: flex; flex-direction: column; gap: 4px; }
 .rankRow {
   display: flex; align-items: center; gap: var(--space-3);

@@ -12,7 +12,7 @@ import s from './settings.module.css';
  * 2 Eyl 2026): eklenen kayıt tüm rehberlerin dropdown'ına düşer, dolayısıyla
  * silme de herkesi etkilerdi. Sunucuda da bu uçlar açılmadı.
  */
-export default function CatalogSection({ title, subtitle, load, create, addLabel }) {
+export default function CatalogSection({ title, load, create, addLabel }) {
   const [items, setItems] = useState(null);         // null = yükleniyor
   const [name, setName] = useState('');
   const [error, setError] = useState(null);
@@ -49,7 +49,7 @@ export default function CatalogSection({ title, subtitle, load, create, addLabel
 
   return (
     <Card>
-      <CardHeader title={title} subtitle={subtitle} />
+      <CardHeader title={title} />
 
       {items === null ? (
         <div className={s.loading}><Spinner /></div>

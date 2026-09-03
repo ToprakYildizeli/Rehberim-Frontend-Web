@@ -46,17 +46,15 @@ export default function Ayarlar() {
   // "Rehberlik" yalnız rehberde var — öğrenci/veli bu ekranı görürse yalnız
   // kendi profilini ve görünümünü yönetir.
   const tabs = useMemo(() => [
-    { value: 'profil', label: 'Profil', icon: User, hint: 'Fotoğraf, ad, kurum, şifre' },
+    { value: 'profil', label: 'Profil', icon: User },
     ...(isCounselor
       ? [
-        { value: 'rehberlik', label: 'Rehberlik', icon: Users,
-          hint: 'Öğrenciler, veliler, başarımlar' },
-        { value: 'tercihler', label: 'Tercihler', icon: SlidersHorizontal,
-          hint: 'Program varsayılanları, Panel bölümleri' },
+        { value: 'rehberlik', label: 'Rehberlik', icon: Users },
+        { value: 'tercihler', label: 'Tercihler', icon: SlidersHorizontal },
       ]
       : []),
-    { value: 'gorunum', label: 'Görünüm', icon: Palette, hint: 'Tema ve renkler' },
-    { value: 'hesap', label: 'Hesap', icon: ShieldCheck, hint: 'Oturum, veri, silme' },
+    { value: 'gorunum', label: 'Görünüm', icon: Palette },
+    { value: 'hesap', label: 'Hesap', icon: ShieldCheck },
   ], [isCounselor]);
   const [tab, setTab] = useState('profil');
 
@@ -136,7 +134,7 @@ export default function Ayarlar() {
           tamamı ayarlara kalıyor. */}
       <nav className={s.nav} role="tablist" aria-orientation="vertical"
            aria-label="Ayarlar bölümleri">
-        {tabs.map(({ value, label, icon: Icon, hint }) => (
+        {tabs.map(({ value, label, icon: Icon }) => (
           <button
             key={value}
             role="tab"
@@ -145,10 +143,7 @@ export default function Ayarlar() {
             onClick={() => setTab(value)}
           >
             <Icon size={16} />
-            <span className={s.navText}>
-              <span className={s.navLabel}>{label}</span>
-              <span className={s.navHint}>{hint}</span>
-            </span>
+            <span className={s.navLabel}>{label}</span>
           </button>
         ))}
       </nav>
@@ -158,7 +153,6 @@ export default function Ayarlar() {
       <div className={`${s.content} ${tab === 'hesap' ? st.narrowContent : ''}`}>
         <header className={s.contentHead}>
           <h2 className={s.contentTitle}>{active.label}</h2>
-          <p className={s.contentHint}>{active.hint}</p>
         </header>
 
       {/* ---------------------------------------------------------- PROFİL */}
@@ -167,7 +161,7 @@ export default function Ayarlar() {
       {/* Kimlik kartı tam genişlik ve iki sütunlu: solda fotoğraf, sağda alanlar.
           Şifre ile davet kodu altta yan yana durup satırı dolduruyor. */}
       <Card className={s.wide}>
-        <CardHeader title="Kimlik bilgileri" subtitle="Fotoğraf, ad, kurum ve giriş bilgileriniz" />
+        <CardHeader title="Kimlik bilgileri" />
         <div className={st.identity}>
           <AvatarSection user={user} onChange={updateUser} />
           <div className={`${s.form} ${st.identityForm}`}>
@@ -228,14 +222,12 @@ export default function Ayarlar() {
           <div className={s.wide}><AchievementsSection /></div>
           <CatalogSection
             title="Çalışma türleri"
-            subtitle="Ders Programı'nda blok açarken seçilen metodlar"
             load={loadTaskTypes}
             create={createTaskType}
             addLabel="Yeni çalışma türü"
           />
           <CatalogSection
             title="Yayınevleri"
-            subtitle="Kitaplığa kitap eklenirken seçilen yayınevleri"
             load={loadPublishers}
             create={createPublisher}
             addLabel="Yeni yayınevi"
@@ -249,7 +241,7 @@ export default function Ayarlar() {
       {/* ------------------------------------------------------ GÖRÜNÜM */}
       {tab === 'gorunum' && (
       <Card className={s.wide}>
-        <CardHeader title="Tema" subtitle="Aydınlık/karanlık ve renk teması" />
+        <CardHeader title="Tema" />
 
         <div className={s.option}>
           <div>
@@ -287,7 +279,6 @@ export default function Ayarlar() {
                     {p.name}
                     {selected && <Check size={13} />}
                   </span>
-                  <span className={s.paletteHint}>{p.hint}</span>
                 </button>
               );
             })}
@@ -300,7 +291,7 @@ export default function Ayarlar() {
       {tab === 'hesap' && (
       <>
       <Card>
-        <CardHeader title="Oturum" subtitle="Bu cihazdaki oturumunuz" />
+        <CardHeader title="Oturum" />
         <div className={s.option}>
           <div>
             <p className={s.optionLabel}>Oturumu kapat</p>
@@ -370,7 +361,7 @@ function PasswordCard({ onRotated, user }) {
 
   return (
     <Card>
-      <CardHeader title="Şifre" subtitle="Giriş şifrenizi değiştirin" />
+      <CardHeader title="Şifre" />
       <div className={s.form}>
         <Field label="Mevcut şifre" error={errors.current_password}>
           <Input
@@ -425,7 +416,7 @@ function InviteCodeCard({ code }) {
 
   return (
     <Card>
-      <CardHeader title="Davet kodu" subtitle="Öğrenci ve veliler bu kodla size bağlanır" />
+      <CardHeader title="Davet kodu" />
       <div className={s.option}>
         <code className={s.code}>{code}</code>
         <Button variant="ghost" size="sm" onClick={copy}>

@@ -79,10 +79,7 @@ export default function ParentInvitesSection() {
 
   return (
     <Card>
-      <CardHeader
-        title="Veli davetleri"
-        subtitle="Öğrencinize veli ekleyin — veli bu kodla kendi hesabını açar"
-      />
+      <CardHeader title="Veli davetleri" />
 
       <div className={s.inviteForm}>
         <Field label="Öğrenci">

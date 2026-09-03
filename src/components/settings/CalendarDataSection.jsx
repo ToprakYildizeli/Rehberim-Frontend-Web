@@ -77,10 +77,7 @@ export default function CalendarDataSection() {
 
   return (
     <Card>
-      <CardHeader
-        title="Takvim aktarımı"
-        subtitle="Takvimi .ics olarak indir ya da başka bir takvimden içe aktar"
-      />
+      <CardHeader title="Takvim aktarımı" />
 
       <div className={s.icsRow}>
         <Field label="Dışa aktarılacak">

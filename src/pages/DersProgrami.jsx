@@ -890,9 +890,6 @@ export default function DersProgrami() {
             <div className={s.rail}>
             <Card>
               <h2 className={s.railTitle}>Blok Oluştur</h2>
-              <p className={s.railSub}>
-                Bloğu sürükleyip bir güne bırakın veya gün seçip ekleyin.
-              </p>
 
               {catalogError ? (
                 <p className={s.librarySub}>Katalog yüklenemedi. Sayfayı yenileyin.</p>

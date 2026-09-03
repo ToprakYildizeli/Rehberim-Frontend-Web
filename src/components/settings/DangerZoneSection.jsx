@@ -83,10 +83,7 @@ export default function DangerZoneSection({ onDeleted }) {
   return (
     <>
       <Card className={s.danger}>
-        <CardHeader
-          title="Hesabı sil"
-          subtitle="Hesabınız ve ona bağlı veriler kalıcı olarak silinir"
-        />
+        <CardHeader title="Hesabı sil" />
         <div className={s.dangerRow}>
           <p className={s.dangerText}>
             <AlertTriangle size={14} /> Bu işlem geri alınamaz.
