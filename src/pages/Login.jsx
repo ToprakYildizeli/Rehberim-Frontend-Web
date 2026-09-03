@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/ui';
+import { Logo } from '../components/ui/Logo';
 import styles from './Auth.module.css';
 
 export default function Login() {
@@ -38,7 +39,9 @@ export default function Login() {
       <ThemeToggle floating />
 
       <div className={styles.card}>
-        <Link to="/" className={styles.logo}>Rehberim</Link>
+        <Link to="/" className={styles.logo} aria-label="Rehberim ana sayfa">
+          <Logo height={24} />
+        </Link>
         <h1 className={styles.heading}>Hoş geldiniz</h1>
         <p className={styles.sub}>Rehber hesabınızla giriş yapın.</p>
 

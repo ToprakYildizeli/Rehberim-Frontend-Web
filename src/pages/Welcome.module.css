@@ -34,23 +34,10 @@
   justify-content: space-between;
 }
 
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 17px;
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.02em;
-}
+/* .brand ve .footerBrand artık birer <svg>; logo rengi buradaki `color`'dan
+   miras alınıyor (currentColor). */
+.brand { color: var(--text); flex-shrink: 0; }
 
-.brandDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent);
-  flex-shrink: 0;
-}
 
 .navRight {
   display: flex;
@@ -666,12 +653,7 @@
 
 .footerLinks a:hover { color: #fff; }
 
-.footerBrand {
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
-  letter-spacing: 0.02em;
-}
+.footerBrand { color: #fff; flex-shrink: 0; }
 
 .footerCopy {
   font-size: 13px;

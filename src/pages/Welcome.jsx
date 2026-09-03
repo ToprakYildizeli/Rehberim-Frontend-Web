@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ThemeToggle } from '../components/ui';
+import { Logo } from '../components/ui/Logo';
 import { registerCounselor } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import styles from './Welcome.module.css';
@@ -351,10 +352,7 @@ export default function Welcome() {
       {/* ── Navbar ── */}
       <nav className={styles.nav}>
         <div className={styles.navInner}>
-          <span className={styles.brand}>
-            <span className={styles.brandDot} />
-            Rehberim
-          </span>
+          <Logo height={26} className={styles.brand} />
           <div className={styles.navLinks}>
             <a href="#ozellikler" className={styles.navSection}>Özellikler</a>
             <a href="#roller" className={styles.navSection}>Kimler kullanır</a>
@@ -631,7 +629,7 @@ export default function Welcome() {
       <footer className={styles.footer}>
         <div className={styles.footerInner}>
           <div className={styles.footerTop}>
-            <span className={styles.footerBrand}>Rehberim</span>
+            <Logo height={22} className={styles.footerBrand} />
             <div className={styles.footerLinks}>
               <a href="#ozellikler">Özellikler</a>
               <a href="#roller">Kimler kullanır</a>

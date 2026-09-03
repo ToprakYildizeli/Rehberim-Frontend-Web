@@ -104,18 +104,9 @@
   overflow: hidden;
 }
 
-.brandMark {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  /* Vurgu rengi — logo da seçilen paleti izlesin (kullanıcı isteği, 2 Eyl 2026).
-     Sabit `--violet` her palette mor kalıyordu. */
-  background: var(--accent);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
+/* Logo `currentColor` kullanıyor; .brand'in beyaz rengini miras alıyor.
+   Daraltılmış çubukta kep, açıkken tam logo geliyor (bkz. DashboardLayout). */
+.brandLogo { flex-shrink: 0; }
 
 .nav {
   display: flex;

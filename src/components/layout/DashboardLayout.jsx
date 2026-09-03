@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Users, Calendar, CalendarDays, Settings,
-  GraduationCap, PanelLeftClose, PanelLeftOpen, Menu, Moon, Sun, LogOut,
+  PanelLeftClose, PanelLeftOpen, Menu, Moon, Sun, LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Avatar, SearchInput } from '../ui';
+import { Logo, LogoMark } from '../ui/Logo';
 import s from './layout.module.css';
 
 const NAV = [
@@ -119,11 +120,11 @@ export default function DashboardLayout() {
           mobileOpen ? s.sidebarOpen : '',
         ].join(' ')}
       >
-        <NavLink to="/panel" className={s.brand}>
-          <span className={s.brandMark}>
-            <GraduationCap size={17} color="#fff" />
-          </span>
-          {!collapsed && 'Rehberim'}
+        {/* Daraltılmış kenar çubuğunda yalnız kep sığıyor; açıkken tam logo. */}
+        <NavLink to="/panel" className={s.brand} aria-label="Rehberim">
+          {collapsed
+            ? <LogoMark size={22} className={s.brandLogo} />
+            : <Logo height={26} className={s.brandLogo} />}
         </NavLink>
 
         <nav className={s.nav}>
