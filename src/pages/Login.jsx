@@ -72,6 +72,8 @@ export default function Login() {
             />
           </label>
 
+          <Link to="/sifremi-unuttum" className={styles.forgot}>Şifremi unuttum</Link>
+
           {error && <p className={styles.error}>{error}</p>}
 
           <button className={styles.btnPrimary} type="submit" disabled={loading}>

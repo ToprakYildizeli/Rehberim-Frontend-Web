@@ -76,3 +76,23 @@ export async function removeAvatar() {
   const { data } = await api.delete('/auth/me/avatar/');
   return data;
 }
+
+/** POST /api/auth/password-reset/ — sıfırlama bağlantısı ister.
+ *  Yanıt e-posta kayıtlı olsun olmasın AYNIDIR (auth-contract v2.4); "böyle bir
+ *  hesap yok" diye bir durum gösterme, sunucu bunu bilerek söylemiyor. */
+export async function requestPasswordReset(email) {
+  const { data } = await api.post('/auth/password-reset/', { email });
+  return data;
+}
+
+/** POST /api/auth/password-reset/confirm/ — e-postadaki uid + token ile yeni şifre.
+ *  **Token çifti dönmez** — otomatik giriş yok, çağıran giriş ekranına yönlendirir.
+ *  Başarılı sıfırlama kullanıcının açık refresh token'larını kara listeye alır. */
+export async function confirmPasswordReset(uid, token, newPassword) {
+  const { data } = await api.post('/auth/password-reset/confirm/', {
+    uid,
+    token,
+    new_password: newPassword,
+  });
+  return data;
+}

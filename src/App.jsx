@@ -6,6 +6,8 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import Welcome from './pages/Welcome';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import SifremiUnuttum from './pages/SifremiUnuttum';
+import SifreSifirla from './pages/SifreSifirla';
 import Panel from './pages/Panel';
 import Ogrenciler from './pages/Ogrenciler';
 import OgrenciDetay from './pages/OgrenciDetay';
@@ -33,6 +35,9 @@ export default function App() {
               <Route path="/" element={<GuestRoute><Welcome /></GuestRoute>} />
               <Route path="/giris" element={<GuestRoute><Login /></GuestRoute>} />
               <Route path="/kayit" element={<GuestRoute><Register /></GuestRoute>} />
+              <Route path="/sifremi-unuttum" element={<GuestRoute><SifremiUnuttum /></GuestRoute>} />
+              {/* E-postadaki bağlantının açtığı sayfa; uid ve token oradan gelir. */}
+              <Route path="/sifre-sifirla/:uid/:token" element={<GuestRoute><SifreSifirla /></GuestRoute>} />
 
               <Route
                 element={

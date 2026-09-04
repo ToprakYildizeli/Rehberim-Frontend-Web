@@ -141,6 +141,20 @@
 .btnPrimary:hover:not(:disabled) { background: var(--accent-hover); }
 .btnPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
 
+/* Şifre alanının hemen altında, sağa yaslı ince bağlantı. */
+.forgot {
+  align-self: flex-end;
+  margin-top: -8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.forgot:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
 .footer {
   text-align: center;
   font-size: 0.85rem;
