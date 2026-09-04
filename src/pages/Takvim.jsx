@@ -32,8 +32,8 @@ const TODAY = new Date();
 const pad2 = (n) => String(n).padStart(2, '0');
 const isoDate = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 
-// 24-saat formatında saat (08–23) / dakika seçenekleri (AM/PM yok)
-const HOUR_OPTS = Array.from({ length: 16 }, (_, i) => pad2(i + 8));
+// 24-saat formatında saat (00–23) / dakika seçenekleri (AM/PM yok)
+const HOUR_OPTS = Array.from({ length: 24 }, (_, i) => pad2(i));
 const MIN_OPTS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'];
 
 export default function Takvim() {
@@ -136,7 +136,7 @@ export default function Takvim() {
             const key = toKey(cursor.year, cursor.month, day);
             const dayItems = byDate.get(key) ?? [];
             // Hücreye kaç kutu sığdığı sabit; kalanı sessizce düşmesin diye sayılır.
-            const shown = dayItems.slice(0, CHIPS_PER_CELL);
+            const shown = dayItems.slice(0, CHIPS_PER_CELL );
             const hidden = dayItems.length - shown.length;
             return (
               <button
@@ -172,49 +172,55 @@ export default function Takvim() {
         </div>
       </Card>
 
-      <Card>
+      <Card className={s.agendaCard}>
         <h2 className={s.agendaDate}>{selectedLabel}</h2>
-        <p className={s.agendaCount}>
-          {selectedItems.length > 0 ? `${selectedItems.length} etkinlik` : 'Etkinlik yok'}
-        </p>
 
         {selectedItems.length === 0 ? (
-          <EmptyState text="Bu gün için planlanmış bir etkinlik yok." />
+            <EmptyState text="Bu gün için planlanmış bir etkinlik yok." />
         ) : (
-          <div className={s.agendaList}>
-            {selectedItems.map((a) => (
-              <div
-                className={s.event}
-                key={a.id}
-                style={{ borderLeftColor: catColor(a.category) }}
-              >
-                <span className={s.eventTime}>{a.time}</span>
-                {a.student && (
-                  <Avatar name={a.student.name} color={a.student.color} size="sm" />
-                )}
-                {/* Başlık ana satır, kim/not ikinci satır. `category` backend'in
-                    serbest metin `title`'ı olduğu için rozete sığmıyordu. */}
-                <span className={s.eventBody}>
-                  <span className={s.eventName} title={a.category}>{a.category}</span>
-                  <p className={s.eventNote}>
-                    {[a.student?.name ?? 'Kişisel', a.note].filter(Boolean).join(' · ')}
-                  </p>
-                </span>
-                <button
-                  type="button"
-                  className={s.eventDelete}
-                  onClick={() => handleDelete(a.id)}
-                  aria-label={`${a.time} etkinliğini sil`}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
+            <div className={s.agendaList}>
+              {selectedItems.map((a) => (
+                  <div
+                      className={s.event}
+                      key={a.id}
+                      style={{ borderLeftColor: catColor(a.category) }}
+                  >
+                    <span className={s.eventTime}>{a.time}</span>
+
+                    {a.student && (
+                        <Avatar
+                            name={a.student.name}
+                            color={a.student.color}
+                            size="sm"
+                        />
+                    )}
+
+                    <span className={s.eventBody}>
+            <span className={s.eventName} title={a.category}>
+              {a.category}
+            </span>
+
+            <p className={s.eventNote}>
+              {[a.student?.name ?? 'Kişisel', a.note]
+                  .filter(Boolean)
+                  .join(' · ')}
+            </p>
+          </span>
+
+                    <button
+                        type="button"
+                        className={s.eventDelete}
+                        onClick={() => handleDelete(a.id)}
+                        aria-label={`${a.time} etkinliğini sil`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+              ))}
+            </div>
         )}
 
-        <form className={s.form} onSubmit={handleSave}>
-          <h3 className={s.formTitle}>Etkinlik Ekle</h3>
+      <form className={s.form} onSubmit={handleSave}>
 
           <Field label="Saat">
             <div className={s.timePicker}>

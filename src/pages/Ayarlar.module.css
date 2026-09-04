@@ -37,6 +37,9 @@
 .navItemOn {
   background: var(--accent-subtle);
   color: var(--accent-text);
+  font-weight: 700;
+  box-shadow: inset 6px 0 0 var(--accent);
+
 }
 
 .navLabel { font-size: 0.85rem; font-weight: 600; min-width: 0; }

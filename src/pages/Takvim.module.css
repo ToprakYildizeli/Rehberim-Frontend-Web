@@ -57,7 +57,7 @@
    çizilir. Yükseklik sabit (gün numarası + CHIPS_PER_CELL kutu + "+N" satırı) ve
    `overflow: hidden` son emniyet — hiçbir etkinlik hücrenin altından taşmaz. */
 .cell {
-  min-height: 104px;
+  min-height: 90px;
   overflow: hidden;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-lg);
@@ -122,7 +122,7 @@
 /* ---------- Agenda rail ---------- */
 .agendaDate {
   font-size: 0.95rem;
-  font-weight: 700;
+  font-weight: 400;
   color: var(--text);
   margin: 0;
 }
@@ -137,9 +137,14 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  margin-bottom: var(--space-5);
-}
 
+  min-height: 154px;
+  max-height: 154px;
+  overflow-y: auto;
+
+  margin-bottom: var(--space-5);
+  padding-right: 6px;
+}
 /* Grid rather than flex: only the text column is allowed to collapse, so the
    badge can never ride over the student name. */
 /* Yalnız metin sütunu daralır (`flex: 1; min-width: 0`); saat, avatar ve sil
