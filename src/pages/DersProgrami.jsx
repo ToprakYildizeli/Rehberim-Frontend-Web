@@ -697,10 +697,13 @@ export default function DersProgrami() {
                   setParams({ ogrenci: e.target.value }, { replace: true });
                 }}
                 aria-label="Öğrenci seç"
+                disabled={students.length === 0}
               >
-                {students.map((st) => (
-                  <option value={st.id} key={st.id}>{st.name} · {st.grade}</option>
-                ))}
+                {students.length === 0
+                  ? <option value="">Henüz öğrenciniz yok</option>
+                  : students.map((st) => (
+                    <option value={st.id} key={st.id}>{st.name} · {st.grade}</option>
+                  ))}
               </Select>
             )}
             {loadedTemplate && (
@@ -888,9 +891,7 @@ export default function DersProgrami() {
             </Card>
 
             <div className={s.rail}>
-            <Card>
-              <h2 className={s.railTitle}>Blok Oluştur</h2>
-
+            <Card className={s.blockCard}>
               {catalogError ? (
                 <p className={s.librarySub}>Katalog yüklenemedi. Sayfayı yenileyin.</p>
               ) : !catalogReady ? (
@@ -1273,8 +1274,14 @@ function AssignModal({ source, students, defaultStudentId, blocks, boardStart, b
       ) : (
         <div className={s.assignForm}>
           <Field label="Öğrenci">
-            <Select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
-              {students.map((st) => <option key={st.id} value={st.id}>{st.name} · {st.grade}</option>)}
+            <Select
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              disabled={students.length === 0}
+            >
+              {students.length === 0
+                ? <option value="">Henüz öğrenciniz yok</option>
+                : students.map((st) => <option key={st.id} value={st.id}>{st.name} · {st.grade}</option>)}
             </Select>
           </Field>
           <div className={s.assignWindow}>

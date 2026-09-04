@@ -83,8 +83,12 @@ export default function ParentInvitesSection() {
 
       <div className={s.inviteForm}>
         <Field label="Öğrenci">
-          <Select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
-            <option value="">Seçin…</option>
+          <Select
+            value={studentId}
+            onChange={(e) => setStudentId(e.target.value)}
+            disabled={students.length === 0}
+          >
+            <option value="">{students.length === 0 ? 'Henüz öğrenciniz yok' : 'Seçin…'}</option>
             {students.map((st) => (
               <option key={st.id} value={st.id}>{st.name}</option>
             ))}

@@ -102,6 +102,7 @@
 }
 
 .control:focus { border-color: var(--accent); }
+.control:disabled { opacity: 0.6; cursor: not-allowed; }
 .control::placeholder { color: var(--text-muted); }
 
 /* Dropdown'lar (native select) — modern görünüm: özel chevron + hover vurgusu,
