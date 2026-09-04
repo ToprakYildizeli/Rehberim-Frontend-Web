@@ -1,0 +1,33 @@
+name: Derleme
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: Lint + derleme
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Bağımlılıkları kur
+        # `npm ci`: package-lock.json'a birebir uyar ve kilit dosyası
+        # package.json ile uyuşmuyorsa durur.
+        run: npm ci
+
+      - name: Lint
+        run: npx oxlint src
+
+      - name: Derleme
+        # VITE_API_BASE_URL derleme anında gömülür. Burada yalnız derlemenin
+        # geçtiğini doğruluyoruz; gerçek adres dağıtım sırasında verilir.
+        run: npm run build

@@ -56,6 +56,9 @@ kurallarım için `~/.claude/CLAUDE.md` geçerlidir; burada bu repo'ya özgü ol
 - **Arayüz testini kullanıcı kendisi yapıyor** (isteği, 3 Eyl 2026). Playwright
   ile tarayıcı turu atma, ekran görüntüsü toplama. `npm run build` + `npx oxlint src`
   yeterli; gerisini o söyler.
+- **CI her push'ta aynı ikisini koşuyor** (`.github/workflows/build.yml`):
+  `npm ci` + `npx oxlint src` + `npm run build`. `npm ci` kilit dosyası
+  `package.json` ile uyuşmuyorsa durur — paket eklerken kilidi de commit'le.
 - Dev sunucusu genelde kullanıcıda zaten açık (`localhost:5173`). Yeni bir tane
   başlatmadan önce portun boş olduğuna bak.
 
