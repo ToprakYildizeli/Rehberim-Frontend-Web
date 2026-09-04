@@ -93,7 +93,52 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   padding: 5px var(--space-3);
+  /* Düzelt/sil düğmeleri rozetin içinde, adın hemen sağında. */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
+
+/* Düğmeler yalnız rozetin üstündeyken belirginleşir: liste kalabalık, sürekli
+   görünür iki ikon her satırı gürültüye çeviriyordu. Klavyeyle gezene de
+   görünsün diye :focus-within da sayılıyor. */
+.chipBtn {
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: none;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s, color 0.12s;
+}
+
+.chip:hover .chipBtn,
+.chip:focus-within .chipBtn { opacity: 1; }
+
+.chipBtn:focus-visible { opacity: 1; outline: 2px solid var(--accent); outline-offset: 2px; }
+.chipBtn:hover:not(:disabled) { color: var(--accent); }
+.chipBtnDanger:hover:not(:disabled) { color: var(--error); }
+.chipBtn:disabled { cursor: not-allowed; opacity: 0.4; }
+
+.chipEdit { display: inline-flex; align-items: center; gap: 6px; }
+
+.chipInput {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg-input);
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm, 6px);
+  padding: 1px 6px;
+  width: 12ch;
+  outline: none;
+}
+
+.chipInput:focus { border-color: var(--accent); }
+
+/* Düzenlemedeki rozetin düğmeleri hep görünür — kaydet/vazgeç gizli olamaz. */
+.chipEdit .chipBtn { opacity: 1; }
 
 .chipEmpty { font-size: 0.78rem; color: var(--text-muted); }
 

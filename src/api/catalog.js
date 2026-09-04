@@ -75,10 +75,11 @@ export async function listPublishers() {
   return data.map((x) => ({ id: x.id, name: x.name }));
 }
 
-/* Katalog ekleme (Faz D2). İkisi de GLOBAL: eklenen kayıt tüm rehberlerin
-   listesine düşer. Bu yüzden düzenleme/silme ucu yoktur — tek bir hatalı istek
-   herkesin listesini kalıcı bozmasın diye. Sunucu, yakın-tekrarları Türkçe
-   farkında (İ→i, I→ı) harf duyarsız karşılaştırmayla reddeder. */
+/* Katalog yönetimi. İkisi de REHBERE AİTTİR (4 Eylül 2026): eklenen kayıt yalnız
+   o rehberin ve öğrencilerinin listesine düşer, başka rehberi etkilemez. Rehber
+   kendi kaydını düzeltip silebilir; başkasınınkine erişmeye çalışırsa 404 alır.
+   Sunucu yakın-tekrarları Türkçe farkında (İ→i, I→ı) harf duyarsız
+   karşılaştırmayla reddeder — kıyas rehberin kendi listesi içinde yapılır. */
 
 export async function createTaskType(name) {
   const { data } = await api.post('/task-types/', { name });
@@ -88,6 +89,27 @@ export async function createTaskType(name) {
 export async function createPublisher(name) {
   const { data } = await api.post('/publishers/', { name });
   return { id: data.id, name: data.name };
+}
+
+export async function renameTaskType(id, name) {
+  const { data } = await api.patch(`/task-types/${id}/`, { name });
+  return { id: data.id, name: data.name };
+}
+
+export async function renamePublisher(id, name) {
+  const { data } = await api.patch(`/publishers/${id}/`, { name });
+  return { id: data.id, name: data.name };
+}
+
+/** Silmek görevleri bozmaz: `Task.task_type` SET_NULL, o bloklar metodsuz kalır
+ *  ama silinmez. Yayınevinde ise hiçbir kitap etkilenmez — `Book.publisher` bir
+ *  ilişki değil, yayınevinin adını tutan bir metin alanı. */
+export async function deleteTaskType(id) {
+  await api.delete(`/task-types/${id}/`);
+}
+
+export async function deletePublisher(id) {
+  await api.delete(`/publishers/${id}/`);
 }
 
 /** GET /api/topics/?subject=<id>[&grade=&curriculum=] → dersin konu kataloğu.

@@ -14,7 +14,8 @@ import PreferencesSection from '../components/settings/PreferencesSection';
 import ParentInvitesSection from '../components/settings/ParentInvitesSection';
 import StudentsSection from '../components/settings/StudentsSection';
 import {
-  createPublisher, createTaskType, listPublishers, listTaskTypes,
+  createPublisher, createTaskType, deletePublisher, deleteTaskType,
+  listPublishers, listTaskTypes, renamePublisher, renameTaskType,
 } from '../api/catalog';
 import { changePassword, updateMe } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
@@ -224,12 +225,16 @@ export default function Ayarlar() {
             title="Çalışma türleri"
             load={loadTaskTypes}
             create={createTaskType}
+            rename={renameTaskType}
+            remove={deleteTaskType}
             addLabel="Yeni çalışma türü"
           />
           <CatalogSection
             title="Yayınevleri"
             load={loadPublishers}
             create={createPublisher}
+            rename={renamePublisher}
+            remove={deletePublisher}
             addLabel="Yeni yayınevi"
           />
         </>
