@@ -12,12 +12,10 @@ dist
 dist-ssr
 *.local
 
-# Env (yerel — .env.example ve .env.production izlenir)
+# Env (yerel — .env.example izlenir)
 .env
 .env.*
 !.env.example
-# Üretim adresi gizli değil ve derleme anında pakete gömülüyor; repo'da dursun.
-!.env.production
 
 # Editor directories and files
 .vscode/*

@@ -1,6 +1,29 @@
 import axios from 'axios';
 
-const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api';
+/** Üretim API adresi.
+ *
+ *  Neden `.env` değil: **Vercel repo'daki `.env*` dosyalarını derlemeye dahil
+ *  etmiyor** — ortam değişkenlerini yalnız kendi panelinden alıyor. 5 Eylül
+ *  2026'da ölçüldü: `.env.production` ile ve onsuz derlenen paketlerin
+ *  özetleri farklı, Vercel'in yayınladığı paket **onsuz** olanla birebir aynı.
+ *  Panel tarafı da tıkandı: `VITE_` öneki "tarayıcıya açılır" uyarısı verip
+ *  kaydettirmiyor, oysa önek zorunlu — Vite yalnız onunla başlayanları pakete
+ *  gömüyor.
+ *
+ *  Bu yüzden adres burada. Yine de tek kaynak: `VITE_API_BASE_URL` tanımlıysa
+ *  o kazanır, yani panel bir gün düzelirse ya da başka bir yere dağıtılırsa
+ *  kod değişmeden çalışır.
+ */
+const LOCAL_API = 'http://127.0.0.1:8000/api';
+const PRODUCTION_API = 'https://rehberim-backend-production.up.railway.app/api';
+
+// Sayfa localhost'ta açıldıysa yerel sunucuya, değilse üretime bağlan. Sabit
+// `127.0.0.1` varsayılanı canlıda sessiz bir arızaydı: site açılıyor ama her
+// istek kullanıcının kendi makinesine gidiyordu.
+const isLocal = typeof location !== 'undefined'
+  && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+
+const baseURL = import.meta.env.VITE_API_BASE_URL || (isLocal ? LOCAL_API : PRODUCTION_API);
 
 const api = axios.create({
   baseURL,
