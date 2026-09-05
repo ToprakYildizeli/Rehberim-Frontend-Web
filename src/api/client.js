@@ -15,7 +15,7 @@ import axios from 'axios';
  *  kod değişmeden çalışır.
  */
 const LOCAL_API = 'http://127.0.0.1:8000/api';
-const PRODUCTION_API = 'https://rehberim-backend-production.up.railway.app/api';
+const PRODUCTION_API = 'https://api.rehberim.xyz/api';
 
 // Sayfa localhost'ta açıldıysa yerel sunucuya, değilse üretime bağlan. Sabit
 // `127.0.0.1` varsayılanı canlıda sessiz bir arızaydı: site açılıyor ama her
