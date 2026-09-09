@@ -149,7 +149,7 @@ export default function Panel() {
         <Card className={s.wCard}>
           <CardHeader title="Program Gerekenler" actions={<span className={`${s.countBadge} ${needProgram.length ? s.countDanger : ''}`}>{needProgram.length}</span>} />
           {needProgram.length === 0 ? (
-            <EmptyState icon={<ClipboardList size={20} />} text="Herkesin bu hafta programı var." />
+            <EmptyState icon={<ClipboardList size={20} />} text="Her öğrencinin planlanmış programı var." />
           ) : (
             <div className={s.list}>
               {needProgram.map((st) => (

@@ -102,13 +102,17 @@ function dimAvg(exams, type, subs) {
 
 /** Panoyu besleyen tüm türetilmiş veriyi döndürür. */
 export async function getDashboard() {
-  const [students, appts, programsRes, examsRes, tpRes, subjects, prefs] = await Promise.all([
+  const [students, appts, programsRes, examsRes, tpRes, subjects, topicsRes, prefs] = await Promise.all([
     listStudents(),
     listAppointments(),
     api.get('/programs/'),
     api.get('/exams/'),
     api.get('/topic-progress/'),
     listSubjects(),          // maksimum netler katalogtaki soru sayılarından gelir
+    // Konu puanının PAYDASI: öğrencinin müfredatındaki tüm konular. Yalnız
+    // kayıtlı konulara bakmak, sadece iyi bildiği konuları işaretleyen
+    // öğrenciyi tepeye çıkarıyordu (bkz. aşağıda `avgLevel`).
+    api.get('/topics/'),
     getPreferences(),        // hangi uyarı kartı görünecek + eşikleri (D3)
   ]);
   // Ders etiketi → sınavdaki soru sayısı (= o dersten çıkarılabilecek en yüksek net).
@@ -116,6 +120,25 @@ export async function getDashboard() {
   const aytGroupsByField = Object.fromEntries(
     AYT_FIELDS.map((f) => [f.value, aytGroupsFor(f.value, maxByLabel)])
   );
+  const topics = topicsRes.data || [];
+  const subjectCategory = Object.fromEntries(subjects.map((x) => [x.id, x.category]));
+
+  /* Öğrencinin müfredatına düşen konular — öğrenci sayfasındaki (`OgrenciDetay`)
+     kümenin aynısı: sınav öğrencisinde tüm TYT+AYT dersleri ve 'eski' müfredat,
+     diğerlerinde okul dersleri ve öğrencinin sınıf/müfredatı. İki ekran aynı
+     paydayı kullanmazsa aynı öğrenci için iki farklı "konu puanı" çıkıyor. */
+  const curriculumTopicIds = (student) => {
+    const cats = student.isExam ? ['tyt', 'ayt'] : ['okul'];
+    return topics
+      .filter((t) => {
+        if (!cats.includes(subjectCategory[t.subject])) return false;
+        return student.isExam
+          ? t.curriculum === 'eski'
+          : t.grade === student.gradeCode && t.curriculum === student.curriculum;
+      })
+      .map((t) => t.id);
+  };
+
   const programs = programsRes.data || [];
   const exams = examsRes.data || [];
   const tps = tpRes.data || [];
@@ -142,8 +165,18 @@ export async function getDashboard() {
     const netDelta = (lastNet != null && prevNet != null) ? round1(lastNet - prevNet) : null;
     const trend = netDelta == null ? null : netDelta > 0 ? 'up' : netDelta < 0 ? 'down' : 'flat';
 
-    const avgLevel = b.tps.length ? round1(b.tps.reduce((a, t) => a + t.level, 0) / b.tps.length) : null;
-    const weakCount = b.tps.filter((t) => t.level <= 2).length;
+    /* Konu puanı: müfredattaki TÜM konuların ortalaması, **kaydı olmayan konu 1
+       sayılır**. Öğrenci sayfasındaki `subjectStats` ile birebir aynı kural.
+       Önce yalnız kayıtlı satırların ortalaması alınıyordu; sadece iyi bildiği
+       birkaç konuyu işaretleyen öğrenci panelde 4.4/5 görünüyor, kendi
+       sayfasında 2.x çıkıyordu. */
+    const topicIds = curriculumTopicIds(s);
+    const levelByTopic = new Map(b.tps.map((t) => [t.topic, t.level]));
+    const levels = topicIds.map((id) => levelByTopic.get(id) ?? 1);
+    const avgLevel = levels.length
+      ? round1(levels.reduce((a, x) => a + x, 0) / levels.length)
+      : null;
+    const weakCount = levels.filter((l) => l <= 2).length;
 
     // Haftalık saat YALNIZ çalışma + deneme bloklarını sayar. Dış meşguliyet
     // (okul, dershane, antrenman, doktor) programda yer kaplar ama çalışma değildir
@@ -161,6 +194,8 @@ export async function getDashboard() {
     // Pencere artık 7 gün olmak zorunda değil — bitişi sunucudan gelen `end_date` söyler.
     const current = b.programs.find((p) => p.start_date <= today && today <= p.end_date);
     const hasCurrentProgram = !!current;
+    // İleri tarihli program da "planlanmış" sayılır (bkz. `needProgram`).
+    const hasUpcomingProgram = b.programs.some((p) => p.start_date > today);
     // Uyum yüzdesi sunucuda **süre** üzerinden hesaplanır (B2) — burada görev
     // sayısıyla tekrar hesaplanmaz ki panel ile öğrenci sayfası aynı sayıyı göstersin.
     const compliance = current ? (current.compliance?.percent ?? 0) : null;
@@ -183,7 +218,7 @@ export async function getDashboard() {
       lastNet, avgNet, netDelta, trend,
       avgLevel, weakCount,
       weeklyHours,
-      hasCurrentProgram, compliance,
+      hasCurrentProgram, hasUpcomingProgram, compliance,
       netDims,
       lastExamDate: exSorted[0]?.exam_date ?? null,
     };
@@ -222,7 +257,11 @@ export async function getDashboard() {
   };
 
   // Aksiyon listeleri
-  const needProgram = enriched.filter((e) => !e.hasCurrentProgram);
+  /* "Program Gerekenler": bugünü kapsayan programı OLMAYAN **ve** ileriye
+     dönük planlanmış programı da bulunmayan öğrenciler. Önce yalnız bugüne
+     bakılıyordu; rehber kasım için program hazırladığında öğrenci yine
+     "program gerekiyor" listesinde kalıyordu. */
+  const needProgram = enriched.filter((e) => !e.hasCurrentProgram && !e.hasUpcomingProgram);
   // Program uyumu — bu hafta programlı herkes, düşükten yükseğe sıralı (%)
   const complianceRanked = enriched
     .filter((e) => e.hasCurrentProgram && e.compliance != null)
