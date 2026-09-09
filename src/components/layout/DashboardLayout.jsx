@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { Avatar, SearchInput } from '../ui';
+import { Avatar } from '../ui';
 import { Logo, LogoMark } from '../ui/Logo';
 import s from './layout.module.css';
 
@@ -171,7 +171,9 @@ export default function DashboardLayout() {
           </div>
 
           <div className={s.topbarRight}>
-            <SearchInput className={s.topSearch} placeholder="Öğrenci ara..." aria-label="Öğrenci ara" />
+            {/* Buradaki arama kutusu kaldırıldı (9 Eylül 2026): hiçbir zaman
+                bağlanmamıştı — `value`/`onChange` yoktu, yazılan hiçbir şey bir
+                yere gitmiyordu. Çalışan öğrenci araması Öğrenciler sayfasında. */}
             <ProfileMenu displayName={displayName} avatar={user?.avatar} />
           </div>
         </header>

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Card, CardHeader, Field, NumberInput, Select, Spinner } from '../ui';
+import { Card, CardHeader, Field, NumberInput, Spinner } from '../ui';
 import { getPreferences, updatePreferences } from '../../api/preferences';
 import s from './settings.module.css';
 
@@ -16,10 +16,13 @@ import s from './settings.module.css';
  * kartlarını gösterip gizler.
  */
 
-const SCHEDULE_TYPES = [
-  { value: 'timed', label: 'Saatli (saat dilimli tahta)' },
-  { value: 'untimed', label: 'Saatsiz (yalnız o günün listesi)' },
-];
+/* ⚠️ "Program tipi" (saatli/saatsiz) seçeneği arayüzden **kaldırıldı**
+ * (9 Eylül 2026). Tercih sunucuda kaydediliyor ve yeni program açılırken
+ * `schedule_type` olarak gönderiliyordu, ama **tahta bu alanı hiç okumuyor**:
+ * `untimed` kelimesi tüm arayüzde yalnız burada geçiyordu. Yani "Saatsiz"
+ * seçmenin hiçbir görünür etkisi yoktu — çalışmayan bir ayarı ekranda tutmak
+ * yanıltıcı. Backend alanı ve varsayılanı duruyor; tahtaya saatsiz görünüm
+ * yazıldığında bu seçenek geri gelmeli. */
 
 /** Panel'deki **her** bölüm. Sıra, Panel'deki yerleşim sırasıdır — listede
  *  yukarıdan aşağı okumak ekranı yukarıdan aşağı okumakla aynı olsun diye. */
@@ -105,16 +108,6 @@ export default function PreferencesSection() {
               max={31}
               onCommit={(v) => save('default_day_count', v, 600)}
             />
-          </Field>
-          <Field label="Program tipi" className={s.prefSelect}>
-            <Select
-              value={prefs.default_schedule_type}
-              onChange={(e) => save('default_schedule_type', e.target.value)}
-            >
-              {SCHEDULE_TYPES.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </Select>
           </Field>
         </div>
       </Card>

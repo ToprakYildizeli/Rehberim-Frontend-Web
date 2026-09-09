@@ -677,7 +677,6 @@
 }
 
 .windowRangeText { font-size: 0.85rem; font-weight: 700; color: var(--text); white-space: nowrap; }
-.windowRangeSub { font-size: 0.68rem; color: var(--text-muted); }
 
 
 .windowError {

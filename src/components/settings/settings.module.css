@@ -238,7 +238,6 @@
 }
 
 .prefNum { width: 110px; flex: 0 0 auto; }
-.prefSelect { width: 280px; flex: 0 0 auto; max-width: 100%; }
 
 /* Dokuz anahtar sabit üç sütunda (3x3). `auto-fill` bırakılsaydı genişliğe göre
    2 ya da 4 sütuna kayıp son satırı tek başına bırakabiliyordu. */

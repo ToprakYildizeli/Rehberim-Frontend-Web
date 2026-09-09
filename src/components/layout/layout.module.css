@@ -201,7 +201,6 @@
   gap: var(--space-4);
 }
 
-.topSearch { width: 260px; }
 
 .iconBtn {
   position: relative;
@@ -325,12 +324,10 @@
   .collapseBtn { display: none; }
   .scrimOpen { display: block; }
   .mobileToggle { display: flex; }
-  .topSearch { width: 180px; }
 }
 
 @media (max-width: 640px) {
   .canvas { padding: var(--space-4); }
   .topbar { padding: 0 var(--space-4); gap: var(--space-3); }
-  .topSearch { display: none; }
   .pageTitle { font-size: 1rem; }
 }
