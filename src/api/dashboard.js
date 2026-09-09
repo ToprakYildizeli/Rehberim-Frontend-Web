@@ -101,8 +101,40 @@ function dimAvg(exams, type, subs) {
   return round1(vals.reduce((a, x) => a + x, 0) / vals.length);
 }
 
-/** Panoyu besleyen tüm türetilmiş veriyi döndürür. */
-export async function getDashboard() {
+/* Panel verisi kısa süre önbelleklenir.
+ *
+ * Panel dokuz uçtan veri çekip topluyor; sayfalar arasında gidip gelmek her
+ * seferinde bunu baştan yaptırıyordu ve altmış öğrencide her dönüş saniyeler
+ * sürüyordu. Süre kısa (30 sn) çünkü rehber programı düzenleyip panele
+ * döndüğünde eski sayıyı görmemeli — sayfa yenilemesi (F5) zaten modül
+ * durumunu sıfırlar, yani her zaman taze veri alınabilir.
+ *
+ * Çıkışta `clearDashboardCache()` ile boşaltılır: bir sonraki kullanıcı
+ * öncekinin verisini görmemeli. */
+const CACHE_TTL_MS = 30_000;
+let cached = null;        // { at, data }
+let inflight = null;      // aynı anda gelen çağrılar tek isteği paylaşsın
+
+export function clearDashboardCache() {
+  cached = null;
+  inflight = null;
+}
+
+export async function getDashboard({ force = false } = {}) {
+  if (!force && cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.data;
+  if (!force && inflight) return inflight;
+
+  inflight = fetchDashboard()
+    .then((data) => {
+      cached = { at: Date.now(), data };
+      return data;
+    })
+    .finally(() => { inflight = null; });
+  return inflight;
+}
+
+/** Panoyu besleyen tüm türetilmiş veriyi çeker ve toplar. */
+async function fetchDashboard() {
   const [students, appts, programsRes, examsRes, tpRes, subjects, meRes, topicsRes, prefs]
     = await Promise.all([
     listStudents(),

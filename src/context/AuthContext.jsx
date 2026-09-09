@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useCallback } from 'react';
 import { logout as apiLogout } from '../api/auth';
 import { clearPreferencesCache } from '../api/preferences';
+import { clearDashboardCache } from '../api/dashboard';
 
 const AuthContext = createContext(null);
 
@@ -40,6 +41,7 @@ export function AuthProvider({ children }) {
     // Tercihler modül düzeyinde önbellekleniyor; temizlenmezse aynı sekmede giriş
     // yapan ikinci rehber öncekinin ayarlarını görürdü.
     clearPreferencesCache();
+    clearDashboardCache();   // sonraki kullanıcı öncekinin panosunu görmesin
   }, [accessToken, refreshToken]);
 
   return (
