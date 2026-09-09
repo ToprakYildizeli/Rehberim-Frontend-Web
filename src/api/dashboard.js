@@ -107,7 +107,9 @@ export async function getDashboard() {
     = await Promise.all([
     listStudents(),
     listAppointments(),
-    api.get('/programs/'),
+    // `slim=1`: görevler HARİÇ. Panelin görevlere ihtiyacı yok ve altmış
+    // öğrencide iç içe görevler yanıtı 2 MB'a çıkarıyordu (283 KB'a indi).
+    api.get('/programs/', { params: { slim: 1 } }),
     api.get('/exams/'),
     api.get('/topic-progress/'),
     listSubjects(),          // maksimum netler katalogtaki soru sayılarından gelir
@@ -115,7 +117,9 @@ export async function getDashboard() {
     // Konu puanının PAYDASI: öğrencinin müfredatındaki tüm konular. Yalnız
     // kayıtlı konulara bakmak, sadece iyi bildiği konuları işaretleyen
     // öğrenciyi tepeye çıkarıyordu (bkz. aşağıda `avgLevel`).
-    api.get('/topics/'),
+    // `slim=1`: yalnız gruplamaya yeten alanlar — adları ve `my_progress`'i
+    // kullanmıyoruz (156 KB → 37 KB).
+    api.get('/topics/', { params: { slim: 1 } }),
     getPreferences(),        // hangi uyarı kartı görünecek + eşikleri (D3)
   ]);
   // Ders etiketi → sınavdaki soru sayısı (= o dersten çıkarılabilecek en yüksek net).
@@ -183,17 +187,19 @@ export async function getDashboard() {
       : null;
     const weakCount = levels.filter((l) => l <= 2).length;
 
-    // Haftalık saat YALNIZ çalışma + deneme bloklarını sayar. Dış meşguliyet
-    // (okul, dershane, antrenman, doktor) programda yer kaplar ama çalışma değildir
-    // — backend bunu `counts_as_study` ile söyler.
-    // Pencere 7 günden farklı olabildiği için ("Salıdan Cumaya 4 gün") her programın
-    // toplamı haftalık hıza çevriliyor, yoksa kısa programlı öğrenci az çalışıyor görünür.
-    const weekHours = b.programs.map((p) => {
-      const mins = (p.tasks || [])
-        .filter((t) => t.counts_as_study !== false)
-        .reduce((a, t) => a + (t.duration_minutes || 0), 0);
-      return (mins / 60) * (7 / (p.day_count || 7));
-    });
+    /* Haftalık saat YALNIZ çalışma + deneme bloklarını sayar; dış meşguliyet
+       (okul, dershane, antrenman, doktor) programda yer kaplar ama çalışma
+       değildir. Pencere 7 günden farklı olabildiği için ("Salıdan Cumaya 4
+       gün") her programın toplamı haftalık hıza çevrilir.
+
+       Bu hesabı **sunucu zaten yapıyor**: `compliance.weekly_hours` aynı
+       `counts_as_study` kümesinden, aynı formülle üretiliyor. Önce burada
+       görevler tek tek toplanıyordu ve yalnız bunun için bütün görevlerin
+       indirilmesi gerekiyordu — 506 programda ikisinin farkı 0.06 saati
+       geçmiyor (yalnız sunucunun yuvarlaması). */
+    const weekHours = b.programs
+      .map((p) => p.compliance?.weekly_hours)
+      .filter((h) => h != null);
     const weeklyHours = weekHours.length ? round1(weekHours.reduce((a, x) => a + x, 0) / weekHours.length) : 0;
 
     // Pencere artık 7 gün olmak zorunda değil — bitişi sunucudan gelen `end_date` söyler.
