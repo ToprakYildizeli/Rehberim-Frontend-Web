@@ -553,3 +553,42 @@ button.row:hover { background: var(--bg-alt); }
 
 /* TYT/AYT toggle + ders grubu dropdown'ı her zaman yan yana */
 .netDimCtl { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+/* Grafik öğrenci seçicisi.
+   Altmış öğrencili bir rehberde eski hâli (hepsi chip, hepsi çizgili)
+   kullanılamıyordu: chip'ler satırlara yayılıp kartı kaplıyor, grafik de
+   altmış çizgiyle okunmaz hâle geliyordu. */
+.netPicker { margin: var(--space-3) 0 var(--space-2); }
+
+.netPickerHead {
+  display: flex; align-items: center; gap: var(--space-2);
+  flex-wrap: wrap; margin-bottom: 8px;
+}
+
+.netSearch {
+  font: inherit; font-size: 0.78rem;
+  padding: 5px 10px; min-width: 180px; flex: 0 1 240px;
+  color: var(--text); background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+}
+.netSearch:focus { outline: none; border-color: var(--accent); }
+
+.netCount { font-size: 0.74rem; color: var(--text-muted); }
+
+.netClear {
+  font: inherit; font-size: 0.74rem; font-weight: 600;
+  color: var(--text-secondary); background: none; border: none;
+  cursor: pointer; padding: 0; text-decoration: underline;
+}
+.netClear:hover { color: var(--accent); }
+
+.netHint { font-size: 0.76rem; color: var(--text-muted); }
+
+.chipX { font-size: 0.9rem; line-height: 1; color: var(--text-muted); }
+
+/* Eklenebilecek öğrenciler: uzun listede kart büyümesin, kendi içinde kaysın. */
+.netAddList {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  max-height: 92px; overflow-y: auto;
+  padding: 8px; border: 1px dashed var(--border); border-radius: var(--radius-sm);
+}

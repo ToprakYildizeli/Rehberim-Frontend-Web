@@ -32,7 +32,13 @@ export default function Panel() {
   const [netField, setNetField] = useState('say'); // AYT'de kıyaslanan alan
   const [netGroup, setNetGroup] = useState('total'); // ve ders grubu (sınava/alana göre)
   const [netType, setNetType] = useState('tyt');
-  const [hidden, setHidden] = useState(() => new Set());
+  /* Grafikte GÖSTERİLEN öğrenciler. Önce "gizlenenler" tutuluyordu ve küme boş
+     başlıyordu — yani herkes çizgiliydi. Altmış öğrencili bir rehberde bu
+     altmış çizgi demek; grafik okunmuyor, altındaki altmış chip de sığmıyor.
+     Artık seçim açık: varsayılan olarak en çok denemesi olan birkaç öğrenci
+     gelir, gerisi aranıp eklenir. */
+  const [selected, setSelected] = useState(null);   // null = henüz kurulmadı
+  const [studentQuery, setStudentQuery] = useState('');
 
   useEffect(() => {
     let alive = true;
@@ -41,8 +47,8 @@ export default function Panel() {
   }, []);
 
   const openStudent = (id) => navigate(`/ogrenciler/${id}`);
-  const toggle = (id) => setHidden((prev) => {
-    const next = new Set(prev);
+  const toggle = (id) => setSelected((prev) => {
+    const next = new Set(prev ?? []);
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   });
@@ -79,7 +85,20 @@ export default function Panel() {
   const rankMax = metric === 'avgNet' ? dimDef.max : metricDef.max;
   const rankUnit = metric === 'avgNet' ? 'net' : metricDef.unit;
   const available = netSeries[netType] || [];
-  const visible = available.filter((se) => !hidden.has(se.id));
+  /* Varsayılan seçim: en çok denemesi olan beş öğrenci. Grafiği anlamlı bir
+     şeyle açmak, boş açmaktan da altmış çizgiyle açmaktan da iyi. */
+  const defaultSelection = new Set(
+    [...available]
+      .sort((a, b) => b.points.length - a.points.length)
+      .slice(0, 5)
+      .map((se) => se.id)
+  );
+  const shown = selected ?? defaultSelection;
+  const visible = available.filter((se) => shown.has(se.id));
+  const query = studentQuery.trim().toLocaleLowerCase('tr-TR');
+  const searchResults = available.filter(
+    (se) => !shown.has(se.id) && se.name.toLocaleLowerCase('tr-TR').includes(query)
+  );
 
   return (
     <div className={s.page}>
@@ -103,14 +122,51 @@ export default function Panel() {
           </div>
           <PillGroup options={NET_TYPES} value={netType} onChange={setNetType} />
         </div>
-        <div className={s.netChips}>
-          {available.map((se) => (
-            <button key={se.id} type="button"
-              className={`${s.chip} ${hidden.has(se.id) ? s.chipOff : ''}`} onClick={() => toggle(se.id)}>
-              <span className={s.chipDot} style={{ background: se.color }} />
-              {se.name.split(' ')[0]}
-            </button>
-          ))}
+        <div className={s.netPicker}>
+          <div className={s.netPickerHead}>
+            <input
+              className={s.netSearch}
+              type="search"
+              value={studentQuery}
+              onChange={(e) => setStudentQuery(e.target.value)}
+              placeholder={`Öğrenci ara (${available.length})`}
+              aria-label="Grafiğe öğrenci ekle"
+            />
+            <span className={s.netCount}>{visible.length} / {available.length} seçili</span>
+            {visible.length > 0 && (
+              <button type="button" className={s.netClear} onClick={() => setSelected(new Set())}>
+                Temizle
+              </button>
+            )}
+          </div>
+
+          {/* Seçili olanlar — tıklayınca çıkar. */}
+          <div className={s.netChips}>
+            {visible.map((se) => (
+              <button key={se.id} type="button" className={s.chip} onClick={() => toggle(se.id)}
+                title="Grafikten çıkar">
+                <span className={s.chipDot} style={{ background: se.color }} />
+                {se.name}
+                <span className={s.chipX} aria-hidden="true">×</span>
+              </button>
+            ))}
+            {visible.length === 0 && (
+              <span className={s.netHint}>Aşağıdan öğrenci ekleyin.</span>
+            )}
+          </div>
+
+          {/* Eklenebilecekler — arama kutusuyla daralır, uzunsa kendi içinde kayar. */}
+          {searchResults.length > 0 && (
+            <div className={s.netAddList}>
+              {searchResults.slice(0, 60).map((se) => (
+                <button key={se.id} type="button" className={`${s.chip} ${s.chipOff}`}
+                  onClick={() => toggle(se.id)} title="Grafiğe ekle">
+                  <span className={s.chipDot} style={{ background: se.color }} />
+                  {se.name}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
         <MultiLineChart series={visible} range={netSeries.range} />
       </Card>

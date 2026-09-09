@@ -3,6 +3,7 @@
    takvim) tek seferde çekip client-side toplar. Backend'e aggregate uç gerekmez. */
 import api from './client';
 import { listStudents } from './students';
+import { seriesColor } from '../components/ui/avatarUtils';
 import { listAppointments } from './appointments';
 import { listSubjects } from './catalog';
 import { getPreferences } from './preferences';
@@ -242,12 +243,16 @@ export async function getDashboard() {
    * Daha eski tarihli bir deneme varsa (geçmişe dönük girilmiş olabilir) eksen
    * ona kadar geriye uzar — girilen hiçbir deneme grafikten düşmemeli. */
   const seriesFor = (type) => students
-    .map((s) => {
+    .map((s, index) => {
       const exs = bucket[s.id].exams
         .filter((e) => e.exam_type === type && e.exam_date <= today)
         .sort((a, c) => (a.exam_date < c.exam_date ? -1 : 1));
       return exs.length ? {
-        id: s.id, name: enrById[s.id].name, color: enrById[s.id].color,
+        id: s.id,
+        name: enrById[s.id].name,
+        // Grafik rengi avatar renginden ayrı: sekiz renkli avatar paleti altmış
+        // öğrencide çizgileri ayırt edilemez yapıyordu (bkz. `seriesColor`).
+        color: seriesColor(index),
         points: exs.map((e) => ({
           date: e.exam_date,
           label: (e.name || '').replace(/^(TYT|AYT)\s+/, ''),
