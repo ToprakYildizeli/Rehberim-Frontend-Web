@@ -680,3 +680,43 @@ body {
 }
 
 #root { min-height: 100vh; }
+
+/* ---------------------------------------------------------------------------
+   Baskı (Yazdır / PDF olarak kaydet)
+   ---------------------------------------------------------------------------
+   Rehberler haftalık programı kâğıda basmak ya da veliye PDF olarak vermek
+   istiyor. Ekran yerleşimi olduğu gibi basılınca kenar çubuğu ve üst çubuk
+   sayfanın yarısını yiyor; burada yalnız içerik alanı bırakılıyor.
+
+   Sınıf adlarına değil `data-print` niteliklerine bakıyoruz: CSS modülleri
+   sınıf adlarını derlemede karıştırıyor, global bir stil onları göremez. */
+@media print {
+  [data-print='hide'] { display: none !important; }
+
+  /* Ekranda kaydırılabilir olan alan baskıda tam boy açılmalı, yoksa yalnız
+     görünen kısım basılır. */
+  [data-print='area'] {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+  }
+
+  html, body, #root {
+    height: auto !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  /* Renkli zeminler kâğıtta tasarruf için kaldırılmaz — programdaki ders
+     renkleri bilgi taşıyor, gri bir tabloya dönüşmeleri okunurluğu düşürür. */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Baskıda anlamsız olan etkileşim öğeleri. */
+  button, [role='tablist'], [data-print='no-print'] { display: none !important; }
+
+  @page { margin: 12mm; }
+}

@@ -366,10 +366,13 @@
 
 .railForm { display: flex; flex-direction: column; gap: var(--space-3); }
 
-/* Uzun pencerelerde (10-14 gün) sığmayan günler alt satıra sarar. */
+/* Gün seçici **tek satır**: sütun sayısı pencerenin gün sayısıdır (`--cols`,
+   en fazla `MAX_DAYS` = 7). Önceden `auto-fit, minmax(32px, 1fr)` vardı; dar
+   alanda 5+2 gibi düzensiz kırılıyordu — hafta bölünmüş görünüyordu. Sabit
+   sütunla butonlar sarmak yerine daralıyor. */
 .dayPills {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(32px, 1fr));
+  grid-template-columns: repeat(var(--cols, 7), minmax(0, 1fr));
   gap: 5px;
 }
 
@@ -380,8 +383,13 @@
   font-family: inherit;
   font-size: 0.7rem;
   font-weight: 500;
-  padding: 6px 0;
+  padding: 6px 2px;
   text-align: center;
+  /* Yedi sütun dar alanda sıkışınca metin taşmasın. */
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
@@ -841,4 +849,26 @@
     var(--bg-alt) 0 5px,
     transparent 5px 10px
   );
+}
+
+/* Yalnız baskıda görünen başlık. Ekranda üst çubuk zaten öğrenci adını ve
+   hafta aralığını gösteriyor; kâğıtta o çubuk gizlendiği için buraya yazılıyor
+   (bkz. index.css → @media print). */
+.printHeader { display: none; }
+
+@media print {
+  .printHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ccc;
+    font-size: 0.95rem;
+  }
+
+  /* Tahta kâğıda sığsın: ekran genişliğine göre değil sayfaya göre yayılsın. */
+  .gridCard { box-shadow: none; border: none; padding: 0; }
+  .layout { display: block; }
 }

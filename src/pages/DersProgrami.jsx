@@ -4,7 +4,7 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core';
-import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil } from 'lucide-react';
+import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil, Printer } from 'lucide-react';
 import {
   Card, Button, Field, Select, Input, NumberInput, PillGroup, Spinner, Modal,
 } from '../components/ui';
@@ -685,7 +685,7 @@ export default function DersProgrami() {
           547px'e sıkıştırıp üç satıra çıkardı. Burada her satırın iki ucu da
           dolu: solda bağlam, sağda o satırın çıktısı. */}
       <div className={s.ribbon}>
-        <div className={s.ribbonRow}>
+        <div data-print="hide" className={s.ribbonRow}>
           <div className={s.ribbonGroup}>
             <PillGroup options={MODES} value={mode} onChange={switchMode} />
             {mode === 'ogrenci' && (
@@ -789,6 +789,19 @@ export default function DersProgrami() {
                   <RotateCcw size={13} /> Geçen Hafta
                 </Button>
               )}
+              {/* Tek düğme, iki iş: tarayıcının baskı penceresinde hedef olarak
+                  yazıcı ya da "PDF olarak kaydet" seçilir. Ayrı bir "PDF indir"
+                  düğmesi aynı pencereyi açardı; gerçek bir indirme için PDF
+                  üreten bir kitaplık ya da sunucu ucu gerekir. */}
+              <Button
+                className={s.action}
+                variant="soft"
+                size="sm"
+                onClick={() => window.print()}
+                title="Programı yazdır veya PDF olarak kaydet"
+              >
+                <Printer size={13} /> Yazdır / PDF
+              </Button>
               <Button className={s.action} variant="danger" size="sm" onClick={clearAll} title="Tümünü temizle">
                 <Trash2 size={13} /> Temizle
               </Button>
@@ -814,6 +827,12 @@ export default function DersProgrami() {
           onDragCancel={() => setActiveDrag(null)}
         >
           <div className={s.layout}>
+            {/* Yalnız baskıda görünür: kâğıtta kimin programı ve hangi hafta
+                olduğu yazmazsa sayfa tek başına anlamsız kalıyor. */}
+            <div className={s.printHeader} aria-hidden="true">
+              <strong>{activeStudent ? activeStudent.name : 'Ders Programı'}</strong>
+              <span>{windowRangeText(win.startDate, win.dayCount)}</span>
+            </div>
             <Card className={s.gridCard}>
               {/* Ders satırlı görünümde ilk sütun ders adlarını taşıdığı için
                   saat sütunundan çok daha geniş olmalı. */}

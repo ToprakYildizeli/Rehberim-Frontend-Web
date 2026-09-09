@@ -107,13 +107,17 @@ export default function DashboardLayout() {
   return (
     <div className={s.shell}>
       <div
+        data-print="hide"
         className={`${s.scrim} ${mobileOpen ? s.scrimOpen : ''}`}
         onClick={() => setMobileOpen(false)}
         aria-hidden="true"
       />
 
       <div className={s.body}>
+      {/* `data-print`: CSS modülleri sınıf adlarını karıştırdığı için baskı
+          kuralları (index.css) bu niteliklere bakıyor. */}
       <aside
+        data-print="hide"
         className={[
           s.sidebar,
           collapsed ? s.sidebarCollapsed : '',
@@ -157,7 +161,7 @@ export default function DashboardLayout() {
       </aside>
 
       <div className={s.main}>
-        <header className={s.topbar}>
+        <header data-print="hide" className={s.topbar}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
             <button
               type="button"
@@ -178,7 +182,7 @@ export default function DashboardLayout() {
           </div>
         </header>
 
-        <main className={s.canvas}>
+        <main data-print="area" className={s.canvas}>
           <Outlet />
         </main>
       </div>
