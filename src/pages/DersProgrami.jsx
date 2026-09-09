@@ -552,17 +552,26 @@ export default function DersProgrami() {
   const activeStudent = students.find((x) => String(x.id) === String(studentId));
   const catalogReady = subjects.length > 0 && taskTypes.length > 0;
 
-  // Tür toggle: TYT/AYT her zaman; Kitap yalnız öğrenci modunda (kitap öğrenciye bağlı).
-  const typeOptions = useMemo(
-    () => (mode === 'ogrenci' ? [...CATEGORIES, { value: 'kitap', label: 'Kitap' }] : CATEGORIES),
-    [mode]
-  );
   // Kitap yalnız çalışma bloğunda anlamlı; dış/deneme bloklarında kaynak kitap yok.
   const isBookMode = draft.kind === 'study' && draft.category === 'kitap';
   const isExternal = draft.kind === 'external';
-  const isGeneralExam = draft.kind === 'exam' && Boolean(draft.examScope);
-  // Ders/metod/konu alanları: dış blokta ve genel denemede gösterilmez.
+  const isExam = draft.kind === 'exam';
+  const isGeneralExam = isExam && Boolean(draft.examScope);
+
+  // Tür toggle: TYT/AYT her zaman; Kitap yalnız öğrenci modunda (kitap
+  // öğrenciye bağlı) ve yalnız çalışma bloğunda — denemenin kaynak kitabı olmaz.
+  const typeOptions = useMemo(
+    () => (mode === 'ogrenci' && !isExam
+      ? [...CATEGORIES, { value: 'kitap', label: 'Kitap' }]
+      : CATEGORIES),
+    [mode, isExam]
+  );
+
+  // Ders alanı: dış blokta ve genel denemede gösterilmez.
   const showSubjectFields = !isExternal && !isGeneralExam;
+  /* Çalışma türü ve konu **denemede sorulmaz**: deneme kendi başına bir çalışma
+     türüdür ve tek bir konusu yoktur, sınavın kapsadığı her şeyi içerir. */
+  const showMethodFields = showSubjectFields && !isExam;
 
   /* Süre hafızası (A4): ders/metod/konu üçlüsü değişince, rehberin bu kombinasyonda
      en son kullandığı süre varsayılan olarak gelir — hafıza rehber özelinde olduğu
@@ -1043,7 +1052,7 @@ export default function DersProgrami() {
                           ))}
                         </Select>
                       </Field>
-                    ) : (
+                    ) : showMethodFields ? (
                       <>
                         <Field label="Çalışma Türü">
                           <Select
@@ -1070,7 +1079,7 @@ export default function DersProgrami() {
                           </Select>
                         </Field>
                       </>
-                    )}
+                    ) : null}
                     </>
                     )}
 
@@ -1466,17 +1475,21 @@ function draftBlockFields(draft, subjectMap, taskTypeMap) {
       type: '', typeName: null, topic: title, book: null, bookLabel: null };
     return { ...b, subjectColor: blockColor(b) };
   }
-  const isGeneralExam = draft.kind === 'exam' && draft.examScope;
+  const isExam = draft.kind === 'exam';
+  const isGeneralExam = isExam && draft.examScope;
   const sub = isGeneralExam ? null : subjectMap[draft.subject];
   const tt = taskTypeMap[draft.type];
+  /* Deneme bloğu çalışma türü ve konu taşımaz — ders bazlı olanı da. Deneme
+     kendi başına bir çalışma türüdür; konusu da sınavın kapsadığı her şeydir,
+     tek bir konu seçmek yanlış bilgi üretir. */
   const b = {
     kind: draft.kind,
     examScope: isGeneralExam ? draft.examScope : '',
     subject: isGeneralExam ? '' : draft.subject,
     subjectLabel: sub?.label,
-    type: isGeneralExam ? '' : draft.type,
-    typeName: isGeneralExam ? null : tt?.name,
-    topic: isGeneralExam ? '' : draft.topic,
+    type: isExam ? '' : draft.type,
+    typeName: isExam ? null : tt?.name,
+    topic: isExam ? '' : draft.topic,
     book: null,
     bookLabel: null,
   };
@@ -1652,6 +1665,7 @@ function SubjectCell({ dayIndex, rowKey, items, onRemove, muted }) {
 /** Ders satırlı görünümde bloğun içinde yazan tek şey: KONU.
  *  Satır zaten dersi söylüyor; saat ve süre bu ekranda gösterilmiyor. */
 function chipText(b) {
+  if (b.kind === 'exam') return 'Deneme';
   return b.topic || b.bookLabel || b.typeName || '—';
 }
 
@@ -1692,7 +1706,8 @@ function SubjectChip({ block, onRemove }) {
 /** Blok içeriğinin ikinci satırı: dış blokta yok, denemede kapsam, çalışmada kitap/metod. */
 function blockMetaText(b) {
   if (b.kind === 'external') return 'Çalışma saatine sayılmaz';
-  if (b.examScope) return 'Deneme';
+  // Ders bazlı deneme de deneme: çalışma türü ve konu taşımıyor.
+  if (b.kind === 'exam') return 'Deneme';
   return `${b.bookLabel || b.typeName || ''}${b.topic ? ` · ${b.topic}` : ''}`;
 }
 
