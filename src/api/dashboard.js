@@ -14,16 +14,18 @@ const round1 = (n) => Math.round(n * 10) / 10;
 
 /* "Deneme Ort." kıyası — TYT'de tek ölçek; AYT'de ölçek **alana** bağlıdır.
  *
- * Listelerde ders adlarının yanında **bölüm adı** da var (exam-contract v1.3):
- * net ders bazında da bölüm bazında da girilebiliyor, ikisi aynı denemede
- * bulunamıyor. Bölüm adı eklenmeseydi bölüm bazında girilmiş bir deneme bu
- * kıyasta 0 görünürdü. */
+ * Listeler `subject_label`'a bakar. Net ders bazında da bölüm bazında da
+ * girilebiliyor (exam-contract v1.3), ikisi aynı denemede bulunamıyor.
+ * Matematik'te bölümün etiketi dersinkiyle aynı ("TYT Matematik" — ayrım
+ * `name`'de: ders "Matematik", bölüm "TYT Matematik"), o yüzden tek giriş
+ * ikisini de yakalıyor. Sosyal ve Fen'de bölüm etiketi ayrı, eklenmesi
+ * gerekti — yoksa bölüm bazında girilmiş deneme bu kıyasta 0 görünürdü. */
 const TYT_DIM_GROUPS = [
   { key: 'total', label: 'Toplam', subs: null, max: 120 },
   { key: 'tr', label: 'Türkçe', subs: ['TYT Türkçe'], max: 40 },
-  { key: 'sos', label: 'Sosyal', subs: ['TYT Tarih', 'TYT Coğrafya', 'TYT Felsefe', 'TYT Din Kültürü ve Ahlak Bilgisi', 'TYT Sosyal Bilimler'], max: 20 },
-  { key: 'mat', label: 'Matematik', subs: ['TYT Matematik', 'TYT Geometri', 'TYT Temel Matematik'], max: 40 },
-  { key: 'fen', label: 'Fen', subs: ['TYT Fizik', 'TYT Kimya', 'TYT Biyoloji', 'TYT Fen Bilimleri'], max: 20 },
+  { key: 'sos', label: 'Sosyal', subs: ['TYT Tarih', 'TYT Coğrafya', 'TYT Felsefe', 'TYT Din Kültürü ve Ahlak Bilgisi', 'TYT Sosyal'], max: 20 },
+  { key: 'mat', label: 'Matematik', subs: ['TYT Matematik', 'TYT Geometri'], max: 40 },
+  { key: 'fen', label: 'Fen', subs: ['TYT Fizik', 'TYT Kimya', 'TYT Biyoloji', 'TYT Fen'], max: 20 },
 ];
 
 /** AYT ders grupları — hangi derslerin hangi başlık altında toplandığı.
@@ -35,7 +37,7 @@ const AYT_DIM_GROUPS = [
   { key: 'cog', label: 'Coğrafya', subs: ['AYT Coğrafya-1', 'AYT Coğrafya-2'] },
   { key: 'fel', label: 'Felsefe', subs: ['AYT Felsefe'] },
   { key: 'din', label: 'Din Kültürü', subs: ['AYT Din Kültürü ve Ahlak Bilgisi'] },
-  { key: 'mat', label: 'Matematik', subs: ['AYT Matematik', 'AYT Geometri', 'AYT Matematik-Geometri'] },
+  { key: 'mat', label: 'Matematik', subs: ['AYT Matematik', 'AYT Geometri'] },
   { key: 'fiz', label: 'Fizik', subs: ['AYT Fizik'] },
   { key: 'kim', label: 'Kimya', subs: ['AYT Kimya'] },
   { key: 'biy', label: 'Biyoloji', subs: ['AYT Biyoloji'] },
@@ -87,7 +89,7 @@ function dimAvg(exams, type, subs) {
   /* O boyuta ait hiçbir ders girilmemiş denemeyi **ortalamaya katma**.
      Önceden 0 sayılıyordu; "girilmedi" ile "sıfır çekti" aynı şey değil ve
      ortalamayı haksız yere aşağı çekiyordu. Bölüm bazında girilen denemelerle
-     birlikte bu daha da görünür oldu: AYT'de tek bir "Fen Bilimleri" neti,
+     birlikte bu daha da görünür oldu: AYT'de tek bir "AYT Fen" neti,
      Fizik/Kimya/Biyoloji boyutlarını sıfırlıyordu. */
   const vals = exs
     .map((e) => (e.subject_nets || []).filter((n) => subs.includes(n.subject_label)))

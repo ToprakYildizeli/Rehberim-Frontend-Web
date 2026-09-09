@@ -44,7 +44,6 @@
 
 /* Boy dayatması: sarmalayıcılar ve içlerindeki gerçek denetimler. */
 .ribbon .inlineField,
-.ribbon .windowRange,
 .ribbon .totalStat,
 .ribbon .action,
 .ribbon .studentSelect,
@@ -674,17 +673,6 @@
 }
 
 /* ---------- Esnek program penceresi (A1) ---------- */
-
-/* Tek satır: alt alta iken 40px oluyor ve şeridin en uzun öğesi olarak
-   satır kutusunu büyütüyordu. */
-.windowRange {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
-  white-space: nowrap;
-}
-
-.windowRangeText { font-size: 0.85rem; font-weight: 700; color: var(--text); white-space: nowrap; }
 
 
 .windowError {

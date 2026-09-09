@@ -764,14 +764,11 @@ export default function DersProgrami() {
                   aria-label="Gün sayısı"
                 />
               </label>
-              {/* Alt satırdaki "Kayıtlı program / Henüz atanmadı" kaldırıldı
-                  (9 Eylül 2026): tahtanın kendisi zaten boş ya da dolu
-                  görünüyor, satır yer kaplamaktan başka bir şey yapmıyordu. */}
-              <span className={s.windowRange}>
-                <span className={s.windowRangeText}>
-                  {windowRangeText(win.startDate, win.dayCount)}
-                </span>
-              </span>
+              {/* Şeritteki tarih aralığı yazısı kaldırıldı (9 Eylül 2026):
+                  bu grup başlangıç gününü ve kaç günlük olduğunu SEÇMEK için;
+                  aralık ikisinden zaten çıkıyor ve tahtanın gün başlıklarında
+                  tarihler yazılı. Kâğıda basarken aralık gerekiyor, o yüzden
+                  tahtanın baskı başlığında duruyor. */}
             </div>
           )}
         </div>

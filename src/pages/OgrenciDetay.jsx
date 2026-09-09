@@ -401,7 +401,7 @@ function DenemelerTab({ studentId }) {
   /** Denemeyi sınav bölümlerine göre gruplar; girilmeyen ders 0 net gösterilir.
    *
    *  Net iki biçimde girilebiliyor (exam-contract v1.3): **bölüm bazında**
-   *  (gerçek sonuç belgelerindeki gibi tek "Fen Bilimleri" neti) ya da **ders
+   *  (gerçek sonuç belgelerindeki gibi tek "TYT Fen" neti) ya da **ders
    *  bazında**. Hangisi girilmişse o gösterilir — ikisi aynı denemede
    *  bulunamaz, sunucu reddediyor. */
   function examGroups(exam) {
