@@ -685,22 +685,33 @@ body {
    Baskı (Yazdır / PDF olarak kaydet)
    ---------------------------------------------------------------------------
    Rehberler haftalık programı kâğıda basmak ya da veliye PDF olarak vermek
-   istiyor. Ekran yerleşimi olduğu gibi basılınca kenar çubuğu ve üst çubuk
-   sayfanın yarısını yiyor; burada yalnız içerik alanı bırakılıyor.
+   istiyor. Kâğıda **yalnız tahta** çıkar: kenar çubuğu, üst çubuk, araç şeridi
+   ve sağdaki blok ekleme paneli `data-print="hide"` ile düşer.
+
+   Gizlenecekleri tek tek işaretliyoruz; "her şeyi gizle, hedefi geri aç"
+   yöntemi hedefi mutlak konuma almayı gerektiriyor ve konumlanmış bir ata
+   varsa kâğıtta kayıyor.
 
    Sınıf adlarına değil `data-print` niteliklerine bakıyoruz: CSS modülleri
    sınıf adlarını derlemede karıştırıyor, global bir stil onları göremez. */
 @media print {
   [data-print='hide'] { display: none !important; }
 
-  /* Ekranda kaydırılabilir olan alan baskıda tam boy açılmalı, yoksa yalnız
-     görünen kısım basılır. */
-  [data-print='area'] {
+  /* Ekranda kaydırılabilir olan kutular kâğıtta tam boy açılmalı, yoksa
+     yalnız görünen kısım basılır. */
+  [data-print='area'],
+  [data-print='board'] {
     overflow: visible !important;
     height: auto !important;
     max-height: none !important;
-    padding: 0 !important;
+    box-shadow: none !important;
+    border: none !important;
   }
+
+  [data-print='area'] { padding: 0 !important; }
+
+  /* Baskıda anlamsız olan etkileşim öğeleri (blok silme çarpıları vb.). */
+  [data-print='board'] button { display: none !important; }
 
   html, body, #root {
     height: auto !important;
@@ -708,15 +719,12 @@ body {
     background: #fff !important;
   }
 
-  /* Renkli zeminler kâğıtta tasarruf için kaldırılmaz — programdaki ders
-     renkleri bilgi taşıyor, gri bir tabloya dönüşmeleri okunurluğu düşürür. */
+  /* Ders renkleri bilgi taşıyor; kâğıtta gri bir tabloya dönüşmeleri
+     okunurluğu düşürür. */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-
-  /* Baskıda anlamsız olan etkileşim öğeleri. */
-  button, [role='tablist'], [data-print='no-print'] { display: none !important; }
 
   @page { margin: 12mm; }
 }

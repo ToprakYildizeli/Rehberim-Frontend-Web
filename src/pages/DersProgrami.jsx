@@ -704,8 +704,10 @@ export default function DersProgrami() {
           ve o satırın solu bomboş kalıyordu; ızgara denemesi ise ayarları
           547px'e sıkıştırıp üç satıra çıkardı. Burada her satırın iki ucu da
           dolu: solda bağlam, sağda o satırın çıktısı. */}
-      <div className={s.ribbon}>
-        <div data-print="hide" className={s.ribbonRow}>
+      {/* Şeridin tamamı baskıda düşer: öğrenci adı ve hafta aralığı
+          tahtanın kendi baskı başlığında zaten yazıyor. */}
+      <div data-print="hide" className={s.ribbon}>
+        <div className={s.ribbonRow}>
           <div className={s.ribbonGroup}>
             <PillGroup options={MODES} value={mode} onChange={switchMode} />
             {mode === 'ogrenci' && (
@@ -847,13 +849,16 @@ export default function DersProgrami() {
           onDragCancel={() => setActiveDrag(null)}
         >
           <div className={s.layout}>
-            {/* Yalnız baskıda görünür: kâğıtta kimin programı ve hangi hafta
-                olduğu yazmazsa sayfa tek başına anlamsız kalıyor. */}
-            <div className={s.printHeader} aria-hidden="true">
-              <strong>{activeStudent ? activeStudent.name : 'Ders Programı'}</strong>
-              <span>{windowRangeText(win.startDate, win.dayCount)}</span>
-            </div>
-            <Card className={s.gridCard}>
+            {/* Baskıda kâğıda yalnız bu kutu çıkar; kenar çubuğu, üst çubuk,
+                araç şeridi ve sağdaki blok paneli `data-print="hide"` ile
+                gizleniyor (bkz. index.css → @media print). */}
+            <Card className={s.gridCard} data-print="board">
+              {/* Yalnız baskıda görünür: kâğıtta kimin programı ve hangi hafta
+                  olduğu yazmazsa sayfa tek başına anlamsız kalıyor. */}
+              <div className={s.printHeader} aria-hidden="true">
+                <strong>{activeStudent ? activeStudent.name : 'Ders Programı'}</strong>
+                <span>{windowRangeText(win.startDate, win.dayCount)}</span>
+              </div>
               {/* Ders satırlı görünümde ilk sütun ders adlarını taşıdığı için
                   saat sütunundan çok daha geniş olmalı. */}
               <div
@@ -929,7 +934,7 @@ export default function DersProgrami() {
               )}
             </Card>
 
-            <div className={s.rail}>
+            <div data-print="hide" className={s.rail}>
             <Card className={s.blockCard}>
               {catalogError ? (
                 <p className={s.librarySub}>Katalog yüklenemedi. Sayfayı yenileyin.</p>
