@@ -196,10 +196,28 @@ export default function DersProgrami() {
     () => Object.fromEntries(taskTypes.map((x) => [String(x.id), x])),
     [taskTypes]
   );
-  // Sadece seçili sınav (TYT/AYT) dersleri; okul dersleri gösterilmez.
+  /* Bileşeni olan sınav bölümleri ("TYT Fen Bilimleri" gibi). Bunlar deneme
+   * için anlamlı, çalışma için değil: öğrenci Fizik çalışır, "Fen Bilimleri"
+   * çalışmaz. Bileşeni olmayan bölüm (TYT Türkçe zaten tam bir bölüm) normal
+   * bir derstir, süzülmez. */
+  const aggregateSectionIds = useMemo(() => {
+    const keysWithMembers = new Set(
+      subjects.filter((x) => !x.isSection && x.sectionKey).map((x) => x.sectionKey)
+    );
+    return new Set(
+      subjects.filter((x) => x.isSection && keysWithMembers.has(x.sectionKey)).map((x) => x.id)
+    );
+  }, [subjects]);
+
+  /* Sadece seçili sınav (TYT/AYT) dersleri; okul dersleri gösterilmez.
+   * Deneme bloğunda bölümler de listelenir — rehber "TYT Fen denemesi"
+   * yazdırabilsin diye. Çalışma bloğunda listelenmez. */
   const filteredSubjects = useMemo(
-    () => subjects.filter((x) => x.category === draft.category),
-    [subjects, draft.category]
+    () => subjects.filter(
+      (x) => x.category === draft.category
+        && (draft.kind === 'exam' || !aggregateSectionIds.has(x.id))
+    ),
+    [subjects, draft.category, draft.kind, aggregateSectionIds]
   );
   // Metod adı → task_type id (kitap formatından varsayılan metodu çözmek için).
   const typeIdByName = useMemo(
@@ -635,6 +653,8 @@ export default function DersProgrami() {
   const addableRows = useMemo(() => {
     const shown = new Set(subjectRows.map((r) => r.key));
     const opts = subjects
+      // Tahta satırları çalışma satırıdır; toplu bölümler satır olarak açılmaz.
+      .filter((x) => !aggregateSectionIds.has(x.id))
       .map((x) => ({ key: `sub-${x.id}`, label: x.label }))
       .concat([
         { key: 'exam-tyt', label: 'Genel TYT' },
@@ -642,7 +662,7 @@ export default function DersProgrami() {
         { key: 'ext', label: 'Dış meşguliyet' },
       ]);
     return opts.filter((o) => !shown.has(o.key));
-  }, [subjects, subjectRows]);
+  }, [subjects, subjectRows, aggregateSectionIds]);
 
   /** Blok taşıyan satır silinemez — silinirse blokları görünmez olurdu. */
   const rowHasBlocks = useCallback(
