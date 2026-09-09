@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { login } from '../api/auth';
+import { login, logout } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/ui';
 import { Logo } from '../components/ui/Logo';
@@ -24,6 +24,25 @@ export default function Login() {
     setLoading(true);
     try {
       const { data } = await login(form.username, form.password);
+
+      /* Rol denetimi. Burası olmadan öğrenci ya da veli hesabıyla giren biri
+       * panele alınıyor, oradaki her uç `403` dönüyor ve ekran bomboş kalıyor —
+       * kullanıcı neyin yanlış olduğunu anlamıyor. Sunucu doğru şeyi söylüyor
+       * ("Bu işlem yalnızca rehberler içindir"), sorun onu dinlememizdi. */
+      if (data.user?.role !== 'counselor') {
+        /* Oturumu hiç kaydetmiyoruz; sunucudaki refresh token'ı da geçersiz
+         * kılıyoruz ki kullanılmayan canlı bir oturum ortada kalmasın. */
+        logout(data.refresh, data.access).catch(() => {});
+        const nereye = {
+          parent: 'Veli hesabınızla Rehberim Veli uygulamasından giriş yapın.',
+          student: 'Öğrenci hesabınızla Rehberim Öğrenci uygulamasından giriş yapın.',
+        }[data.user?.role];
+        setError(
+          `Bu panel rehberler içindir. ${nereye ?? 'Bu hesabın panele erişimi yok.'}`
+        );
+        return;
+      }
+
       saveSession(data.access, data.refresh, data.user);
       navigate('/dashboard');
     } catch (err) {
