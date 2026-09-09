@@ -102,13 +102,15 @@ function dimAvg(exams, type, subs) {
 
 /** Panoyu besleyen tüm türetilmiş veriyi döndürür. */
 export async function getDashboard() {
-  const [students, appts, programsRes, examsRes, tpRes, subjects, topicsRes, prefs] = await Promise.all([
+  const [students, appts, programsRes, examsRes, tpRes, subjects, meRes, topicsRes, prefs]
+    = await Promise.all([
     listStudents(),
     listAppointments(),
     api.get('/programs/'),
     api.get('/exams/'),
     api.get('/topic-progress/'),
     listSubjects(),          // maksimum netler katalogtaki soru sayılarından gelir
+    api.get('/auth/me/'),    // net grafiğinin ekseni rehberin katılma gününden başlar
     // Konu puanının PAYDASI: öğrencinin müfredatındaki tüm konular. Yalnız
     // kayıtlı konulara bakmak, sadece iyi bildiği konuları işaretleyen
     // öğrenciyi tepeye çıkarıyordu (bkz. aşağıda `avgLevel`).
@@ -143,13 +145,8 @@ export async function getDashboard() {
   const exams = examsRes.data || [];
   const tps = tpRes.data || [];
   const today = todayIso();
-  /* Öğretim yılının başı = 1 Eylül. Eylülden önceki aylarda (Oca–Ağu) hâlâ bir
-     önceki yılın Eylül'ündeyiz; net grafiğinin ekseni bu tarihten bugüne. */
-  const academicYearStart = (() => {
-    const now = new Date();
-    const year = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
-    return `${year}-09-01`;
-  })();
+  // Rehberin hesabı ne zaman açıldı? Net grafiğinin ekseni buradan başlar.
+  const joinedDate = meRes.data?.joined_date || null;
 
   // Öğrenci başına verileri grupla
   const bucket = {};
@@ -240,9 +237,10 @@ export async function getDashboard() {
    * D2'si başka bir öğrencinin D2'siyle aynı deneme değildi ve aynı hizada
    * görünüyordu. Aynı gün girilen iki deneme artık gerçekten aynı hizada.
    *
-   * Aralık: **1 Eylül'den bugüne**. Daha eski bir deneme varsa eksen ona kadar
-   * geriye uzar — girilen hiçbir deneme grafikten düşmemeli; aksi hâlde yaz
-   * boyunca girilen denemeler eylülde bir anda kaybolurdu. */
+   * Aralık: **rehberin katıldığı günden bugüne**. Sabit bir başlangıç (1 Eylül
+   * gibi) ağustosta kaydolan rehberin ilk haftalarını grafikten düşürüyordu.
+   * Daha eski tarihli bir deneme varsa (geçmişe dönük girilmiş olabilir) eksen
+   * ona kadar geriye uzar — girilen hiçbir deneme grafikten düşmemeli. */
   const seriesFor = (type) => students
     .map((s) => {
       const exs = bucket[s.id].exams
@@ -263,15 +261,12 @@ export async function getDashboard() {
   const earliestExam = [...tytSeries, ...aytSeries]
     .flatMap((se) => se.points.map((p) => p.date))
     .reduce((a, d) => (a == null || d < a ? d : a), null);
+  // Eksenin başı: katılma günü ile en eski denemenin ERKEN olanı.
+  const axisStart = [joinedDate, earliestExam].filter(Boolean).sort()[0] || today;
   const netSeries = {
     tyt: tytSeries,
     ayt: aytSeries,
-    range: {
-      start: earliestExam && earliestExam < academicYearStart
-        ? earliestExam
-        : academicYearStart,
-      end: today,
-    },
+    range: { start: axisStart, end: today },
   };
 
   // Yaklaşan görüşmeler (bugünden itibaren)
