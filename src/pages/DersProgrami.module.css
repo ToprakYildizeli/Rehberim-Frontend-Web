@@ -856,8 +856,21 @@
     font-size: 0.95rem;
   }
 
-  /* Tahta kâğıda sığsın: ekran genişliğine göre değil sayfaya göre yayılsın.
-     Kutunun kendisi baskı hedefi (`data-print="only"`), yerleşimi index.css
-     ayarlıyor; burada yalnız iç boşluk sıfırlanıyor. */
+  /* Tahta kâğıda sığsın: ekran genişliğine göre değil sayfaya göre yayılsın. */
   .gridCard { padding: 0; }
+
+  /* Izgara tek sütuna insin. Yan panel `display:none` olsa da
+     `grid-template-columns`'taki 272px'lik ikinci iz duruyor ve kâğıdın
+     sağında boş bir şerit bırakıyordu. */
+  .layout {
+    display: block;
+    gap: 0;
+  }
+
+  .page,
+  .screen {
+    gap: 0;
+    height: auto;
+    min-height: 0;
+  }
 }

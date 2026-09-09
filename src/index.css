@@ -719,6 +719,14 @@ body {
     background: #fff !important;
   }
 
+  /* Sayfa kapları kâğıtta zemin ve gölge taşımasın. Blokların kendi renkleri
+     bilgi taşıdığı için onlara dokunulmuyor — yalnız kapsayıcılar beyazlanıyor
+     ve gölgeler kaldırılıyor (gölge kâğıtta gri bir şerit gibi çıkıyor). */
+  [data-print='area'],
+  [data-print='board'] { background: #fff !important; }
+
+  * { box-shadow: none !important; }
+
   /* Ders renkleri bilgi taşıyor; kâğıtta gri bir tabloya dönüşmeleri
      okunurluğu düşürür. */
   * {
