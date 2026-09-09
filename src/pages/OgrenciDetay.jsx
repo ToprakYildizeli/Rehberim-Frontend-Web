@@ -307,27 +307,23 @@ function BookRow({ book }) {
 const stripExamPrefix = (label = '') => label.replace(/^(TYT|AYT)\s+/, '');
 const round2 = (n) => Math.round(n * 100) / 100;   // net için 2 ondalık (0.25 → 0.25)
 
-// Deneme içindeki dersleri sınav bölümlerine göre grupla (ÖSYM YKS yapısı).
-const EXAM_GROUPS = {
-  tyt: [
-    { key: 'tur', title: 'Türkçe', names: ['Türkçe'] },
-    { key: 'sos', title: 'Sosyal Bilimler', names: ['Tarih', 'Coğrafya', 'Felsefe', 'Din Kültürü ve Ahlak Bilgisi'] },
-    { key: 'mat', title: 'Matematik', names: ['Matematik', 'Geometri'] },
-    { key: 'fen', title: 'Fen Bilimleri', names: ['Fizik', 'Kimya', 'Biyoloji'] },
-  ],
-  ayt: [
-    { key: 'mat', title: 'Matematik', names: ['Matematik', 'Geometri'] },
-    { key: 'fen', title: 'Fen Bilimleri', names: ['Fizik', 'Kimya', 'Biyoloji'] },
-    { key: 'sos1', title: 'Türk Dili ve Edebiyatı · Sosyal-1', names: ['Türk Dili ve Edebiyatı', 'Tarih-1', 'Coğrafya-1'] },
-    { key: 'sos2', title: 'Sosyal Bilimler-2', names: ['Tarih-2', 'Coğrafya-2', 'Felsefe', 'Din Kültürü ve Ahlak Bilgisi'] },
-  ],
+/* Deneme kırılımının bölüm sırası (ÖSYM kitapçık sırası).
+ *
+ * Bölümlerin hangi dersleri kapsadığı **artık burada yazmıyor**: backend her
+ * derse `section_key` veriyor ve bölüm satırlarını `is_section` ile
+ * işaretliyor (api-reference → GET /api/subjects/). Listeyi iki yerde tutmak,
+ * müfredat değiştiğinde birinin geride kalması demekti. Burada yalnız sıra
+ * var — o bir sunum tercihi. */
+const SECTION_ORDER = {
+  tyt: ['tyt_tur', 'tyt_sos', 'tyt_mat', 'tyt_fen'],
+  ayt: ['ayt_sos1', 'ayt_sos2', 'ayt_mat', 'ayt_fen'],
 };
 
 // AYT puan türleri: hangi bölümlerin netleri toplanır (ÖSYM YKS).
 const AYT_FIELDS = [
-  { label: 'Sayısal', short: 'SAY', keys: ['mat', 'fen'] },
-  { label: 'Eşit Ağırlık', short: 'EA', keys: ['mat', 'sos1'] },
-  { label: 'Sözel', short: 'SÖZ', keys: ['sos1', 'sos2'] },
+  { label: 'Sayısal', short: 'SAY', keys: ['ayt_mat', 'ayt_fen'] },
+  { label: 'Eşit Ağırlık', short: 'EA', keys: ['ayt_mat', 'ayt_sos1'] },
+  { label: 'Sözel', short: 'SÖZ', keys: ['ayt_sos1', 'ayt_sos2'] },
 ];
 
 const EXAM_TYPE_FILTERS = [
@@ -402,20 +398,30 @@ function DenemelerTab({ studentId }) {
     return () => { alive = false; };
   }, [studentId]);
 
-  /** Denemeyi sınav bölümlerine göre gruplar; girilmeyen ders 0 net gösterilir. */
+  /** Denemeyi sınav bölümlerine göre gruplar; girilmeyen ders 0 net gösterilir.
+   *
+   *  Net iki biçimde girilebiliyor (exam-contract v1.3): **bölüm bazında**
+   *  (gerçek sonuç belgelerindeki gibi tek "Fen Bilimleri" neti) ya da **ders
+   *  bazında**. Hangisi girilmişse o gösterilir — ikisi aynı denemede
+   *  bulunamaz, sunucu reddediyor. */
   function examGroups(exam) {
-    const defs = EXAM_GROUPS[exam.type];
+    const order = SECTION_ORDER[exam.type];
     const catalog = byType[exam.type];
-    if (!defs || !catalog || catalog.length === 0) {
+    if (!order || !catalog || catalog.length === 0) {
       // Tür yoksa: tek grup, yalnızca girilen dersler.
       return [{ title: null, subjects: exam.subjectNets, totalNet: exam.totalNet, totalMax: null }];
     }
     const recorded = new Map(exam.subjectNets.map((n) => [n.subject, n]));
-    const byName = new Map(catalog.map((sub) => [sub.name, sub]));
-    return defs
-      .map((g) => {
-        const subjects = g.names
-          .map((name) => byName.get(name))
+
+    return order
+      .map((key) => {
+        const section = catalog.find((sub) => sub.isSection && sub.sectionKey === key);
+        const members = catalog.filter((sub) => !sub.isSection && sub.sectionKey === key);
+
+        /* Bölüm satırı girilmişse onu göster. Bileşeni olmayan bölümde
+           (TYT Türkçe zaten tam bir bölüm) her hâlükârda bölüm satırı. */
+        const asSection = section && (recorded.has(section.id) || members.length === 0);
+        const rows = (asSection ? [section] : members)
           .filter(Boolean)
           .map((sub) => {
             const rec = recorded.get(sub.id);
@@ -427,12 +433,13 @@ function DenemelerTab({ studentId }) {
               max: sub.questionCount || null,   // soru sayısı
             };
           });
+
         return {
-          key: g.key,
-          title: g.title,
-          subjects,
-          totalNet: round2(subjects.reduce((a, x) => a + x.net, 0)),
-          totalMax: subjects.reduce((a, x) => a + (x.max || 0), 0),
+          key,
+          title: section ? section.name : null,
+          subjects: rows,
+          totalNet: round2(rows.reduce((a, x) => a + x.net, 0)),
+          totalMax: rows.reduce((a, x) => a + (x.max || 0), 0),
         };
       })
       .filter((g) => g.subjects.length > 0);

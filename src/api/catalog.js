@@ -52,6 +52,10 @@ export async function listSubjects(params) {
     label: x.label,        // "TYT Matematik" gibi gösterim etiketi
     category: x.category,
     questionCount: x.question_count ?? 0,   // sınavdaki soru sayısı (maks. net)
+    // Sınav bölümü bilgisi (api-reference → GET /api/subjects/). `sectionKey`
+    // bölümü bileşenlerine bağlar; deneme kırılımı bununla gruplanıyor.
+    isSection: Boolean(x.is_section),
+    sectionKey: x.section_key || '',
     color: subjectColor(x.label || x.name),
   }));
 }

@@ -12,13 +12,18 @@ const isoOf = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getD
 const todayIso = () => isoOf(new Date());
 const round1 = (n) => Math.round(n * 10) / 10;
 
-// "Deneme Ort." kıyası — TYT'de tek ölçek; AYT'de ölçek **alana** bağlıdır.
+/* "Deneme Ort." kıyası — TYT'de tek ölçek; AYT'de ölçek **alana** bağlıdır.
+ *
+ * Listelerde ders adlarının yanında **bölüm adı** da var (exam-contract v1.3):
+ * net ders bazında da bölüm bazında da girilebiliyor, ikisi aynı denemede
+ * bulunamıyor. Bölüm adı eklenmeseydi bölüm bazında girilmiş bir deneme bu
+ * kıyasta 0 görünürdü. */
 const TYT_DIM_GROUPS = [
   { key: 'total', label: 'Toplam', subs: null, max: 120 },
   { key: 'tr', label: 'Türkçe', subs: ['TYT Türkçe'], max: 40 },
-  { key: 'sos', label: 'Sosyal', subs: ['TYT Tarih', 'TYT Coğrafya', 'TYT Felsefe', 'TYT Din Kültürü ve Ahlak Bilgisi'], max: 20 },
-  { key: 'mat', label: 'Matematik', subs: ['TYT Matematik', 'TYT Geometri'], max: 40 },
-  { key: 'fen', label: 'Fen', subs: ['TYT Fizik', 'TYT Kimya', 'TYT Biyoloji'], max: 20 },
+  { key: 'sos', label: 'Sosyal', subs: ['TYT Tarih', 'TYT Coğrafya', 'TYT Felsefe', 'TYT Din Kültürü ve Ahlak Bilgisi', 'TYT Sosyal Bilimler'], max: 20 },
+  { key: 'mat', label: 'Matematik', subs: ['TYT Matematik', 'TYT Geometri', 'TYT Temel Matematik'], max: 40 },
+  { key: 'fen', label: 'Fen', subs: ['TYT Fizik', 'TYT Kimya', 'TYT Biyoloji', 'TYT Fen Bilimleri'], max: 20 },
 ];
 
 /** AYT ders grupları — hangi derslerin hangi başlık altında toplandığı.
@@ -30,7 +35,7 @@ const AYT_DIM_GROUPS = [
   { key: 'cog', label: 'Coğrafya', subs: ['AYT Coğrafya-1', 'AYT Coğrafya-2'] },
   { key: 'fel', label: 'Felsefe', subs: ['AYT Felsefe'] },
   { key: 'din', label: 'Din Kültürü', subs: ['AYT Din Kültürü ve Ahlak Bilgisi'] },
-  { key: 'mat', label: 'Matematik', subs: ['AYT Matematik', 'AYT Geometri'] },
+  { key: 'mat', label: 'Matematik', subs: ['AYT Matematik', 'AYT Geometri', 'AYT Matematik-Geometri'] },
   { key: 'fiz', label: 'Fizik', subs: ['AYT Fizik'] },
   { key: 'kim', label: 'Kimya', subs: ['AYT Kimya'] },
   { key: 'biy', label: 'Biyoloji', subs: ['AYT Biyoloji'] },
@@ -74,9 +79,22 @@ function aytGroupsFor(field, maxByLabel) {
 function dimAvg(exams, type, subs) {
   const exs = exams.filter((e) => e.exam_type === type);
   if (!exs.length) return null;
-  const vals = exs.map((e) => (subs
-    ? round1((e.subject_nets || []).filter((n) => subs.includes(n.subject_label)).reduce((a, n) => a + n.net, 0))
-    : e.total_net));
+  if (!subs) {
+    const totals = exs.map((e) => e.total_net);
+    return round1(totals.reduce((a, x) => a + x, 0) / totals.length);
+  }
+
+  /* O boyuta ait hiçbir ders girilmemiş denemeyi **ortalamaya katma**.
+     Önceden 0 sayılıyordu; "girilmedi" ile "sıfır çekti" aynı şey değil ve
+     ortalamayı haksız yere aşağı çekiyordu. Bölüm bazında girilen denemelerle
+     birlikte bu daha da görünür oldu: AYT'de tek bir "Fen Bilimleri" neti,
+     Fizik/Kimya/Biyoloji boyutlarını sıfırlıyordu. */
+  const vals = exs
+    .map((e) => (e.subject_nets || []).filter((n) => subs.includes(n.subject_label)))
+    .filter((nets) => nets.length > 0)
+    .map((nets) => round1(nets.reduce((a, n) => a + n.net, 0)));
+
+  if (!vals.length) return null;
   return round1(vals.reduce((a, x) => a + x, 0) / vals.length);
 }
 
