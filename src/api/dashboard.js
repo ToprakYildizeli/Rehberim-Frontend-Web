@@ -143,6 +143,13 @@ export async function getDashboard() {
   const exams = examsRes.data || [];
   const tps = tpRes.data || [];
   const today = todayIso();
+  /* Öğretim yılının başı = 1 Eylül. Eylülden önceki aylarda (Oca–Ağu) hâlâ bir
+     önceki yılın Eylül'ündeyiz; net grafiğinin ekseni bu tarihten bugüne. */
+  const academicYearStart = (() => {
+    const now = new Date();
+    const year = now.getMonth() >= 8 ? now.getFullYear() : now.getFullYear() - 1;
+    return `${year}-09-01`;
+  })();
 
   // Öğrenci başına verileri grupla
   const bucket = {};
@@ -226,19 +233,46 @@ export async function getDashboard() {
 
   const enrById = Object.fromEntries(enriched.map((e) => [e.id, e]));
 
-  // Öğrenci-bazlı net serisi (çok çizgili grafik) — tür başına, tarihe göre sıralı
+  /* Öğrenci-bazlı net serisi (çok çizgili grafik).
+   *
+   * Eksen **tarih**tir, deneme sırası değil. Önce her öğrencinin denemeleri
+   * 1, 2, 3... diye sıralanıp "D1, D2" diye etiketleniyordu; bir öğrencinin
+   * D2'si başka bir öğrencinin D2'siyle aynı deneme değildi ve aynı hizada
+   * görünüyordu. Aynı gün girilen iki deneme artık gerçekten aynı hizada.
+   *
+   * Aralık: **1 Eylül'den bugüne**. Daha eski bir deneme varsa eksen ona kadar
+   * geriye uzar — girilen hiçbir deneme grafikten düşmemeli; aksi hâlde yaz
+   * boyunca girilen denemeler eylülde bir anda kaybolurdu. */
   const seriesFor = (type) => students
     .map((s) => {
       const exs = bucket[s.id].exams
-        .filter((e) => e.exam_type === type)
+        .filter((e) => e.exam_type === type && e.exam_date <= today)
         .sort((a, c) => (a.exam_date < c.exam_date ? -1 : 1));
       return exs.length ? {
         id: s.id, name: enrById[s.id].name, color: enrById[s.id].color,
-        points: exs.map((e, i) => ({ x: i, label: e.name.replace(/^(TYT|AYT)\s+/, ''), net: e.total_net })),
+        points: exs.map((e) => ({
+          date: e.exam_date,
+          label: (e.name || '').replace(/^(TYT|AYT)\s+/, ''),
+          net: e.total_net,
+        })),
       } : null;
     })
     .filter(Boolean);
-  const netSeries = { tyt: seriesFor('tyt'), ayt: seriesFor('ayt') };
+  const tytSeries = seriesFor('tyt');
+  const aytSeries = seriesFor('ayt');
+  const earliestExam = [...tytSeries, ...aytSeries]
+    .flatMap((se) => se.points.map((p) => p.date))
+    .reduce((a, d) => (a == null || d < a ? d : a), null);
+  const netSeries = {
+    tyt: tytSeries,
+    ayt: aytSeries,
+    range: {
+      start: earliestExam && earliestExam < academicYearStart
+        ? earliestExam
+        : academicYearStart,
+      end: today,
+    },
+  };
 
   // Yaklaşan görüşmeler (bugünden itibaren)
   const upcoming = appts

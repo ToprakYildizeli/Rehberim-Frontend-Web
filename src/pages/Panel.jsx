@@ -112,7 +112,7 @@ export default function Panel() {
             </button>
           ))}
         </div>
-        <MultiLineChart series={visible} />
+        <MultiLineChart series={visible} range={netSeries.range} />
       </Card>
       )}
 
@@ -316,19 +316,57 @@ function KpiCard({ icon, value, label, tone }) {
   );
 }
 
+const MONTH_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz',
+  'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
+
+/** `YYYY-MM-DD` → gün sayısı (UTC, saat farkından etkilenmesin). */
+const dayNum = (iso) => Date.parse(`${iso}T00:00:00Z`) / 86400000;
+
+/** Eksende gösterilecek ay başları — yalnız aralığın İÇİNE düşenler.
+ *
+ *  Aralık ayın ortasında başlayabiliyor (ilk deneme 26 Haziran gibi); o ayın
+ *  1'i grafiğin solunda kalır ve etiket dışarı taşardı. Başlangıçtan önceki
+ *  ay atlanıyor, o ayın adı zaten ilk noktanın hizasında okunuyor. */
+function monthTicks(startIso, endIso) {
+  const [sy, sm] = startIso.split('-').map(Number);
+  const start = dayNum(startIso);
+  const end = dayNum(endIso);
+  const ticks = [];
+  let y = sy; let m = sm;
+  for (let i = 0; i < 24; i += 1) {
+    const iso = `${y}-${String(m).padStart(2, '0')}-01`;
+    const at = dayNum(iso);
+    if (at > end) break;
+    if (at >= start) ticks.push({ iso, label: MONTH_SHORT[m - 1] });
+    m += 1;
+    if (m > 12) { m = 1; y += 1; }
+  }
+  return ticks;
+}
+
 /** Çok çizgili net grafiği — her öğrenci kendi renginde (SVG, tek eksen).
+ *
+ *  Yatay eksen **tarih**tir: öğretim yılının 1 Eylül'ünden bugüne. Önce deneme
+ *  sırasıydı ("D1, D2") ve bir öğrencinin D2'si başkasının D2'siyle aynı hizada
+ *  görünüyordu — oysa farklı günlerde girilmiş farklı denemelerdi. Artık aynı
+ *  gün girilen denemeler gerçekten aynı hizada; aralar da gerçek zaman kadar.
+ *
  *  Büyük viewBox + non-scaling-stroke → çizgi/nokta ekranda ince ve net kalır. */
-function MultiLineChart({ series }) {
+function MultiLineChart({ series, range }) {
   if (!series.length) return <EmptyState icon={<LineChart size={20} />} text="Görüntülenecek öğrenci seç." />;
   const W = 760; const H = 300; const padL = 42; const padR = 20; const padT = 18; const padB = 38;
-  const maxX = Math.max(...series.map((se) => se.points.length));
+
+  const x0 = dayNum(range.start);
+  const x1 = Math.max(dayNum(range.end), x0 + 1);
   const allNet = series.flatMap((se) => se.points.map((p) => p.net));
   const lo = Math.min(...allNet); const hi = Math.max(...allNet);
   const min = Math.floor(lo - (hi - lo || 4) * 0.15);
   const max = Math.ceil(hi + (hi - lo || 4) * 0.15);
-  const xs = (x) => padL + (maxX <= 1 ? (W - padL - padR) / 2 : (x * (W - padL - padR)) / (maxX - 1));
+  const xs = (iso) => padL + ((dayNum(iso) - x0) / (x1 - x0)) * (W - padL - padR);
   const ys = (v) => padT + (1 - (v - min) / ((max - min) || 1)) * (H - padT - padB);
   const grids = [min, Math.round((min + max) / 2), max];
+  const ticks = monthTicks(range.start, range.end);
+
   return (
     <svg className={s.trendSvg} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="xMinYMid meet"
       role="img" aria-label="Öğrenci net grafiği">
@@ -338,19 +376,23 @@ function MultiLineChart({ series }) {
           <text x={padL - 8} y={ys(g) + 4} className={s.axisTxt} textAnchor="end">{g}</text>
         </g>
       ))}
-      {Array.from({ length: maxX }).map((_, i) => (
-        <text key={i} x={xs(i)} y={H - 12} className={s.axisTxt} textAnchor="middle">D{i + 1}</text>
+      {ticks.map((t) => (
+        <text key={t.iso} x={xs(t.iso)} y={H - 12} className={s.axisTxt} textAnchor="middle">{t.label}</text>
       ))}
       {series.map((se) => {
-        const line = se.points.map((p, i) => `${i ? 'L' : 'M'}${xs(p.x).toFixed(1)},${ys(p.net).toFixed(1)}`).join(' ');
+        const line = se.points
+          .map((p, i) => `${i ? 'L' : 'M'}${xs(p.date).toFixed(1)},${ys(p.net).toFixed(1)}`)
+          .join(' ');
         return (
           <g key={se.id}>
             <path d={line} fill="none" stroke={se.color} strokeWidth="2" strokeLinejoin="round"
               strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+            {/* Nokta yalnız gerçekten deneme olan günde çizilir. */}
             {se.points.map((p) => (
-              <circle key={p.x} cx={xs(p.x)} cy={ys(p.net)} r="3" fill="var(--bg-card)"
-                stroke={se.color} strokeWidth="2" vectorEffect="non-scaling-stroke">
-                <title>{se.name} — {p.label}: {p.net} net</title>
+              <circle key={`${p.date}-${p.label}`} cx={xs(p.date)} cy={ys(p.net)} r="3.5"
+                fill="var(--bg-card)" stroke={se.color} strokeWidth="2"
+                vectorEffect="non-scaling-stroke">
+                <title>{se.name} — {p.label || 'Deneme'} ({trDate(p.date)}): {p.net} net</title>
               </circle>
             ))}
           </g>
@@ -358,4 +400,10 @@ function MultiLineChart({ series }) {
       })}
     </svg>
   );
+}
+
+/** `2026-09-08` → `8 Eyl` */
+function trDate(iso) {
+  const [, m, d] = iso.split('-').map(Number);
+  return `${d} ${MONTH_SHORT[m - 1]}`;
 }
