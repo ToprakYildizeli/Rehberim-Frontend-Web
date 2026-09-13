@@ -380,3 +380,14 @@ select.control:focus { background-color: var(--bg-input); }
   border-radius: 50%;
   display: block;
 }
+
+/* Textarea: `.control`un üstüne yalnız çok satırlıya özgü olanlar.
+   Yükseklik kullanıcıya bırakıldı ama yataya büyümesi engellendi — yan
+   sütundaki tahtayı iterdi. */
+.textarea {
+  height: auto;
+  min-height: 62px;
+  padding-block: 8px;
+  line-height: 1.45;
+  resize: vertical;
+}

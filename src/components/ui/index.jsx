@@ -81,6 +81,11 @@ export function Input({ className, ...rest }) {
   return <input className={cx(s.control, className)} {...rest} />;
 }
 
+/** Çok satırlı metin. `Input` ile aynı görünümde; yalnız yükseklik serbest. */
+export function Textarea({ className, rows = 3, ...rest }) {
+  return <textarea rows={rows} className={cx(s.control, s.textarea, className)} {...rest} />;
+}
+
 /**
  * Sayı girdisi — alanı boşaltmaya izin verir.
  *

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft, ChevronRight, ChevronDown, BookOpen, ClipboardList, CalendarDays, Target, Check,
-  ArrowUpDown, ShieldCheck, Lock, Trophy,
+  ArrowUpDown, ShieldCheck, Lock, Trophy, CircleDashed,
 } from 'lucide-react';
 import {
   Card, Avatar, Badge, Button, Select, PillGroup, EmptyState, Spinner, ProgressBar, SearchInput,
@@ -12,7 +12,7 @@ import { listStudentBooks, getBook } from '../api/books';
 import { listStudentExams } from '../api/exams';
 import {
   getComplianceHistory, getProgramCompliance, getStudentPrograms, setProgramApproval,
-  setTaskCompleted, windowDays, fmtMin,
+  setTaskCompletion, nextCompletion, COMPLETION_LABEL, windowDays, fmtMin,
 } from '../api/programs';
 import { listSubjects, listTopics, blockLabel } from '../api/catalog';
 import { getTopicLevels, setTopicLevel } from '../api/topicProgress';
@@ -652,7 +652,9 @@ function ProgramTab({ studentId }) {
               onToggleTask={async (taskId, next) => {
                 patchProgram(active.id, {
                   blocks: active.blocks.map(
-                    (b) => (b.taskId === taskId ? { ...b, isCompleted: next } : b)
+                    (b) => (b.taskId === taskId
+                      ? { ...b, completion: next, isCompleted: next === 'done' }
+                      : b)
                   ),
                 });
                 // Yüzdeyi tarayıcıda tekrar hesaplamak yerine sunucudan al.
@@ -754,11 +756,15 @@ function WeekBoard({ program, onToggleTask }) {
   const [busyTask, setBusyTask] = useState(null);
   const locked = program.isApproved;
 
-  async function toggle(block) {
+  /* Tıklama durumu ilerletir: yapılmadı → yarısı → tamamlandı → yapılmadı.
+     Öğrenci mobilde üç düğmeden seçiyor; burada tahta yeri dar olduğu için
+     aynı üç durum tek düğmede döngüye alındı. */
+  async function cycle(block) {
     if (locked || busyTask) return;
+    const target = nextCompletion(block.completion);
     setBusyTask(block.taskId);
     try {
-      onToggleTask(block.taskId, await setTaskCompleted(block.taskId, !block.isCompleted));
+      onToggleTask(block.taskId, await setTaskCompletion(block.taskId, target));
     } catch {
       /* sunucu reddettiyse tahta olduğu gibi kalır */
     } finally {
@@ -781,23 +787,34 @@ function WeekBoard({ program, onToggleTask }) {
               items.map((b) => (
                 <button
                   type="button"
-                  className={cx(s.block, b.isCompleted && s.blockDone, locked && s.blockLocked)}
+                  className={cx(
+                    s.block,
+                    b.completion === 'done' && s.blockDone,
+                    b.completion === 'half' && s.blockHalf,
+                    locked && s.blockLocked,
+                  )}
                   key={b.id}
                   style={{ borderLeftColor: b.subjectColor }}
                   disabled={locked || busyTask === b.taskId}
-                  onClick={() => toggle(b)}
-                  aria-pressed={b.isCompleted}
-                  title={locked
-                    ? 'Onaylanmış program kilitlidir'
-                    : (b.isCompleted ? 'Yapılmadı olarak işaretle' : 'Yapıldı olarak işaretle')}
+                  onClick={() => cycle(b)}
+                  title={[
+                    COMPLETION_LABEL[b.completion] || COMPLETION_LABEL.none,
+                    b.note || null,
+                    locked
+                      ? 'Onaylanmış program kilitlidir'
+                      : `Tıkla: ${COMPLETION_LABEL[nextCompletion(b.completion)].toLowerCase()}`,
+                  ].filter(Boolean).join('\n')}
                 >
                   <span className={s.blockTime}>
-                    {b.isCompleted ? <Check size={10} /> : (locked ? <Lock size={10} /> : null)}
+                    {b.completion === 'done' ? <Check size={10} />
+                      : b.completion === 'half' ? <CircleDashed size={10} />
+                        : (locked ? <Lock size={10} /> : null)}
                     {fmtMin(b.startMin)}
                   </span>
                   <span className={s.blockSubject}>{blockLabel(b)}</span>
                   {b.kind !== 'external' && b.topic && <span className={s.blockTopic}>{b.topic}</span>}
                   {b.bookLabel && <span className={s.blockBook}>{b.bookLabel}</span>}
+                  {b.note && <span className={s.blockNote}>{b.note}</span>}
                 </button>
               ))
             )}

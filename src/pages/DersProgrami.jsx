@@ -4,9 +4,9 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core';
-import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil, Printer } from 'lucide-react';
+import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil, Printer, StickyNote } from 'lucide-react';
 import {
-  Card, Button, Field, Select, Input, NumberInput, PillGroup, Spinner, Modal,
+  Card, Button, Field, Select, Input, Textarea, NumberInput, PillGroup, Spinner, Modal,
 } from '../components/ui';
 import DateField from '../components/ui/DateField';
 import { listStudents } from '../api/students';
@@ -45,8 +45,13 @@ const VIEWS = [
   { value: 'hours', label: 'Saat satırlı' },
   { value: 'subjects', label: 'Ders satırlı' },
 ];
+const cx = (...parts) => parts.filter(Boolean).join(' ');
+
 const MIN_DURATION = 5;
 const MAX_DURATION = 12 * 60;
+/* Yönerge bir cümle olsun diye sınırlı: bloğa sığmayan bir metin tahtayı
+   okunmaz hâle getiriyor. Backend'de `TextField`, yani sınır yalnız burada. */
+const NOTE_MAX = 280;
 
 /* Ders satırı tercihleri yalnız bir görünüm ayarı; sunucuya yazılmıyor (yol
    haritası A2 kararı), ama her açılışta sıfırlanmasın diye tarayıcıda saklanıyor. */
@@ -182,8 +187,13 @@ export default function DersProgrami() {
   const [draft, setDraft] = useState({
     kind: 'study', examScope: 'tyt', externalTitle: '',
     category: 'tyt', subject: '', type: '', topic: '', book: '',
-    durationMin: 60, days: [],
+    note: '', durationMin: 60, days: [],
   });
+
+  /* Yerleştirilmiş bir bloğun yönergesini düzenleme kipi: `{ id, text }`.
+     Blok listesine ancak kaydedilince dokunuluyor — her tuşta `commit`
+     çağırmak tahtayı ve kaydetme kuyruğunu gereksiz yere döverdi. */
+  const [noteEdit, setNoteEdit] = useState(null);
 
   const lastWeek = useRef(null);
   const scope = mode === 'ogrenci' && studentId ? studentId : null;
@@ -494,6 +504,18 @@ export default function DersProgrami() {
     } else {
       commit(blocks.map((b) => (b.id === payload.blockId ? { ...b, dayIndex, startMin } : b)));
     }
+  }
+
+  function openNote(id) {
+    const block = blocks.find((b) => b.id === id);
+    if (block) setNoteEdit({ id, text: block.note || '' });
+  }
+
+  function saveNote() {
+    if (!noteEdit) return;
+    const text = noteEdit.text.trim();
+    commit(blocks.map((b) => (b.id === noteEdit.id ? { ...b, note: text } : b)));
+    setNoteEdit(null);
   }
 
   function removeBlock(id) {
@@ -881,7 +903,8 @@ export default function DersProgrami() {
 
                 {view === 'hours'
                   ? HOURS.map((hour) => (
-                    <HourRow key={hour} hour={hour} days={days} blocks={blocks} onRemove={removeBlock} />
+                    <HourRow key={hour} hour={hour} days={days} blocks={blocks}
+                             onRemove={removeBlock} onEditNote={openNote} />
                   ))
                   : subjectRows.map((row) => (
                     <SubjectRow
@@ -890,6 +913,7 @@ export default function DersProgrami() {
                       days={days}
                       blocks={blocks}
                       onRemove={removeBlock}
+                      onEditNote={openNote}
                       editing={rowsEditing}
                       onRemoveRow={(key) => setRows((rowKeys ?? []).filter((k) => k !== key))}
                       canRemoveRow={!rowHasBlocks(row.key)}
@@ -1092,6 +1116,21 @@ export default function DersProgrami() {
                         aria-label="Süre (dakika)"
                       />
                     </Field>
+
+                    {/* Yönerge: bloğun ne olduğu değil, öğrencinin ne yapacağı.
+                        Öğrenci bunu salt-okur — kendi cevabı üç düğmeyle. */}
+                    <Field label="Açıklama (opsiyonel)">
+                      <Textarea
+                        value={draft.note}
+                        rows={2}
+                        maxLength={NOTE_MAX}
+                        placeholder="Ör. 45-70. sayfa · 40 soru · önce konu tekrarı"
+                        onChange={(e) => setDraft((d) => ({ ...d, note: e.target.value }))}
+                      />
+                      <span className={s.noteHint}>
+                        Öğrenci bu notu görür, değiştiremez.
+                      </span>
+                    </Field>
                   </div>
 
                   <p className={s.previewLabel}>Sürüklenebilir blok</p>
@@ -1181,6 +1220,29 @@ export default function DersProgrami() {
           boardDayCount={win.dayCount}
           onClose={() => setAssignSource(null)}
         />
+      )}
+
+      {noteEdit && (
+        <Modal open onClose={() => setNoteEdit(null)} width={420} labelledBy="note-title">
+          <h2 id="note-title" className={s.modalTitle}>Blok açıklaması</h2>
+          <Field label="Öğrenciye yönerge">
+            <Textarea
+              autoFocus
+              rows={4}
+              maxLength={NOTE_MAX}
+              value={noteEdit.text}
+              placeholder="Ör. 45-70. sayfa · 40 soru · önce konu tekrarı"
+              onChange={(e) => setNoteEdit((n) => ({ ...n, text: e.target.value }))}
+            />
+            <span className={s.noteHint}>
+              Öğrenci bu notu görür, değiştiremez. Boş bırakırsanız açıklama silinir.
+            </span>
+          </Field>
+          <div className={s.assignActions}>
+            <Button variant="soft" onClick={() => setNoteEdit(null)}>Vazgeç</Button>
+            <Button onClick={saveNote}>Kaydet</Button>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -1472,7 +1534,8 @@ function draftBlockFields(draft, subjectMap, taskTypeMap) {
     const title = draft.externalTitle.trim();
     if (!title) return null;                       // dış blokta ad zorunlu
     const b = { kind: 'external', examScope: '', subject: '', subjectLabel: null,
-      type: '', typeName: null, topic: title, book: null, bookLabel: null };
+      type: '', typeName: null, topic: title, note: draft.note.trim(),
+      book: null, bookLabel: null };
     return { ...b, subjectColor: blockColor(b) };
   }
   const isExam = draft.kind === 'exam';
@@ -1490,6 +1553,9 @@ function draftBlockFields(draft, subjectMap, taskTypeMap) {
     type: isExam ? '' : draft.type,
     typeName: isExam ? null : tt?.name,
     topic: isExam ? '' : draft.topic,
+    // Yönerge her blok türünde anlamlı: denemede "TYT 1. deneme", çalışmada
+    // "45-70. sayfa", dış blokta "servis 07:40'ta".
+    note: draft.note.trim(),
     book: null,
     bookLabel: null,
   };
@@ -1507,6 +1573,7 @@ function blockFromPayload(payload) {
     type: payload.type,
     typeName: payload.typeName,
     topic: payload.topic,
+    note: payload.note ?? '',
     book: payload.book ?? null,
     bookLabel: payload.bookLabel ?? null,
   };
@@ -1514,7 +1581,7 @@ function blockFromPayload(payload) {
 
 /** Bir saat satırı. Hücre 15 dk'lık dört bırakma dilimine bölünür ki 20 dk'lık
  *  bloklar da saat başına oturmak zorunda kalmasın. */
-function HourRow({ hour, days, blocks, onRemove }) {
+function HourRow({ hour, days, blocks, onRemove, onEditNote }) {
   const from = hour * 60;
   return (
     <>
@@ -1529,6 +1596,7 @@ function HourRow({ hour, days, blocks, onRemove }) {
             (b) => b.dayIndex === day.index && b.startMin >= from && b.startMin < from + 60
           )}
           onRemove={onRemove}
+          onEditNote={onEditNote}
         />
       ))}
     </>
@@ -1537,13 +1605,16 @@ function HourRow({ hour, days, blocks, onRemove }) {
 
 const SLOTS_PER_HOUR = Math.round(60 / SLOT_MIN);
 
-function HourCell({ day, from, items, onRemove }) {
+function HourCell({ day, from, items, onRemove, onEditNote }) {
   return (
     <div className={s.cell} data-cell={`${day}:${from}`}>
       {Array.from({ length: SLOTS_PER_HOUR }, (_, i) => (
         <QuarterSlot key={i} day={day} startMin={from + i * SLOT_MIN} index={i} />
       ))}
-      {items.map((b) => <PlacedBlock key={b.id} block={b} hourStart={from} onRemove={onRemove} />)}
+      {items.map((b) => (
+        <PlacedBlock key={b.id} block={b} hourStart={from}
+                     onRemove={onRemove} onEditNote={onEditNote} />
+      ))}
     </div>
   );
 }
@@ -1611,7 +1682,8 @@ function ensureBlockValid(b) {
   return b;
 }
 
-function SubjectRow({ row, days, blocks, onRemove, editing, onRemoveRow, canRemoveRow, muted }) {
+function SubjectRow({ row, days, blocks, onRemove, onEditNote, editing, onRemoveRow,
+                     canRemoveRow, muted }) {
   return (
     <>
       <span className={`${s.rowLabel} ${muted ? s.rowMuted : ''}`} title={row.label}>
@@ -1642,13 +1714,14 @@ function SubjectRow({ row, days, blocks, onRemove, editing, onRemoveRow, canRemo
             .filter((b) => b.dayIndex === day.index && subjectRowKey(b) === row.key)
             .sort((a, b) => a.startMin - b.startMin)}
           onRemove={onRemove}
+          onEditNote={onEditNote}
         />
       ))}
     </>
   );
 }
 
-function SubjectCell({ dayIndex, rowKey, items, onRemove, muted }) {
+function SubjectCell({ dayIndex, rowKey, items, onRemove, onEditNote, muted }) {
   // Saat serbest: bu hücreye bırakılan blok o günün ilk boş dilimine yerleşir.
   const { setNodeRef, isOver } = useDroppable({ id: `${dayIndex}:row:${rowKey}` });
   return (
@@ -1657,7 +1730,9 @@ function SubjectCell({ dayIndex, rowKey, items, onRemove, muted }) {
       className={[s.subjCell, muted ? s.cellMuted : '', isOver && !muted ? s.cellOver : '']
         .filter(Boolean).join(' ')}
     >
-      {items.map((b) => <SubjectChip key={b.id} block={b} onRemove={onRemove} />)}
+      {items.map((b) => (
+        <SubjectChip key={b.id} block={b} onRemove={onRemove} onEditNote={onEditNote} />
+      ))}
     </div>
   );
 }
@@ -1669,7 +1744,7 @@ function chipText(b) {
   return b.topic || b.bookLabel || b.typeName || '—';
 }
 
-function SubjectChip({ block, onRemove }) {
+function SubjectChip({ block, onRemove, onEditNote }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
     data: {
@@ -1686,19 +1761,32 @@ function SubjectChip({ block, onRemove }) {
       ref={setNodeRef}
       className={`${s.chipBlock} ${isDragging ? s.blockDragging : ''}`}
       style={{ borderLeftColor: block.subjectColor }}
+      title={block.note || undefined}
       {...listeners}
       {...attributes}
     >
       <span className={s.chipLabel}>{chipText(block)}</span>
-      <button
-        type="button"
-        className={s.chipRemove}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => onRemove(block.id)}
-        aria-label={`${blockLabel(block)} — ${chipText(block)} bloğunu kaldır`}
-      >
-        <X size={10} />
-      </button>
+      <div className={s.chipActions}>
+        <button
+          type="button"
+          className={cx(s.chipBtn, block.note && s.chipBtnOn)}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onEditNote(block.id)}
+          title={block.note || 'Açıklama ekle'}
+          aria-label={`${blockLabel(block)} — ${chipText(block)} bloğunun açıklamasını düzenle`}
+        >
+          <StickyNote size={10} />
+        </button>
+        <button
+          type="button"
+          className={s.chipBtn}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onRemove(block.id)}
+          aria-label={`${blockLabel(block)} — ${chipText(block)} bloğunu kaldır`}
+        >
+          <X size={10} />
+        </button>
+      </div>
     </div>
   );
 }
@@ -1711,7 +1799,7 @@ function blockMetaText(b) {
   return `${b.bookLabel || b.typeName || ''}${b.topic ? ` · ${b.topic}` : ''}`;
 }
 
-function PlacedBlock({ block, hourStart, onRemove }) {
+function PlacedBlock({ block, hourStart, onRemove, onEditNote }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
     data: {
@@ -1745,6 +1833,7 @@ function PlacedBlock({ block, hourStart, onRemove }) {
         top: offset + 2,
         height: Math.max(height, 14),
       }}
+      title={block.note || undefined}
       {...listeners}
       {...attributes}
     >
@@ -1752,16 +1841,32 @@ function PlacedBlock({ block, hourStart, onRemove }) {
         {block.kind === 'external' ? '🚫 ' : block.book ? '📖 ' : ''}{label}
       </span>
       {block.durationMin >= 90 && meta && <span className={s.blockMeta}>{meta}</span>}
+      {/* Yönerge bloğun içinde okunabildiği kadar görünsün; tamamı `title`da. */}
+      {block.note && block.durationMin >= 60 && (
+        <span className={s.blockNote}>{block.note}</span>
+      )}
       {!isShort && <span className={s.blockTime}>{timeRange(block)}</span>}
-      <button
-        type="button"
-        className={s.blockRemove}
-        onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => onRemove(block.id)}
-        aria-label={`${label} bloğunu kaldır`}
-      >
-        <X size={11} />
-      </button>
+      <div className={s.blockActions}>
+        <button
+          type="button"
+          className={cx(s.blockBtn, block.note && s.blockBtnOn)}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onEditNote(block.id)}
+          title={block.note || 'Açıklama ekle'}
+          aria-label={`${label} bloğunun açıklamasını düzenle`}
+        >
+          <StickyNote size={11} />
+        </button>
+        <button
+          type="button"
+          className={s.blockBtn}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={() => onRemove(block.id)}
+          aria-label={`${label} bloğunu kaldır`}
+        >
+          <X size={11} />
+        </button>
+      </div>
     </div>
   );
 }

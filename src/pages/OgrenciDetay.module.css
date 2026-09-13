@@ -483,8 +483,29 @@
   background: color-mix(in srgb, var(--success) 12%, var(--bg-card));
 }
 .blockDone .blockSubject { text-decoration: line-through; text-decoration-thickness: 1px; }
+
+/* "Yarısı tamamlandı": tamamlananla aynı yeşil değil — bakışta ayrılmalı.
+   Üstü çizilmiyor, çünkü iş bitmedi. */
+.blockHalf {
+  background: color-mix(in srgb, var(--warning) 12%, var(--bg-card));
+}
+
 .blockLocked { opacity: 0.85; }
 .blockTime { display: flex; align-items: center; gap: 3px; }
+
+/* Rehberin yönergesi: bloğun altında, ikinci derece. En fazla iki satır;
+   tamamı düğmenin `title`ında. */
+.blockNote {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  color: var(--text-muted);
+  font-style: italic;
+}
 
 /* ---------- Konu Takibi ---------- */
 .konuBar {

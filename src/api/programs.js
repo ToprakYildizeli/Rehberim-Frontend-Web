@@ -100,9 +100,11 @@ function mapTaskToBlock(task, startDate) {
     type: task.task_type != null ? String(task.task_type) : '',
     typeName: task.task_type_name,
     topic: task.title || '',
+    note: task.description || '',
     book: task.book != null ? task.book : null,
     bookLabel: task.book_label || null,
-    isCompleted: !!task.is_completed,
+    completion: task.completion || 'none',
+    isCompleted: task.completion === 'done',
   };
   return { ...b, subjectColor: blockColor(b) };
 }
@@ -117,6 +119,9 @@ export function blockToTaskPayload(b, startDate) {
     task_type: !isExternal && b.type ? Number(b.type) : null,
     book: !isExternal && b.book ? Number(b.book) : null,
     title: b.topic || '',
+    // Rehberin yönergesi ("45-70. sayfa", "40 soru"). Öğrenci yazamaz; bu yüzden
+    // her kaydetmede gönderiyoruz, boşa dönmesi de bir silme isteğidir.
+    description: b.note || '',
     date: addDays(startDate, b.dayIndex),
     start_time: fmtMin(b.startMin),
     duration_minutes: b.durationMin,
@@ -234,10 +239,26 @@ export async function getComplianceHistory(studentId) {
   };
 }
 
-/** Bir görevi tamamlandı/tamamlanmadı işaretler (rehber, onay öncesi düzeltme). */
-export async function setTaskCompleted(taskId, isCompleted) {
-  const { data } = await api.patch(`/tasks/${taskId}/`, { is_completed: isCompleted });
-  return !!data.is_completed;
+/** Görevin tamamlanma durumu: yapılmadı → yarısı → tamamlandı → yapılmadı.
+ *  Öğrenci mobilde işaretliyor; rehber onay öncesi buradan düzeltiyor. */
+export const COMPLETION_STATES = ['none', 'half', 'done'];
+
+export const COMPLETION_LABEL = {
+  none: 'Yapılmadı',
+  half: 'Yarısı tamamlandı',
+  done: 'Tamamlandı',
+};
+
+/** Bir sonraki durum (üçlü döngü). */
+export function nextCompletion(state) {
+  const i = COMPLETION_STATES.indexOf(state || 'none');
+  return COMPLETION_STATES[(i + 1) % COMPLETION_STATES.length];
+}
+
+/** Görevi verilen duruma getirir; backend'in yazdığı durumu geri döner. */
+export async function setTaskCompletion(taskId, completion) {
+  const { data } = await api.patch(`/tasks/${taskId}/`, { completion });
+  return data.completion || 'none';
 }
 
 /** Tek programın güncel uyum özetini çeker — görev işaretlendikten sonra yüzdeyi
@@ -313,7 +334,8 @@ export async function persistStudentSchedule(studentId, nextBlocks, win) {
   const changed = (a, b) =>
     a.dayIndex !== b.dayIndex || a.startMin !== b.startMin || a.durationMin !== b.durationMin ||
     a.subject !== b.subject || a.type !== b.type || a.topic !== b.topic ||
-    a.book !== b.book || a.kind !== b.kind || a.examScope !== b.examScope;
+    a.book !== b.book || a.kind !== b.kind || a.examScope !== b.examScope ||
+    a.note !== b.note;
 
   const nextIds = new Set(nextBlocks.map((b) => b.id));
   // Silinenler

@@ -320,7 +320,7 @@
   font-size: 0.68rem;
   font-weight: 700;
   line-height: 1.2;
-  padding-right: 12px;
+  padding-right: 28px;   /* iki eylem düğmesi: açıklama + kaldır */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -341,23 +341,6 @@
   margin-top: auto;
   font-weight: 600;
 }
-
-.blockRemove {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  background: transparent;
-  border: none;
-  color: #fff;
-  opacity: 0.75;
-  cursor: pointer;
-  padding: 1px;
-  display: flex;
-  border-radius: 3px;
-  z-index: 3;
-}
-
-.blockRemove:hover { opacity: 1; background: rgba(0, 0, 0, 0.2); }
 
 /* ---------- Right rail ---------- */
 /* Başlık kalkınca üstte boşluk kaldı; kart dolgusunu daraltıp içeriği yukarı çek. */
@@ -742,7 +725,7 @@
   background: var(--bg-alt);
   border-left: 3px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 3px 16px 3px 5px;
+  padding: 3px 30px 3px 5px;
   font-size: 0.62rem;
   color: var(--text-secondary);
   cursor: grab;
@@ -753,21 +736,6 @@
 .chipBlock:active { cursor: grabbing; }
 
 .chipLabel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.chipRemove {
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  background: transparent;
-  border: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 1px;
-  display: flex;
-  border-radius: 3px;
-}
-
-.chipRemove:hover { color: var(--error); background: var(--error-bg); }
 
 /* Ders satırı başlığı: ad + satırı gizleme düğmesi */
 .rowName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -874,3 +842,76 @@
     min-height: 0;
   }
 }
+
+/* `.railForm` tek sütunlu bir flex sütunu; yönerge alanı ekstra bir yerleşim
+   kuralı istemiyor, yalnız altındaki açıklama satırı susturuluyor. */
+.noteHint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.73rem;
+  color: var(--text-muted);
+}
+
+/* Blok üzerindeki eylemler (açıklama + kaldır). Sağ üstte tek bir sıra;
+   önceden yalnız kaldırma vardı ve mutlak konumluydu — ikinci düğme eklenince
+   üst üste biniyordu. */
+.blockActions {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  display: flex;
+  gap: 1px;
+  z-index: 3;
+}
+
+.blockBtn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 1px;
+  display: flex;
+  border-radius: 3px;
+}
+
+.blockBtn:hover { opacity: 1; background: rgba(0, 0, 0, 0.2); }
+
+/* Yönergesi olan blokta simge sürekli görünür — tahtaya bakınca hangi bloğun
+   talimat taşıdığı anlaşılmalı. */
+.blockBtnOn { opacity: 1; background: rgba(0, 0, 0, 0.25); }
+
+/* Bloğun içinde okunan yönerge: en fazla iki satır, gerisi `title`da. */
+.blockNote {
+  font-size: 0.62rem;
+  line-height: 1.25;
+  opacity: 0.9;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  padding-right: 12px;
+}
+
+/* Ders satırlı görünümdeki çipin karşılığı. */
+.chipActions {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: flex;
+  gap: 1px;
+}
+
+.chipBtn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 1px;
+  display: flex;
+  border-radius: 3px;
+}
+
+.chipBtn:hover { color: var(--text); background: var(--bg-alt); }
+.chipBtnOn { color: var(--accent-text); }

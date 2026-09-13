@@ -19,6 +19,7 @@ function blockToTask(b, startDate) {
     task_type: !isExternal && b.type ? Number(b.type) : null,
     book: !isExternal && b.book ? Number(b.book) : null,
     title: b.topic || '',
+    description: b.note || '',
     weekday: weekdayOf(addDays(startDate, b.dayIndex)),
     start_time: fmtMin(b.startMin),
     duration_minutes: b.durationMin,
@@ -50,6 +51,7 @@ export function templateToBlocks(tpl, startDate, dayCount = DEFAULT_DAY_COUNT) {
       type: t.task_type != null ? String(t.task_type) : '',
       typeName: t.task_type_name,
       topic: t.title || '',
+      note: t.description || '',
       book: t.book != null ? t.book : null,
       bookLabel: t.book_label || null,
     };
