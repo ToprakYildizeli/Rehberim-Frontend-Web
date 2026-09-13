@@ -12,7 +12,6 @@ import CatalogSection from '../components/settings/CatalogSection';
 import DangerZoneSection from '../components/settings/DangerZoneSection';
 import PreferencesSection from '../components/settings/PreferencesSection';
 import ParentInvitesSection from '../components/settings/ParentInvitesSection';
-import ParentAccessSection from '../components/settings/ParentAccessSection';
 import StudentsSection from '../components/settings/StudentsSection';
 import {
   createPublisher, createTaskType, deletePublisher, deleteTaskType,
@@ -221,9 +220,6 @@ export default function Ayarlar() {
               kümeleri olduğu için yan yana sığıyor. */}
           <div className={s.wide}><StudentsSection /></div>
           <div className={s.wide}><ParentInvitesSection /></div>
-          {/* Davet izinleri başlangıç değeridir; bağlanmış velininki burada
-              sonradan değiştirilir. */}
-          <div className={s.wide}><ParentAccessSection /></div>
           <div className={s.wide}><AchievementsSection /></div>
           <CatalogSection
             title="Çalışma türleri"
