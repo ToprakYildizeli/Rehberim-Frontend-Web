@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, UserMinus, Users } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Copy, UserMinus, Users, X } from 'lucide-react';
 import { Card, CardHeader, Button, Avatar, Input, Spinner, Modal } from '../ui';
 import { listStudents, removeStudent } from '../../api/students';
 import {
-  listParentAccesses, updateParentAccess, PARENT_SCOPES,
+  listParentAccesses, updateParentAccess, listParentInvites, deleteParentInvite,
+  PARENT_SCOPES,
 } from '../../api/parentInvites';
 import Toggle from './Toggle';
 import s from './settings.module.css';
@@ -22,6 +23,11 @@ import s from './settings.module.css';
  * satır içinde açılan panel sekiz anahtarla listeyi ikiye katlıyor ve
  * altındaki öğrenciler ekrandan taşıyordu.
  *
+ * Pencere iki tür satır gösterir: **bağlanmış veli** (izin anahtarlarıyla) ve
+ * **bekleyen davet** (kod + kime verildiği + açılacak ekranlar). Sayaç ikisini
+ * birlikte sayar; hoca "bu öğrencinin velisi var mı" diye sorduğunda henüz
+ * hesabını açmamış olan da bir cevaptır.
+ *
  * Çıkarma **silme değildir**: sunucu yalnızca `Student.counselor`'ı boşaltır,
  * öğrencinin hesabı/programları/denemeleri yerinde kalır ve başka bir rehberin
  * davet koduyla yeniden bağlanabilir. Onay kutusundaki metin bunu açıkça
@@ -33,7 +39,9 @@ export default function StudentsSection() {
   const [students, setStudents] = useState(null);
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState('');
-  const [accesses, setAccesses] = useState([]);      // tüm veli bağlantıları
+  const [accesses, setAccesses] = useState([]);      // bağlanmış veliler
+  const [invites, setInvites] = useState([]);        // bekleyen davetler
+  const [copied, setCopied] = useState(null);
   const [parentsOpen, setParentsOpen] = useState(null);  // veli penceresi açık öğrenci
   const [pending, setPending] = useState(null);     // çıkarılmak üzere seçilen öğrenci
   const [busy, setBusy] = useState(false);
@@ -53,6 +61,11 @@ export default function StudentsSection() {
     // on öğrencide on istek ederdi.
     listParentAccesses()
       .then((rows) => alive && setAccesses(rows))
+      .catch(() => {});
+    // Bekleyen davetler de veli sayılıyor: kod verilmiş ama hesap henüz
+    // açılmamış olabilir.
+    listParentInvites()
+      .then((rows) => alive && setInvites(rows.filter((x) => !x.isUsed)))
       .catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -77,6 +90,28 @@ export default function StudentsSection() {
 
   /** O öğrenciye bağlı veliler. */
   const parentsOf = (studentId) => accesses.filter((a) => a.studentId === studentId);
+  /** O öğrenci için kullanılmayı bekleyen davetler. */
+  const invitesOf = (studentId) => invites.filter((i) => i.studentId === studentId);
+
+  async function copyCode(code) {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(code);
+      setTimeout(() => setCopied(null), 2000);
+    } catch {
+      setCopied(null);
+    }
+  }
+
+  async function revokeInvite(id) {
+    setError(null);
+    try {
+      await deleteParentInvite(id);
+      setInvites((prev) => prev.filter((x) => x.id !== id));
+    } catch (err) {
+      setError(err?.response?.data?.detail ?? 'Davet iptal edilemedi.');
+    }
+  }
 
   async function toggleScope(row, key, value) {
     const previous = row.scopes[key];
@@ -135,6 +170,8 @@ export default function StudentsSection() {
         <ul className={s.rows}>
           {visible.map((st) => {
             const parents = parentsOf(st.id);
+            const waiting = invitesOf(st.id);
+            const total = parents.length + waiting.length;
             return (
               <li key={st.id} className={s.studentItem}>
                 <div className={s.row}>
@@ -148,10 +185,10 @@ export default function StudentsSection() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    disabled={parents.length === 0}
+                    disabled={total === 0}
                     onClick={() => setParentsOpen(st)}
                   >
-                    <Users size={14} /> Veliler ({parents.length})
+                    <Users size={14} /> Veliler ({total})
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => setPending(st)}>
                     <UserMinus size={14} /> Çıkar
@@ -196,6 +233,37 @@ export default function StudentsSection() {
           Velinin görebileceği ekranlar. Değişiklik <strong>anında</strong>
           {' '}yürürlüğe girer.
         </p>
+
+        {/* Kodu verilmiş ama hesabı henüz açılmamış davetler. İzinleri burada
+            değiştirilemez: davet kullanıldığı anda kopyalanıyor ve arada
+            değiştirmek, bağlanacak velinin kapsamını habersiz kaydırırdı.
+            Gerekirse iptal edilip yenisi açılır. */}
+        {parentsOpen && invitesOf(parentsOpen.id).map((inv) => (
+          <div key={`inv-${inv.id}`} className={s.accessRow}>
+            <div className={s.accessHead}>
+              <span className={s.rowTitle}>
+                {inv.label || 'Veli'}
+                <span className={s.rowLabel}> · kullanılmayı bekliyor</span>
+              </span>
+              <code className={s.inviteCode}>{inv.code}</code>
+            </div>
+            <p className={s.rowHint}>
+              Hesap açılınca şu ekranlar açılacak:{' '}
+              {PARENT_SCOPES.filter(({ key }) => inv.scopes[key])
+                .map(({ label }) => label).join(', ') || 'hiçbiri'}
+            </p>
+            <div className={s.rowActions}>
+              <Button variant="ghost" size="sm" onClick={() => copyCode(inv.code)}>
+                {copied === inv.code ? <Check size={14} /> : <Copy size={14} />}
+                {copied === inv.code ? 'Kopyalandı' : 'Kodu kopyala'}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => revokeInvite(inv.id)}>
+                <X size={14} /> Daveti iptal et
+              </Button>
+            </div>
+          </div>
+        ))}
+
         {parentsOpen && parentsOf(parentsOpen.id).map((row) => (
           <div key={row.id} className={s.accessRow}>
             <div className={s.accessHead}>

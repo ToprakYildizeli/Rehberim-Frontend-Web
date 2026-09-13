@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy, Plus, X } from 'lucide-react';
-import { Card, CardHeader, Button, Field, Input, Select, Spinner, Badge } from '../ui';
+import { Card, CardHeader, Button, Field, Input, Select, Spinner } from '../ui';
 import Toggle from './Toggle';
 import { listStudents } from '../../api/students';
 import {
@@ -16,8 +16,10 @@ import s from './settings.module.css';
  * kendi hesabını açar. Böylece rehber velinin şifresini hiçbir zaman bilmez.
  * Kod tek kullanımlıktır ve kullanılmadan önce iptal edilebilir.
  *
- * Kullanılmış davetler listede kalır (silinemez): hangi velinin hangi davetle
- * geldiği kaydı, sonradan "bu veli nereden bağlandı" sorusunun tek cevabı.
+ * **Listede yalnız bekleyen davetler var** (13 Eyl 2026): kullanılmış davetler
+ * birikip listeyi kalabalıklaştırıyor, bekleyen kodu bulmayı zorlaştırıyordu.
+ * Kayıt sunucuda duruyor (silinmiyor); bağlanmış veli zaten Öğrencilerim
+ * listesinde, kendi öğrencisinin satırında görünüyor.
  *
  * **Her veli aynı değil (13 Eyl 2026, hocanın isteği).** Davet kurulurken o
  * velinin hangi ekranları göreceği tek tek seçiliyor; seçim davet kullanıldığı
@@ -52,7 +54,9 @@ export default function ParentInvitesSection() {
       .then(([st, inv]) => {
         if (!alive) return;
         setStudents(st);
-        setInvites(inv);
+        // Kullanılmışlar ayıklanıyor: bu kart "hangi kod kimi bekliyor"
+        // sorusunu cevaplıyor, geçmiş kaydı değil.
+        setInvites(inv.filter((x) => !x.isUsed));
       })
       .catch(() => alive && setInvites([]));
     return () => { alive = false; };
@@ -170,40 +174,30 @@ export default function ParentInvitesSection() {
       {invites === null ? (
         <div className={s.loading}><Spinner /></div>
       ) : invites.length === 0 ? (
-        <p className={s.note}>Henüz veli daveti oluşturmadınız.</p>
+        <p className={s.note}>Kullanılmayı bekleyen davet yok.</p>
       ) : (
         <ul className={s.rows}>
           {invites.map((inv) => (
             <li key={inv.id} className={s.row}>
-              <code className={`${s.inviteCode} ${inv.isUsed ? s.inviteCodeUsed : ''}`}>
-                {inv.code}
-              </code>
+              <code className={s.inviteCode}>{inv.code}</code>
               <div className={s.rowMain}>
                 <p className={s.rowTitle}>
                   {inv.studentName}
                   {inv.label && <span className={s.rowLabel}> · {inv.label}</span>}
                 </p>
                 <p className={s.rowHint}>
-                  {inv.isUsed
-                    ? `${inv.usedByName ?? 'Bir veli'} kullandı`
-                    : 'Kullanılmayı bekliyor'}
-                  {' · '}
-                  {scopeSummary(inv.scopes)}
+                  Kullanılmayı bekliyor · {scopeSummary(inv.scopes)}
                 </p>
               </div>
-              {inv.isUsed ? (
-                <Badge tone="success">Kullanıldı</Badge>
-              ) : (
-                <div className={s.rowActions}>
-                  <Button variant="ghost" size="sm" onClick={() => copy(inv.code)}>
-                    {copied === inv.code ? <Check size={14} /> : <Copy size={14} />}
-                    {copied === inv.code ? 'Kopyalandı' : 'Kopyala'}
-                  </Button>
-                  <Button variant="ghost" size="sm" onClick={() => revoke(inv.id)}>
-                    <X size={14} /> İptal
-                  </Button>
-                </div>
-              )}
+              <div className={s.rowActions}>
+                <Button variant="ghost" size="sm" onClick={() => copy(inv.code)}>
+                  {copied === inv.code ? <Check size={14} /> : <Copy size={14} />}
+                  {copied === inv.code ? 'Kopyalandı' : 'Kopyala'}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => revoke(inv.id)}>
+                  <X size={14} /> İptal
+                </Button>
+              </div>
             </li>
           ))}
         </ul>
