@@ -229,10 +229,14 @@ export default function StudentsSection() {
           bir kaydet adımı yok (Tercihler'le aynı yaklaşım). */}
       <Modal open={!!parentsOpen} onClose={() => setParentsOpen(null)} width={620}>
         <h3 className={s.modalTitle}>{parentsOpen?.name} · veliler</h3>
-        <p className={s.modalText}>
-          Velinin görebileceği ekranlar. Değişiklik <strong>anında</strong>
-          {' '}yürürlüğe girer.
-        </p>
+        {/* Açıklama yalnız bağlanmış veli varken: anahtarların ne yaptığını
+            anlatıyor. Bekleyen davette anahtar yok, orada gereksiz. */}
+        {parentsOpen && parentsOf(parentsOpen.id).length > 0 && (
+          <p className={s.modalText}>
+            Velinin görebileceği ekranlar. Değişiklik <strong>anında</strong>
+            {' '}yürürlüğe girer.
+          </p>
+        )}
 
         {/* Kodu verilmiş ama hesabı henüz açılmamış davetler. İzinleri burada
             değiştirilemez: davet kullanıldığı anda kopyalanıyor ve arada
@@ -240,18 +244,13 @@ export default function StudentsSection() {
             Gerekirse iptal edilip yenisi açılır. */}
         {parentsOpen && invitesOf(parentsOpen.id).map((inv) => (
           <div key={`inv-${inv.id}`} className={s.accessRow}>
+            {/* Bekleyen davette gösterilecek tek şey yakınlık ve kod: hangi
+                ekranların açılacağı davet kurulurken seçildi, burada
+                değiştirilemiyor — okumak için tekrar yazmak kalabalık. */}
             <div className={s.accessHead}>
-              <span className={s.rowTitle}>
-                {inv.label || 'Veli'}
-                <span className={s.rowLabel}> · kullanılmayı bekliyor</span>
-              </span>
+              <span className={s.rowTitle}>{inv.label || 'Veli'}</span>
               <code className={s.inviteCode}>{inv.code}</code>
             </div>
-            <p className={s.rowHint}>
-              Hesap açılınca şu ekranlar açılacak:{' '}
-              {PARENT_SCOPES.filter(({ key }) => inv.scopes[key])
-                .map(({ label }) => label).join(', ') || 'hiçbiri'}
-            </p>
             <div className={s.rowActions}>
               <Button variant="ghost" size="sm" onClick={() => copyCode(inv.code)}>
                 {copied === inv.code ? <Check size={14} /> : <Copy size={14} />}
