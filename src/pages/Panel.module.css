@@ -469,8 +469,12 @@ button.row:hover { background: var(--bg-alt); }
 /* Kıyaslama */
 .cmpHead {
   display: flex; align-items: center; justify-content: space-between;
-  gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4);
+  gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4);
 }
+/* Başlık daralsın, denetimler bütün olarak kalsın: ikisi eşit esnerse
+   dropdown'lar önce kırpılıyordu. */
+.cmpHead > div:first-child { flex: 0 1 auto; min-width: 0; }
+.cmpHead > .cmpControls { flex: 1 1 auto; justify-content: flex-end; }
 .cmpTitle { display: flex; align-items: center; gap: 6px; font-size: 0.98rem; font-weight: 700; margin: 0; color: var(--text); }
 .rankList { display: flex; flex-direction: column; gap: 4px; }
 .rankRow {
@@ -557,8 +561,14 @@ button.row:hover { background: var(--bg-alt); }
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
+  /* Tek satır: sarınca kart başlığı iki katına çıkıp grafiği aşağı itiyordu.
+     Sığmadığında sarmak yerine denetimler küçülüyor; gerçekten yer kalmazsa
+     satır kendi içinde yatay kayıyor (kartı taşırmıyor). */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
   min-width: 0;
+  padding-bottom: 2px;
 }
 /* Dropdown'lar içeriğe göre daralabilir: sabit genişlik altı denetimde
    satırı taşırıyordu. 96px "TYT Fen" gibi en uzun etiketin okunur kaldığı
@@ -576,9 +586,14 @@ button.row:hover { background: var(--bg-alt); }
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   min-width: 0;
 }
+
+/* Kıyaslama başlığındaki haplar daraltıldı: altı denetim yan yana dururken
+   14px yatay dolgu satırı taşırıyordu. Yükseklik dropdown'larla aynı kalsın
+   diye dikey dolguya dokunulmadı. */
+.cmpControls button { white-space: nowrap; padding-inline: 9px; font-size: 0.74rem; }
 
 /* Grafik öğrenci seçicisi.
    Altmış öğrencili bir rehberde eski hâli (hepsi chip, hepsi çizgili)
