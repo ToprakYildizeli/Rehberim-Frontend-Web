@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, UserMinus, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, UserMinus, Users } from 'lucide-react';
 import { Card, CardHeader, Button, Avatar, Input, Spinner, Modal } from '../ui';
 import { listStudents, removeStudent } from '../../api/students';
 import {
@@ -18,8 +18,9 @@ import s from './settings.module.css';
  *
  * **Velinin izinleri de burada** (13 Eyl 2026): ayrı bir "Bağlı veliler"
  * kartı vardı, aynı bilgi iki yere dağılıyordu. Öğrencinin satırındaki
- * "Veliler" düğmesi o öğrencinin velilerini açıyor ve izinleri oradan
- * değiştiriliyor.
+ * "Veliler" düğmesi bir pencere açıyor, izinler orada değiştiriliyor —
+ * satır içinde açılan panel sekiz anahtarla listeyi ikiye katlıyor ve
+ * altındaki öğrenciler ekrandan taşıyordu.
  *
  * Çıkarma **silme değildir**: sunucu yalnızca `Student.counselor`'ı boşaltır,
  * öğrencinin hesabı/programları/denemeleri yerinde kalır ve başka bir rehberin
@@ -33,7 +34,7 @@ export default function StudentsSection() {
   const [page, setPage] = useState(0);
   const [query, setQuery] = useState('');
   const [accesses, setAccesses] = useState([]);      // tüm veli bağlantıları
-  const [openStudent, setOpenStudent] = useState(null);   // veli paneli açık olan
+  const [parentsOpen, setParentsOpen] = useState(null);  // veli penceresi açık öğrenci
   const [pending, setPending] = useState(null);     // çıkarılmak üzere seçilen öğrenci
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -134,7 +135,6 @@ export default function StudentsSection() {
         <ul className={s.rows}>
           {visible.map((st) => {
             const parents = parentsOf(st.id);
-            const open = openStudent === st.id;
             return (
               <li key={st.id} className={s.studentItem}>
                 <div className={s.row}>
@@ -149,43 +149,15 @@ export default function StudentsSection() {
                     variant="ghost"
                     size="sm"
                     disabled={parents.length === 0}
-                    onClick={() => setOpenStudent(open ? null : st.id)}
+                    onClick={() => setParentsOpen(st)}
                   >
                     <Users size={14} /> Veliler ({parents.length})
-                    {parents.length > 0 && (
-                      <ChevronDown
-                        size={14}
-                        className={open ? s.caretOpen : s.caret}
-                      />
-                    )}
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => setPending(st)}>
                     <UserMinus size={14} /> Çıkar
                   </Button>
                 </div>
 
-                {open && parents.map((row) => (
-                  <div key={row.id} className={s.accessRow}>
-                    <div className={s.accessHead}>
-                      <span className={s.rowTitle}>
-                        {row.parentName}
-                        {row.label && <span className={s.rowLabel}> · {row.label}</span>}
-                      </span>
-                      <span className={s.rowHint}>Görebildiği ekranlar</span>
-                    </div>
-                    <ul className={s.scopeList}>
-                      {PARENT_SCOPES.map(({ key, label }) => (
-                        <li key={key}>
-                          <Toggle
-                            checked={row.scopes[key]}
-                            onChange={(v) => toggleScope(row, key, v)}
-                            label={label}
-                          />
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ))}
               </li>
             );
           })}
@@ -215,6 +187,41 @@ export default function StudentsSection() {
           </Button>
         </div>
       )}
+
+      {/* Veli izinleri penceresi: anahtarlara dokunmak anında yazıyor, ayrı
+          bir kaydet adımı yok (Tercihler'le aynı yaklaşım). */}
+      <Modal open={!!parentsOpen} onClose={() => setParentsOpen(null)} width={620}>
+        <h3 className={s.modalTitle}>{parentsOpen?.name} · veliler</h3>
+        <p className={s.modalText}>
+          Velinin görebileceği ekranlar. Değişiklik <strong>anında</strong>
+          {' '}yürürlüğe girer.
+        </p>
+        {parentsOpen && parentsOf(parentsOpen.id).map((row) => (
+          <div key={row.id} className={s.accessRow}>
+            <div className={s.accessHead}>
+              <span className={s.rowTitle}>
+                {row.parentName}
+                {row.label && <span className={s.rowLabel}> · {row.label}</span>}
+              </span>
+            </div>
+            <ul className={s.scopeList}>
+              {PARENT_SCOPES.map(({ key, label }) => (
+                <li key={key}>
+                  <Toggle
+                    checked={row.scopes[key]}
+                    onChange={(v) => toggleScope(row, key, v)}
+                    label={label}
+                  />
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        {error && <p className={s.error}>{error}</p>}
+        <div className={s.modalActions}>
+          <Button variant="ghost" onClick={() => setParentsOpen(null)}>Kapat</Button>
+        </div>
+      </Modal>
 
       <Modal open={!!pending} onClose={() => !busy && setPending(null)} width={440}>
         <h3 className={s.modalTitle}>{pending?.name} listenizden çıkarılsın mı?</h3>

@@ -502,5 +502,3 @@
 /* Öğrenci satırı + altında açılan veli izinleri paneli. */
 .studentItem { display: grid; gap: 10px; }
 .searchRow { margin-bottom: 12px; max-width: 320px; }
-.caret { transition: transform 0.15s ease; }
-.caretOpen { transform: rotate(180deg); transition: transform 0.15s ease; }
