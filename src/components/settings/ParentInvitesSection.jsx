@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Check, Copy, Plus, X } from 'lucide-react';
-import { Card, CardHeader, Button, Field, Input, Select, Spinner } from '../ui';
+import { Check, Copy, Plus } from 'lucide-react';
+import { Card, CardHeader, Button, Field, Input, Select, Modal } from '../ui';
 import Toggle from './Toggle';
 import { listStudents } from '../../api/students';
 import {
-  createParentInvite, deleteParentInvite, listParentInvites,
-  PARENT_SCOPES, ALL_SCOPES_ON, ALL_SCOPES_OFF,
+  createParentInvite, PARENT_SCOPES, ALL_SCOPES_ON, ALL_SCOPES_OFF,
 } from '../../api/parentInvites';
 import s from './settings.module.css';
 
@@ -16,10 +15,11 @@ import s from './settings.module.css';
  * kendi hesabını açar. Böylece rehber velinin şifresini hiçbir zaman bilmez.
  * Kod tek kullanımlıktır ve kullanılmadan önce iptal edilebilir.
  *
- * **Listede yalnız bekleyen davetler var** (13 Eyl 2026): kullanılmış davetler
- * birikip listeyi kalabalıklaştırıyor, bekleyen kodu bulmayı zorlaştırıyordu.
- * Kayıt sunucuda duruyor (silinmiyor); bağlanmış veli zaten Öğrencilerim
- * listesinde, kendi öğrencisinin satırında görünüyor.
+ * **Burada liste yok** (13 Eyl 2026): bekleyen davetler de bağlanmış veliler
+ * de Öğrencilerim listesinde, kendi öğrencisinin satırındaki "Veliler"
+ * penceresinde duruyor. Aynı bilgiyi iki yerde göstermek, hangisinin güncel
+ * olduğunu sorduruyordu. Bu kart yalnız yeni davet **kurar**; kurulan kod
+ * bir kere, pencerede gösterilir.
  *
  * **Her veli aynı değil (13 Eyl 2026, hocanın isteği).** Davet kurulurken o
  * velinin hangi ekranları göreceği tek tek seçiliyor; seçim davet kullanıldığı
@@ -27,18 +27,9 @@ import s from './settings.module.css';
  * değiştirilemez — davet dururken izin değiştirmek, bağlanmış velinin
  * erişimini habersiz kaydırırdı; gerekirse davet iptal edilip yenisi açılır.
  */
-/** "8 ekranın 3'ü" gibi kısa bir özet; hangileri olduğu satıra sığmıyor.
- *  Hepsi açıksa sayı yerine tek kelime — en sık durum bu. */
-function scopeSummary(scopes) {
-  const acik = PARENT_SCOPES.filter(({ key }) => scopes?.[key]).length;
-  if (acik === PARENT_SCOPES.length) return 'tüm ekranlar';
-  if (acik === 0) return 'hiçbir ekran';
-  return `${acik}/${PARENT_SCOPES.length} ekran`;
-}
-
-export default function ParentInvitesSection() {
+export default function ParentInvitesSection({ onCreated }) {
   const [students, setStudents] = useState([]);
-  const [invites, setInvites] = useState(null);
+  const [created, setCreated] = useState(null);   // yeni kurulan davet (pencere)
   const [studentId, setStudentId] = useState('');
   const [label, setLabel] = useState('');
   // Form kapalı başlıyor: rehber ne paylaşacağını bilerek seçsin, farkında
@@ -50,15 +41,9 @@ export default function ParentInvitesSection() {
 
   useEffect(() => {
     let alive = true;
-    Promise.all([listStudents(), listParentInvites()])
-      .then(([st, inv]) => {
-        if (!alive) return;
-        setStudents(st);
-        // Kullanılmışlar ayıklanıyor: bu kart "hangi kod kimi bekliyor"
-        // sorusunu cevaplıyor, geçmiş kaydı değil.
-        setInvites(inv.filter((x) => !x.isUsed));
-      })
-      .catch(() => alive && setInvites([]));
+    listStudents()
+      .then((st) => alive && setStudents(st))
+      .catch(() => {});
     return () => { alive = false; };
   }, []);
 
@@ -67,10 +52,14 @@ export default function ParentInvitesSection() {
     setBusy(true);
     setError(null);
     try {
-      const created = await createParentInvite(Number(studentId), label.trim(), scopes);
-      setInvites((prev) => [created, ...(prev ?? [])]);
+      const yeni = await createParentInvite(Number(studentId), label.trim(), scopes);
+      // Kod bir kere burada gösteriliyor; sonrası Öğrencilerim listesinde.
+      setCreated(yeni);
       setLabel('');
       setScopes(ALL_SCOPES_OFF);
+      // Üstteki öğrenci listesi bekleyen davetleri de sayıyor; yeni kodun
+      // orada görünmesi için sayfa yenilemek gerekmesin.
+      onCreated?.(yeni);
     } catch (err) {
       const data = err?.response?.data;
       setError(
@@ -79,16 +68,6 @@ export default function ParentInvitesSection() {
       );
     } finally {
       setBusy(false);
-    }
-  }
-
-  async function revoke(id) {
-    setError(null);
-    try {
-      await deleteParentInvite(id);
-      setInvites((prev) => prev.filter((x) => x.id !== id));
-    } catch (err) {
-      setError(err?.response?.data?.detail ?? 'Davet iptal edilemedi.');
     }
   }
 
@@ -171,37 +150,24 @@ export default function ParentInvitesSection() {
 
       {error && <p className={s.error}>{error}</p>}
 
-      {invites === null ? (
-        <div className={s.loading}><Spinner /></div>
-      ) : invites.length === 0 ? (
-        <p className={s.note}>Kullanılmayı bekleyen davet yok.</p>
-      ) : (
-        <ul className={s.rows}>
-          {invites.map((inv) => (
-            <li key={inv.id} className={s.row}>
-              <code className={s.inviteCode}>{inv.code}</code>
-              <div className={s.rowMain}>
-                <p className={s.rowTitle}>
-                  {inv.studentName}
-                  {inv.label && <span className={s.rowLabel}> · {inv.label}</span>}
-                </p>
-                <p className={s.rowHint}>
-                  Kullanılmayı bekliyor · {scopeSummary(inv.scopes)}
-                </p>
-              </div>
-              <div className={s.rowActions}>
-                <Button variant="ghost" size="sm" onClick={() => copy(inv.code)}>
-                  {copied === inv.code ? <Check size={14} /> : <Copy size={14} />}
-                  {copied === inv.code ? 'Kopyalandı' : 'Kopyala'}
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => revoke(inv.id)}>
-                  <X size={14} /> İptal
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* Kurulan davet bir kere burada gösteriliyor: kod ekrandan kaybolmadan
+          kopyalansın. Sonrası Öğrencilerim listesinde, öğrencinin satırında. */}
+      <Modal open={!!created} onClose={() => setCreated(null)} width={420}>
+        <h3 className={s.modalTitle}>Davet oluşturuldu</h3>
+        <div className={s.inviteSummary}>
+          <span className={s.rowTitle}>{created?.studentName}</span>
+          {created?.label && <span className={s.rowHint}>{created.label}</span>}
+          <code className={s.inviteCodeBig}>{created?.code}</code>
+        </div>
+        <div className={s.modalActions}>
+          <Button variant="ghost" onClick={() => copy(created.code)}>
+            {copied === created?.code ? <Check size={14} /> : <Copy size={14} />}
+            {copied === created?.code ? 'Kopyalandı' : 'Kodu kopyala'}
+          </Button>
+          <Button onClick={() => setCreated(null)}>Tamam</Button>
+        </div>
+      </Modal>
+
     </Card>
   );
 }

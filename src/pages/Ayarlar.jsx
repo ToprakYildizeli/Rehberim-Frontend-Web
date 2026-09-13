@@ -58,6 +58,7 @@ export default function Ayarlar() {
     { value: 'hesap', label: 'Hesap', icon: ShieldCheck },
   ], [isCounselor]);
   const [tab, setTab] = useState('profil');
+  const [studentsKey, setStudentsKey] = useState(0);   // davet kurulunca listeyi tazele
 
   // CatalogSection `load`'u bağımlılık olarak izliyor; satır içi ok fonksiyonu
   // her render'da yeni referans üretip sonsuz yeniden yüklemeye yol açardı.
@@ -220,8 +221,14 @@ export default function Ayarlar() {
           (kullanıcı isteği, 13 Eyl 2026). */}
       {tab === 'rehberlik' && isCounselor && (
         <>
-          <div className={s.wide}><StudentsSection /></div>
-          <div className={s.wide}><ParentInvitesSection /></div>
+          {/* Yeni davet kurulunca öğrenci listesi tazeleniyor: "Veliler (n)"
+              sayacı bekleyen davetleri de sayıyor. Yeniden kurmak (key)
+              arama/sayfa durumunu sıfırlıyor ama davet kurmak seyrek bir iş
+              ve listenin eski kalması daha kötü. */}
+          <div className={s.wide}><StudentsSection key={studentsKey} /></div>
+          <div className={s.wide}>
+            <ParentInvitesSection onCreated={() => setStudentsKey((k) => k + 1)} />
+          </div>
         </>
       )}
 

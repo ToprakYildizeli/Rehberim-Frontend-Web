@@ -502,3 +502,21 @@
 /* Öğrenci satırı + altında açılan veli izinleri paneli. */
 .studentItem { display: grid; gap: 10px; }
 .searchRow { margin-bottom: 12px; max-width: 320px; }
+
+/* Yeni davet penceresi: kod okunaklı ve kopyalanabilir dursun. */
+.inviteSummary {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 16px 0 8px;
+}
+.inviteCodeBig {
+  font-family: var(--font-mono, monospace);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  padding: 8px 16px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--bg-alt);
+}
