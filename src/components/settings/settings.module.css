@@ -427,3 +427,47 @@
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* Veli davetinde "görüntülenebilecek ekranlar" kutusu (13 Eyl 2026). */
+.scopeBox {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+.scopeHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.scopeTitle { font-size: 13px; font-weight: 600; }
+.scopeBulk { display: flex; gap: 10px; }
+.linkBtn {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+}
+.linkBtn:hover { text-decoration: underline; }
+.scopeList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 8px 20px;
+}
+/* Bir ekranın alt kırılımı: girintili durur ama kendi başına kapatılabilir —
+   uyum, programın içi kapalıyken de verilebiliyor. */
+.scopeDetail { padding-left: 18px; }
+.scopeHint {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  padding-left: 2px;
+}
+.inviteActions { margin-top: 12px; }

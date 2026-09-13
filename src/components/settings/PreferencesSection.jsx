@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Card, CardHeader, Field, NumberInput, Select, Spinner } from '../ui';
 import { getPreferences, updatePreferences } from '../../api/preferences';
+import Toggle from './Toggle';
 import s from './settings.module.css';
 
 /**
@@ -148,20 +149,3 @@ export default function PreferencesSection() {
   );
 }
 
-/** Anahtar (switch) — görünüşü CSS'te, erişilebilirliği gerçek bir checkbox'ta.
- *  `role="switch"` yerine native checkbox: ekran okuyucular ikisini de anlıyor
- *  ama checkbox klavye davranışını (space) bedavaya getiriyor. */
-function Toggle({ checked, onChange, label }) {
-  return (
-    <label className={s.toggle}>
-      <input
-        type="checkbox"
-        className={s.toggleInput}
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span className={s.toggleTrack} aria-hidden="true"><span className={s.toggleKnob} /></span>
-      <span className={s.toggleLabel}>{label}</span>
-    </label>
-  );
-}

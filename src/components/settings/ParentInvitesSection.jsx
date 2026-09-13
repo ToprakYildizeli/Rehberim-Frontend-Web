@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy, Plus, X } from 'lucide-react';
 import { Card, CardHeader, Button, Field, Input, Select, Spinner, Badge } from '../ui';
+import Toggle from './Toggle';
 import { listStudents } from '../../api/students';
 import {
   createParentInvite, deleteParentInvite, listParentInvites,
+  PARENT_SCOPES, ALL_SCOPES_ON,
 } from '../../api/parentInvites';
 import s from './settings.module.css';
 
@@ -16,12 +18,28 @@ import s from './settings.module.css';
  *
  * Kullanılmış davetler listede kalır (silinemez): hangi velinin hangi davetle
  * geldiği kaydı, sonradan "bu veli nereden bağlandı" sorusunun tek cevabı.
+ *
+ * **Her veli aynı değil (13 Eyl 2026, hocanın isteği).** Davet kurulurken o
+ * velinin hangi ekranları göreceği tek tek seçiliyor; seçim davet kullanıldığı
+ * anda bağlantıya kopyalanıyor. Kurulmuş bir davetin izinleri sonradan
+ * değiştirilemez — davet dururken izin değiştirmek, bağlanmış velinin
+ * erişimini habersiz kaydırırdı; gerekirse davet iptal edilip yenisi açılır.
  */
+/** "8 ekranın 3'ü" gibi kısa bir özet; hangileri olduğu satıra sığmıyor.
+ *  Hepsi açıksa sayı yerine tek kelime — en sık durum bu. */
+function scopeSummary(scopes) {
+  const acik = PARENT_SCOPES.filter(({ key }) => scopes?.[key]).length;
+  if (acik === PARENT_SCOPES.length) return 'tüm ekranlar';
+  if (acik === 0) return 'hiçbir ekran';
+  return `${acik}/${PARENT_SCOPES.length} ekran`;
+}
+
 export default function ParentInvitesSection() {
   const [students, setStudents] = useState([]);
   const [invites, setInvites] = useState(null);
   const [studentId, setStudentId] = useState('');
   const [label, setLabel] = useState('');
+  const [scopes, setScopes] = useState(ALL_SCOPES_ON);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(null);
@@ -43,9 +61,10 @@ export default function ParentInvitesSection() {
     setBusy(true);
     setError(null);
     try {
-      const created = await createParentInvite(Number(studentId), label.trim());
+      const created = await createParentInvite(Number(studentId), label.trim(), scopes);
       setInvites((prev) => [created, ...(prev ?? [])]);
       setLabel('');
+      setScopes(ALL_SCOPES_ON);
     } catch (err) {
       const data = err?.response?.data;
       setError(
@@ -101,6 +120,46 @@ export default function ParentInvitesSection() {
             onChange={(e) => setLabel(e.target.value)}
           />
         </Field>
+      </div>
+
+      {/* Görüntülenebilecek ekranlar — davetin parçası, sonradan değişmez. */}
+      <div className={s.scopeBox}>
+        <div className={s.scopeHead}>
+          <span className={s.scopeTitle}>Görüntülenebilecek ekranlar</span>
+          <div className={s.scopeBulk}>
+            <button
+              type="button"
+              className={s.linkBtn}
+              onClick={() => setScopes(ALL_SCOPES_ON)}
+            >
+              Hepsi
+            </button>
+            <button
+              type="button"
+              className={s.linkBtn}
+              onClick={() => setScopes(
+                Object.fromEntries(PARENT_SCOPES.map(({ key }) => [key, false]))
+              )}
+            >
+              Hiçbiri
+            </button>
+          </div>
+        </div>
+        <ul className={s.scopeList}>
+          {PARENT_SCOPES.map(({ key, label: name, detail, hint }) => (
+            <li key={key} className={detail ? s.scopeDetail : undefined}>
+              <Toggle
+                checked={scopes[key]}
+                onChange={(v) => setScopes((p) => ({ ...p, [key]: v }))}
+                label={name}
+              />
+              {hint && <span className={s.scopeHint}>{hint}</span>}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className={s.inviteActions}>
         <Button size="sm" onClick={create} disabled={!studentId || busy}>
           <Plus size={14} /> Davet oluştur
         </Button>
@@ -128,6 +187,8 @@ export default function ParentInvitesSection() {
                   {inv.isUsed
                     ? `${inv.usedByName ?? 'Bir veli'} kullandı`
                     : 'Kullanılmayı bekliyor'}
+                  {' · '}
+                  {scopeSummary(inv.scopes)}
                 </p>
               </div>
               {inv.isUsed ? (
