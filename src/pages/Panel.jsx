@@ -19,6 +19,25 @@ const METRICS = [
   { value: 'avgLevel', label: 'Konu Puanı', unit: '', max: 5 },
   { value: 'weeklyHours', label: 'Haftalık Saat', unit: 'sa', max: 80 },
 ];
+/** Kıyaslama kohortları: liste kimi kapsasın? (kullanıcı isteği, 13 Eyl 2026)
+ *  Altmış öğrencili bir rehberde 9. sınıfla mezunu aynı sırada görmek işe
+ *  yaramıyordu — sıralama ancak benzer öğrenciler arasında anlamlı.
+ *
+ *  Süzgeç listeyi daraltır, **ölçeği değiştirmez**: AYT alanı hâlâ bir ölçek
+ *  (bkz. C1), kohort ise kimlerin listeleneceği. */
+const COHORTS = [
+  { value: 'all', label: 'Tüm öğrenciler', test: () => true },
+  { value: 'exam', label: 'Sınava girenler (12 · mezun)', test: (st) => st.isExam },
+  { value: 'g9', label: '9. sınıf', test: (st) => st.gradeCode === '9' },
+  { value: 'g10', label: '10. sınıf', test: (st) => st.gradeCode === '10' },
+  { value: 'g11', label: '11. sınıf', test: (st) => st.gradeCode === '11' },
+  { value: 'g12', label: '12. sınıf', test: (st) => st.gradeCode === '12' },
+  { value: 'mezun', label: 'Mezun', test: (st) => st.gradeCode === 'mezun' },
+  { value: 'say', label: 'Sayısal', test: (st) => st.study_field === 'say' },
+  { value: 'ea', label: 'Eşit Ağırlık', test: (st) => st.study_field === 'ea' },
+  { value: 'soz', label: 'Sözel', test: (st) => st.study_field === 'soz' },
+];
+
 const NET_TYPES = [{ value: 'tyt', label: 'TYT' }, { value: 'ayt', label: 'AYT' }];
 
 const complianceColor = (c) => (c >= 80 ? 'var(--success)' : c >= 60 ? 'var(--warning)' : 'var(--danger)');
@@ -28,6 +47,7 @@ export default function Panel() {
   const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [metric, setMetric] = useState('avgNet');
+  const [cohort, setCohort] = useState('all');     // kıyaslama listesinin kapsamı
   const [netExam, setNetExam] = useState('tyt');   // "Deneme Ort." kıyası: TYT/AYT
   const [netField, setNetField] = useState('say'); // AYT'de kıyaslanan alan
   const [netGroup, setNetGroup] = useState('total'); // ve ders grubu (sınava/alana göre)
@@ -61,8 +81,11 @@ export default function Panel() {
   const ranked = useMemo(() => {
     if (!data?.students) return [];
     const val = (st) => (metric === 'avgNet' ? (st.netDims?.[dimKey] ?? null) : st[metric]);
-    return data.students.filter((st) => val(st) != null).sort((a, b) => val(b) - val(a));
-  }, [data, metric, dimKey]);
+    const inCohort = COHORTS.find((c) => c.value === cohort)?.test ?? (() => true);
+    return data.students
+      .filter((st) => inCohort(st) && val(st) != null)
+      .sort((a, b) => val(b) - val(a));
+  }, [data, metric, dimKey, cohort]);
 
   if (!data) return <div className={s.center}><Spinner size={24} /></div>;
 
@@ -96,9 +119,14 @@ export default function Panel() {
   const shown = selected ?? defaultSelection;
   const visible = available.filter((se) => shown.has(se.id));
   const query = studentQuery.trim().toLocaleLowerCase('tr-TR');
-  const searchResults = available.filter(
-    (se) => !shown.has(se.id) && se.name.toLocaleLowerCase('tr-TR').includes(query)
-  );
+  /* Eklenebilecek öğrenciler **yalnız arama yazılınca** listelenir (kullanıcı
+     isteği, 13 Eyl 2026): altmış adın kalıcı olarak ekranda durması grafiği
+     aşağı itiyordu. Boş aramada liste boş — "hepsini göster" hâli yok. */
+  const searchResults = query
+    ? available.filter(
+      (se) => !shown.has(se.id) && se.name.toLocaleLowerCase('tr-TR').includes(query)
+    )
+    : [];
 
   return (
     <div className={s.page}>
@@ -151,11 +179,14 @@ export default function Panel() {
               </button>
             ))}
             {visible.length === 0 && (
-              <span className={s.netHint}>Aşağıdan öğrenci ekleyin.</span>
+              <span className={s.netHint}>Arama kutusuna ad yazıp öğrenci ekleyin.</span>
             )}
           </div>
 
-          {/* Eklenebilecekler — arama kutusuyla daralır, uzunsa kendi içinde kayar. */}
+          {/* Eklenebilecekler — yalnız arama yazılınca, uzunsa kendi içinde kayar. */}
+          {query && searchResults.length === 0 && (
+            <span className={s.netHint}>“{studentQuery.trim()}” ile eşleşen öğrenci yok.</span>
+          )}
           {searchResults.length > 0 && (
             <div className={s.netAddList}>
               {searchResults.slice(0, 60).map((se) => (
@@ -311,6 +342,16 @@ export default function Panel() {
             <h2 className={s.cmpTitle}><BarChart3 size={16} /> Öğrenci Kıyaslama</h2>
           </div>
           <div className={s.cmpControls}>
+            {/* Kimler listelensin: sıralama ancak benzer öğrenciler arasında
+                anlamlı — 9. sınıfla mezunu yan yana koymak işe yaramıyor. */}
+            <Select
+              className={s.dimSelect}
+              value={cohort}
+              onChange={(e) => setCohort(e.target.value)}
+              aria-label="Öğrenci kapsamı"
+            >
+              {COHORTS.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </Select>
             <PillGroup options={METRICS} value={metric} onChange={setMetric} />
             {metric === 'avgNet' && (
               <span className={s.netDimCtl}>
@@ -337,7 +378,9 @@ export default function Panel() {
           </div>
         </div>
         {ranked.length === 0 ? (
-          <EmptyState text="Bu metrik için veri yok." />
+          <EmptyState text={cohort === 'all'
+            ? 'Bu metrik için veri yok.'
+            : 'Seçilen kapsamda bu metrik için veri yok.'} />
         ) : (
           <div className={s.rankList}>
             {ranked.map((st) => (
