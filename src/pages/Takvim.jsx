@@ -39,7 +39,11 @@ const MIN_OPTS = ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '5
 export default function Takvim() {
   // Etkinlikler backend'den geliyor; takvimi içinde bulunduğumuz ay/günde aç.
   const [cursor, setCursor] = useState({ year: TODAY.getFullYear(), month: TODAY.getMonth() });
-  const [selected, setSelected] = useState(isoDate(TODAY));
+  // Seçim **çoklu**: aynı etkinliği birden çok güne bir kerede eklemek için
+  // (kullanıcı isteği, 13 Eyl 2026). Dizi, tıklama sırasını koruyor; son
+  // tıklanan gün "birincil" sayılır ve ajanda onu gösterir.
+  const [selectedDays, setSelectedDays] = useState([isoDate(TODAY)]);
+  const selected = selectedDays[selectedDays.length - 1];
   const [items, setItems] = useState(null);
   const [students, setStudents] = useState([]);
   const [form, setForm] = useState({ time: '09:00', studentId: '', category: 'Toplantı', note: '' });
@@ -80,14 +84,32 @@ export default function Takvim() {
     });
   }
 
+  /** Gün hücresine tıklama: seçime ekler ya da çıkarır.
+   *  En az bir gün hep seçili kalır — seçim boşalırsa ajandanın hangi güne
+   *  ait olduğu belirsizleşirdi. */
+  function toggleDay(key) {
+    setSelectedDays((prev) => {
+      if (!prev.includes(key)) return [...prev, key];
+      if (prev.length === 1) return prev;
+      return prev.filter((d) => d !== key);
+    });
+  }
+
   async function handleSave(e) {
     e.preventDefault();
-    if (!form.time) return;  // öğrenci opsiyonel → kişisel etkinlik olabilir
+    if (!form.time || selectedDays.length === 0) return;  // öğrenci opsiyonel
     setSaving(true);
     try {
-      const created = await createAppointment({ ...form, date: selected });
-      setItems((prev) => [...prev, created]);
+      // Tarih sırasıyla kaydediliyor ki listeye düşen kayıtlar da sıralı olsun.
+      const gunler = [...selectedDays].sort();
+      const created = await Promise.all(
+        gunler.map((date) => createAppointment({ ...form, date })),
+      );
+      setItems((prev) => [...prev, ...created]);
       setForm((f) => ({ ...f, time: '09:00', note: '' }));
+      // Seçim birincil güne iniyor: aynı etkinliği yanlışlıkla ikinci kez
+      // hepsine eklemek, çoklu seçimin en olası hatası.
+      setSelectedDays([gunler[gunler.length - 1]]);
     } finally {
       setSaving(false);
     }
@@ -102,6 +124,9 @@ export default function Takvim() {
     return <div style={{ display: 'grid', placeItems: 'center', padding: 60 }}><Spinner size={24} /></div>;
   }
 
+  // Ajanda birincil günü gösteriyor; çoklu seçimde kaç gün olduğu başlığın
+  // yanındaki rozette yazıyor. Seçili günlerin hepsinin etkinliklerini birden
+  // listelemek, hangi kaydın hangi güne ait olduğunu belirsizleştirirdi.
   const selectedLabel = (() => {
     const [y, m, d] = selected.split('-').map(Number);
     return `${d} ${MONTHS[m - 1]} ${y}`;
@@ -144,11 +169,11 @@ export default function Takvim() {
                 key={key}
                 className={[
                   s.cell,
-                  key === selected ? s.cellSelected : '',
+                  selectedDays.includes(key) ? s.cellSelected : '',
                   key === todayKey ? s.cellToday : '',
                 ].join(' ')}
-                onClick={() => setSelected(key)}
-                aria-pressed={key === selected}
+                onClick={() => toggleDay(key)}
+                aria-pressed={selectedDays.includes(key)}
                 aria-label={`${day} ${MONTHS[cursor.month]}, ${dayItems.length} etkinlik`}
               >
                 <span className={s.cellDay}>{day}</span>
@@ -173,7 +198,19 @@ export default function Takvim() {
       </Card>
 
       <Card className={s.agendaCard}>
-        <h2 className={s.agendaDate}>{selectedLabel}</h2>
+        <div className={s.agendaHead}>
+          <h2 className={s.agendaDate}>{selectedLabel}</h2>
+          {selectedDays.length > 1 && (
+            <button
+              type="button"
+              className={s.selectionBadge}
+              onClick={() => setSelectedDays([selected])}
+              title="Seçimi tek güne indir"
+            >
+              {selectedDays.length} gün seçili ×
+            </button>
+          )}
+        </div>
 
         {selectedItems.length === 0 ? (
             <EmptyState text="Bu gün için planlanmış bir etkinlik yok." />
@@ -282,7 +319,12 @@ export default function Takvim() {
               İptal
             </Button>
             <Button type="submit" disabled={saving || !form.time}>
-              <Plus size={14} /> {saving ? 'Kaydediliyor…' : 'Kaydet'}
+              <Plus size={14} />{' '}
+              {saving
+                ? 'Kaydediliyor…'
+                : selectedDays.length > 1
+                  ? `${selectedDays.length} güne ekle`
+                  : 'Kaydet'}
             </Button>
           </div>
         </form>

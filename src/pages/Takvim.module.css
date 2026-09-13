@@ -84,11 +84,18 @@
 .cellDay { font-size: 0.78rem; line-height: 1.1; padding-left: 2px; }
 .cellToday .cellDay { font-weight: 700; color: var(--accent); }
 
+/* Çoklu seçim (13 Eyl 2026): aynı etkinlik birden çok güne eklenebiliyor,
+   o yüzden seçili gün belirgin olmalı — ince bir çerçeve, dört-beş seçili
+   günün hangileri olduğunu göz taramasıyla ayırt ettirmiyordu. */
 .cellSelected {
   border-color: var(--accent);
   background: var(--accent-subtle);
+  box-shadow: inset 0 0 0 2px var(--accent);
 }
-.cellSelected .cellDay { font-weight: 700; }
+.cellSelected .cellDay {
+  font-weight: 700;
+  color: var(--accent);
+}
 
 .cellEvents { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 
@@ -230,3 +237,27 @@
   .cell { aspect-ratio: 1; padding: 4px; font-size: 0.74rem; }
   .formRow { grid-template-columns: 1fr; }
 }
+
+/* Ajanda başlığı + seçim rozeti */
+.agendaHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Kaç gün seçili olduğunu söyler; tıklanınca seçimi tek güne indirir.
+   Seçimin kaza eseri büyümesi çoklu seçimin en olası hatası, geri dönüş
+   yolu bir tık uzakta olmalı. */
+.selectionBadge {
+  border: 1px solid var(--accent);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.selectionBadge:hover { background: var(--accent); color: #fff; }
