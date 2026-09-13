@@ -38,6 +38,15 @@ const COHORTS = [
   { value: 'soz', label: 'Sözel', test: (st) => st.study_field === 'soz' },
 ];
 
+/** Deneme kaynağı (E1): evde tek başına çözülen ile kurum geneli gözetimli
+ *  sınav aynı koşulda değil. Tek ortalamada toplamak kıyaslamayı
+ *  bulanıklaştırıyordu. */
+const EXAM_SOURCES = [
+  { value: 'all', label: 'Tümü' },
+  { value: 'personal', label: 'Ev' },
+  { value: 'institutional', label: 'Kurum' },
+];
+
 const NET_TYPES = [{ value: 'tyt', label: 'TYT' }, { value: 'ayt', label: 'AYT' }];
 
 const complianceColor = (c) => (c >= 80 ? 'var(--success)' : c >= 60 ? 'var(--warning)' : 'var(--danger)');
@@ -48,6 +57,7 @@ export default function Panel() {
   const [data, setData] = useState(null);
   const [metric, setMetric] = useState('avgNet');
   const [cohort, setCohort] = useState('all');     // kıyaslama listesinin kapsamı
+  const [netSource, setNetSource] = useState('all');  // deneme kaynağı (E1)
   const [netExam, setNetExam] = useState('tyt');   // "Deneme Ort." kıyası: TYT/AYT
   const [netField, setNetField] = useState('say'); // AYT'de kıyaslanan alan
   const [netGroup, setNetGroup] = useState('total'); // ve ders grubu (sınava/alana göre)
@@ -76,7 +86,9 @@ export default function Panel() {
   // Kıyas değeri: "Deneme Ort."ta seçili tür+grup neti; diğer metriklerde alanın kendisi.
   // AYT'de seçilen alan bir SÜZGEÇ değil, ÖLÇEKtir: herkes o alanın ders kümesiyle
   // hesaplanıp listelenir. Sayısalcı, EA ölçeğinde de kendi matematik netiyle görünür.
-  const dimKey = netExam === 'ayt' ? `ayt_${netField}_${netGroup}` : `tyt_${netGroup}`;
+  const dimKey = netSource + (netExam === 'ayt'
+    ? `|ayt_${netField}_${netGroup}`
+    : `|tyt_${netGroup}`);
   const metricVal = (st) => (metric === 'avgNet' ? (st.netDims?.[dimKey] ?? null) : st[metric]);
   const ranked = useMemo(() => {
     if (!data?.students) return [];
@@ -372,6 +384,18 @@ export default function Panel() {
                 )}
                 <Select className={s.dimSelect} value={netGroup} onChange={(e) => setNetGroup(e.target.value)} aria-label="Ders grubu">
                   {groupOpts.map((d) => <option key={d.key} value={d.key}>{d.label}</option>)}
+                </Select>
+                {/* Ev denemesi mi kurumsal mı — ölçüt yalnız "Deneme Ort."ta
+                    anlamlı, o yüzden burada. */}
+                <Select
+                  className={s.dimSelect}
+                  value={netSource}
+                  onChange={(e) => setNetSource(e.target.value)}
+                  aria-label="Deneme kaynağı"
+                >
+                  {EXAM_SOURCES.map((x) => (
+                    <option key={x.value} value={x.value}>{x.label}</option>
+                  ))}
                 </Select>
               </span>
             )}

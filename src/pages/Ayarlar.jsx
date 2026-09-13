@@ -214,13 +214,23 @@ export default function Ayarlar() {
         </>
       )}
 
+      {/* Rehberlik = KİŞİLER: öğrenciler ve velileri. Başarımlar ve
+          kataloglar (çalışma türü, yayınevi) buradaydı ama onlar kişiyle değil
+          rehberin kendi çalışma düzeniyle ilgili — Tercihler'e taşındı
+          (kullanıcı isteği, 13 Eyl 2026). */}
       {tab === 'rehberlik' && isCounselor && (
         <>
-          {/* Satır listeleri geniş olunca okunur; kataloglar dar rozet
-              kümeleri olduğu için yan yana sığıyor. */}
           <div className={s.wide}><StudentsSection /></div>
           <div className={s.wide}><ParentInvitesSection /></div>
+        </>
+      )}
+
+      {/* ---------------------------------------------------- TERCİHLER */}
+      {tab === 'tercihler' && isCounselor && (
+        <>
+          <PreferencesSection />
           <div className={s.wide}><AchievementsSection /></div>
+          {/* Kataloglar dar rozet kümeleri olduğu için yan yana sığıyor. */}
           <CatalogSection
             title="Çalışma türleri"
             load={loadTaskTypes}
@@ -239,9 +249,6 @@ export default function Ayarlar() {
           />
         </>
       )}
-
-      {/* ---------------------------------------------------- TERCİHLER */}
-      {tab === 'tercihler' && isCounselor && <PreferencesSection />}
 
       {/* ------------------------------------------------------ GÖRÜNÜM */}
       {tab === 'gorunum' && (

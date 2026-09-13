@@ -247,11 +247,25 @@ async function fetchDashboard() {
     // **üç alanda da** neti hesaplanır — seçilen alan "kimin listeleneceğini" değil,
     // "hangi ölçekle bakılacağını" belirler. Sayısalcının 40 mat + 30 fen neti
     // Sayısal ölçeğinde 70, EA ölçeğinde 40'tır; ikisi de anlamlı ve kıyaslanabilir.
+    /* Boyutlar ayrıca **deneme kaynağına** göre de hesaplanıyor (13 Eyl 2026):
+       evde tek başına çözülen deneme ile kurum geneli gözetimli sınav aynı
+       koşulda değil, ikisini tek ortalamada toplamak kıyaslamayı bulanıklaştırıyor
+       (E1'deki `source` ayrımı). Anahtar `<kaynak>|<boyut>`; `all` eski
+       davranış, hepsi birlikte. */
     const netDims = {};
-    TYT_DIM_GROUPS.forEach((g) => { netDims[`tyt_${g.key}`] = dimAvg(b.exams, 'tyt', g.subs); });
-    Object.entries(aytGroupsByField).forEach(([field, groups]) => {
-      (groups || []).forEach((g) => {
-        netDims[`ayt_${field}_${g.key}`] = dimAvg(b.exams, 'ayt', g.subs);
+    const bySource = {
+      all: b.exams,
+      personal: b.exams.filter((e) => e.source !== 'institutional'),
+      institutional: b.exams.filter((e) => e.source === 'institutional'),
+    };
+    Object.entries(bySource).forEach(([src, exams]) => {
+      TYT_DIM_GROUPS.forEach((g) => {
+        netDims[`${src}|tyt_${g.key}`] = dimAvg(exams, 'tyt', g.subs);
+      });
+      Object.entries(aytGroupsByField).forEach(([field, groups]) => {
+        (groups || []).forEach((g) => {
+          netDims[`${src}|ayt_${field}_${g.key}`] = dimAvg(exams, 'ayt', g.subs);
+        });
       });
     });
 
