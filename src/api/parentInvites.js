@@ -65,3 +65,33 @@ export async function createParentInvite(studentId, label = '', scopes = ALL_SCO
 export async function deleteParentInvite(id) {
   await api.delete(`/parent-invites/${id}/`);
 }
+
+/* --- Bağlanmış velilerin izinleri (13 Eyl 2026) -----------------------------
+   Davetteki seçim başlangıç değeridir, son söz değil: hoca sonradan bir ekranı
+   açıp kapatabilmeli. Liste ucu, izin satırı olmayan eski bağlantılar için
+   satırı kendisi üretiyor (varsayılanı açık) — görünen davranış değişmiyor. */
+
+const adaptAccess = (a) => ({
+  id: a.id,
+  parentId: a.parent,
+  parentName: a.parent_name,
+  studentId: a.student,
+  studentName: a.student_name,
+  label: a.label ?? '',
+  updatedAt: a.updated_at,
+  scopes: Object.fromEntries(PARENT_SCOPES.map(({ key }) => [key, a[key] !== false])),
+});
+
+/** Rehberin öğrencilerine bağlı veliler + izinleri. */
+export async function listParentAccesses(studentId) {
+  const { data } = await api.get('/parent-accesses/', {
+    params: studentId ? { student: studentId } : undefined,
+  });
+  return data.map(adaptAccess);
+}
+
+/** Tek bir izni (ya da notu) günceller. */
+export async function updateParentAccess(id, fields) {
+  const { data } = await api.patch(`/parent-accesses/${id}/`, fields);
+  return adaptAccess(data);
+}

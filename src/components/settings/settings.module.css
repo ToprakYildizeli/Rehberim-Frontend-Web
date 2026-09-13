@@ -471,3 +471,19 @@
   padding-left: 2px;
 }
 .inviteActions { margin-top: 12px; }
+
+/* Bağlı veliler: her satır bir (veli, öğrenci) bağlantısı + izin anahtarları. */
+.accessList { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.accessRow {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.accessHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
