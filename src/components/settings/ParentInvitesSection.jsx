@@ -5,7 +5,7 @@ import Toggle from './Toggle';
 import { listStudents } from '../../api/students';
 import {
   createParentInvite, deleteParentInvite, listParentInvites,
-  PARENT_SCOPES, ALL_SCOPES_ON,
+  PARENT_SCOPES, ALL_SCOPES_ON, ALL_SCOPES_OFF,
 } from '../../api/parentInvites';
 import s from './settings.module.css';
 
@@ -39,7 +39,9 @@ export default function ParentInvitesSection() {
   const [invites, setInvites] = useState(null);
   const [studentId, setStudentId] = useState('');
   const [label, setLabel] = useState('');
-  const [scopes, setScopes] = useState(ALL_SCOPES_ON);
+  // Form kapalı başlıyor: rehber ne paylaşacağını bilerek seçsin, farkında
+  // olmadan her şeyi açmış olmasın.
+  const [scopes, setScopes] = useState(ALL_SCOPES_OFF);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(null);
@@ -64,7 +66,7 @@ export default function ParentInvitesSection() {
       const created = await createParentInvite(Number(studentId), label.trim(), scopes);
       setInvites((prev) => [created, ...(prev ?? [])]);
       setLabel('');
-      setScopes(ALL_SCOPES_ON);
+      setScopes(ALL_SCOPES_OFF);
     } catch (err) {
       const data = err?.response?.data;
       setError(
@@ -137,9 +139,7 @@ export default function ParentInvitesSection() {
             <button
               type="button"
               className={s.linkBtn}
-              onClick={() => setScopes(
-                Object.fromEntries(PARENT_SCOPES.map(({ key }) => [key, false]))
-              )}
+              onClick={() => setScopes(ALL_SCOPES_OFF)}
             >
               Hiçbiri
             </button>

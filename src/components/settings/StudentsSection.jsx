@@ -28,7 +28,12 @@ export default function StudentsSection() {
   useEffect(() => {
     let alive = true;
     listStudents()
-      .then((rows) => alive && setStudents(rows))
+      // Alfabetik: rehber aradığı öğrenciyi sayfalar arasında el yordamıyla
+      // değil, adının nerede olacağını bilerek buluyor. `localeCompare`
+      // Türkçe ile: ç/ğ/ı/ö/ş/ü yoksa listenin sonuna düşüyor.
+      .then((rows) => alive && setStudents(
+        [...rows].sort((a, b) => a.name.localeCompare(b.name, 'tr'))
+      ))
       .catch(() => alive && setStudents([]));
     return () => { alive = false; };
   }, []);

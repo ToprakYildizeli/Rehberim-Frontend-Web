@@ -26,9 +26,18 @@ export const PARENT_SCOPES = [
   { key: 'see_calendar', label: 'Takvim' },
 ];
 
-/** Yeni davetin başlangıç izinleri: hepsi açık — eski davranış buydu. */
+/** Hepsi açık — sunucunun varsayılanı da bu (izin alanı gönderilmezse `true`),
+ *  eski bağlantıların davranışı korunsun diye. */
 export const ALL_SCOPES_ON = Object.fromEntries(
   PARENT_SCOPES.map(({ key }) => [key, true])
+);
+
+/** Hepsi kapalı. **Yeni davet formu bununla açılıyor** (kullanıcı kararı,
+ *  13 Eyl 2026): rehber ne paylaşacağını bilerek seçsin, farkında olmadan
+ *  her şeyi açmış olmasın. Sunucu varsayılanı değişmedi — o, alan hiç
+ *  gönderilmeyen eski istemcileri korumak için açık kalmalı. */
+export const ALL_SCOPES_OFF = Object.fromEntries(
+  PARENT_SCOPES.map(({ key }) => [key, false])
 );
 
 const adapt = (i) => ({
