@@ -14,7 +14,7 @@ import { getSchedule, saveSchedule, setGeneralWindow } from '../api/schedule';
 import {
   suggestNextWeekStart, getStudentPrograms, updateProgramWindow,
   windowDays, windowRangeText, studyMinutes, externalMinutes,
-  addDays, fmtMin, fmtHours, SLOT_MIN, DEFAULT_DAY_COUNT,
+  addDays, fmtMin, fmtHours, SLOT_MIN, DEFAULT_DAY_COUNT, programDefaults,
 } from '../api/programs';
 import {
   listTemplates, createTemplate, updateTemplate, deleteTemplate, templateToBlocks,
@@ -183,6 +183,8 @@ export default function DersProgrami() {
   // Süre hafızası (A4): durationKey(ders, metod, konu) → dakika. Rehber özelinde.
   const [durationMemory, setDurationMemory] = useState(() => new Map());
 
+  // Tahta düzeni artık tercihlerden geliyor (13 Eyl 2026): rehber her cihazda
+  // yeniden seçmesin. Sayfada değiştirmek yine serbest, o oturumluk kalır.
   const [view, setView] = useState('hours');
   const [draft, setDraft] = useState({
     kind: 'study', examScope: 'tyt', externalTitle: '',
@@ -377,6 +379,17 @@ export default function DersProgrami() {
 
   // Şablonları yükle
   useEffect(() => { listTemplates().then(setTemplates).catch(() => {}); }, []);
+
+  /* Tahta düzeni tercihi (Ayarlar → Program varsayılanları). Bir kez, açılışta
+     uygulanıyor: sonrasında sayfadaki düğmeyle değiştirmek serbest ve o
+     değişiklik tercihi ezmez — geçici bir bakış için ayarlara gitmek gerekmesin. */
+  useEffect(() => {
+    let alive = true;
+    programDefaults()
+      .then(({ boardLayout }) => { if (alive && boardLayout) setView(boardLayout); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
   const reloadTemplates = () => listTemplates().then(setTemplates).catch(() => {});
 
   async function handleSaveTemplate() {

@@ -1,8 +1,8 @@
 /* Rehber tercihleri (D3) — /api/preferences/.
 
    İki tür ayarı bir arada taşır:
-   - **Yeni program varsayılanları** (gün sayısı, saatli/saatsiz): Ders Programı'nda
-     program açılırken ön dolgu olarak kullanılır.
+   - **Yeni program varsayılanları** (gün sayısı, saatli/saatsiz, tahta düzeni):
+     Ders Programı'nda program açılırken ön dolgu olarak kullanılır.
    - **Panel bölümleri**: Panel'deki her bloğun görünüp görünmeyeceği. Uygulamada
      e-posta/push teslimat altyapısı yok; "bildirim tercihi" burada Panel'in zaten
      hesapladığı bölümleri süzmek demek (api-reference §5.9).
@@ -18,6 +18,7 @@ import api from './client';
 export const DEFAULT_PREFERENCES = {
   default_day_count: 7,
   default_schedule_type: 'timed',
+  default_board_layout: 'hours',   // tahta saat satırlı mı ders satırlı mı açılsın
   // Panel'in sekiz bölümü — sıra Panel'deki yerleşim sırası.
   show_kpis: true,
   show_net_chart: true,

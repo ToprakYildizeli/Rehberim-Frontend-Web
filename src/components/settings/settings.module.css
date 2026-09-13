@@ -410,3 +410,20 @@
   margin-inline: auto;
 }
 
+
+/* Tahta düzeni seçimi: iki seçenekli bir liste, kartın tamamına yayılmasın. */
+.prefSelect { max-width: 190px; }
+
+/* Sayfa gezintisi (öğrenci listesi, 10'arlı). */
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 12px;
+}
+.pagerLabel {
+  font-size: 13px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}

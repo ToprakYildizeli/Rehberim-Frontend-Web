@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Card, CardHeader, Field, NumberInput, Spinner } from '../ui';
+import { Card, CardHeader, Field, NumberInput, Select, Spinner } from '../ui';
 import { getPreferences, updatePreferences } from '../../api/preferences';
 import s from './settings.module.css';
 
@@ -108,6 +108,18 @@ export default function PreferencesSection() {
               max={31}
               onCommit={(v) => save('default_day_count', v, 600)}
             />
+          </Field>
+          {/* Tahta düzeni eskiden yalnız tarayıcıda tutuluyordu; rehber her
+              cihazda yeniden seçmek zorunda kalıyordu (kullanıcı isteği,
+              13 Eyl 2026). Artık tercihlerde. */}
+          <Field label="Tahta düzeni" className={s.prefSelect}>
+            <Select
+              value={prefs.default_board_layout}
+              onChange={(e) => save('default_board_layout', e.target.value)}
+            >
+              <option value="hours">Saat satırlı</option>
+              <option value="subjects">Ders satırlı</option>
+            </Select>
           </Field>
         </div>
       </Card>

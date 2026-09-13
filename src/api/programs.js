@@ -42,6 +42,7 @@ export async function programDefaults() {
   return {
     dayCount: prefs.default_day_count || DEFAULT_DAY_COUNT,
     scheduleType: prefs.default_schedule_type || 'timed',
+    boardLayout: prefs.default_board_layout || 'hours',
   };
 }
 
