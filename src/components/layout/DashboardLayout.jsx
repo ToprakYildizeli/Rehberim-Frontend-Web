@@ -7,6 +7,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Avatar } from '../ui';
+import ConsentGate from '../ConsentGate';
 import { Logo, LogoMark } from '../ui/Logo';
 import s from './layout.module.css';
 
@@ -185,6 +186,9 @@ export default function DashboardLayout() {
         <main data-print="area" className={s.canvas}>
           <Outlet />
         </main>
+        {/* Onayı eksik kullanıcıya hukuki metinleri gösterir; kapatılabilir
+            (bkz. ConsentGate). */}
+        <ConsentGate />
       </div>
       </div>
     </div>
