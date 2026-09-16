@@ -18,9 +18,6 @@ function adaptStudent(s) {
     isExam,
     curriculum: isExam ? 'eski' : 'maarif',
     study_field: s.study_field,
-    // Veli onayı özeti (KVKK, 16 Eyl 2026): `null` = onay işlenmemiş.
-    // Ayrıntı (id, yakınlık, biçim) `/parental-consents/` ucunda.
-    parentalConsent: s.parental_consent ?? null,
     color: colorFor(s.full_name),
     lastNet: null,
     compliance: null,

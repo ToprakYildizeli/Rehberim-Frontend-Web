@@ -12,7 +12,6 @@ import CatalogSection from '../components/settings/CatalogSection';
 import DangerZoneSection from '../components/settings/DangerZoneSection';
 import KvkkSection from '../components/settings/KvkkSection';
 import PreferencesSection from '../components/settings/PreferencesSection';
-import ParentalConsentSection from '../components/settings/ParentalConsentSection';
 import ParentInvitesSection from '../components/settings/ParentInvitesSection';
 import StudentsSection from '../components/settings/StudentsSection';
 import {
@@ -231,10 +230,6 @@ export default function Ayarlar() {
           <div className={s.wide}>
             <ParentInvitesSection onCreated={() => setStudentsKey((k) => k + 1)} />
           </div>
-          {/* Veli onayları (KVKK): öğrenci listesiyle aynı sekmede, çünkü
-              rehberin işi burada — eksik onayı öğrenci listesinde görüp
-              buradan kapatıyor. */}
-          <div className={s.wide}><ParentalConsentSection /></div>
         </>
       )}
 
