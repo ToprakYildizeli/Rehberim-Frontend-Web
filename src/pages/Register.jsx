@@ -4,6 +4,7 @@ import { registerCounselor } from '../api/auth';
 import { getLegalDocument } from '../api/legal';
 import { useAuth } from '../context/AuthContext';
 import { Button, Modal, Spinner, ThemeToggle } from '../components/ui';
+import LegalText from '../components/LegalText';
 import { Logo } from '../components/ui/Logo';
 import styles from './Auth.module.css';
 
@@ -222,7 +223,7 @@ export default function Register() {
         </h3>
         {reading?.loading && <Spinner />}
         {reading?.error && <p className={styles.error}>Metin yüklenemedi.</p>}
-        {reading?.body && <pre className={styles.legalBody}>{reading.body}</pre>}
+        {reading?.body && <LegalText body={reading.body} className={styles.legalBody} />}
         <div className={styles.modalActions}>
           <Button variant="ghost" onClick={() => setReading(null)}>Kapat</Button>
         </div>

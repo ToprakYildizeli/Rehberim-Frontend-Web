@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Download, FileText, ShieldCheck, Undo2 } from 'lucide-react';
 import { Card, CardHeader, Button, Badge, Modal, Spinner } from '../ui';
+import LegalText from '../LegalText';
 import {
   acceptConsent, downloadMyData, getLegalDocument, listConsents, withdrawConsent,
 } from '../../api/legal';
@@ -208,7 +209,7 @@ export default function KvkkSection() {
         </h3>
         {reading?.loading && <div className={s.loading}><Spinner /></div>}
         {reading?.error && <p className={s.error}>Metin yüklenemedi.</p>}
-        {reading?.body && <pre className={s.legalBody}>{reading.body}</pre>}
+        {reading?.body && <LegalText body={reading.body} className={s.legalBody} />}
         <div className={s.modalActions}>
           <Button variant="ghost" onClick={() => setReading(null)}>Kapat</Button>
           {reading?.kind && !currentConsent(reading.kind) && (

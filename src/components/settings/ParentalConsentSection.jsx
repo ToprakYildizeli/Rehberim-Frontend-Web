@@ -4,6 +4,7 @@ import {
   Card, CardHeader, Button, Badge, Field, Input, Modal, SearchInput, Select, Spinner,
   Textarea,
 } from '../ui';
+import LegalText from '../LegalText';
 import { getLegalDocument } from '../../api/legal';
 import {
   createParentalConsent, listParentalConsents, updateParentalConsent,
@@ -292,7 +293,7 @@ export default function ParentalConsentSection() {
         <p className={s.modalText}>
           Bu formu yazdırıp veliye imzalatın; imzalı belge kurumda saklanır.
         </p>
-        <pre className={s.legalBody}>{editing?.document?.body}</pre>
+        <LegalText body={editing?.document?.body} className={s.legalBody} />
         <div className={s.modalActions}>
           <Button variant="ghost" onClick={() => setEditing(null)}>Kapat</Button>
           <Button onClick={() => window.print()}>Yazdır</Button>

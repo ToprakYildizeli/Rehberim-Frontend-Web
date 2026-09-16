@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { Button, Modal, Spinner } from './ui';
+import LegalText from './LegalText';
 import { acceptConsent, getLegalDocument } from '../api/legal';
 import { getMe } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
@@ -80,7 +81,7 @@ export default function ConsentGate() {
       {doc === null ? (
         <div className={s.loading}><Spinner /></div>
       ) : (
-        <pre className={s.body}>{doc.body}</pre>
+        <LegalText body={doc.body} className={s.body} />
       )}
       {error && <p className={s.error}>{error}</p>}
       <div className={s.actions}>
