@@ -188,6 +188,9 @@ export default function DersProgrami() {
   const [ranges, setRanges] = useState([]);
   // Taslaktan bir programa geçip geri dönünce taslak kaybolmasın.
   const draftStore = useRef({ blocks: [], win: null });
+  // "Programı sil" onay penceresi.
+  const [deleteAsk, setDeleteAsk] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Şablonlar + atama
   const [templates, setTemplates] = useState([]);
@@ -435,21 +438,21 @@ export default function DersProgrami() {
     [win, scope, programId, refreshStudentData]
   );
 
-  /** Açık programı siler (ör. hatalı atamayla boş kalmış hafta) ve taslağa döner. */
+  /** Açık programı siler (ör. hatalı atamayla boş kalmış hafta) ve taslağa döner.
+   *  Yalnız onay penceresinden çağrılır. */
   async function removeOpenProgram() {
     if (!scope || programId == null) return;
-    const r = ranges.find((x) => x.id === programId);
-    const label = r ? windowRangeText(r.start, r.dayCount) : 'Bu';
-    const count = (blocks || []).length;
-    if (!window.confirm(
-      `${label} programı${count ? ` ve içindeki ${count} görev` : ''} silinecek. Bu geri alınamaz.`
-    )) return;
+    setDeleting(true);
     try {
       await deleteProgram(programId);
       refreshStudentData();
+      setDeleteAsk(false);
       await selectProgram('');
     } catch (err) {
+      setDeleteAsk(false);
       setWindowError(apiMessage(err, 'Program silinemedi.'));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -912,7 +915,7 @@ export default function DersProgrami() {
               </Select>
             )}
             {mode === 'ogrenci' && programId != null && (
-              <Button variant="danger" size="sm" onClick={removeOpenProgram} title="Bu programı sil">
+              <Button variant="danger" size="sm" onClick={() => setDeleteAsk(true)} title="Bu programı sil">
                 <Trash2 size={13} /> Programı sil
               </Button>
             )}
@@ -1368,6 +1371,33 @@ export default function DersProgrami() {
         subjectMap={subjectMap}
         inStudent={mode === 'ogrenci'}
       />
+
+      {deleteAsk && programId != null && (() => {
+        const r = ranges.find((x) => x.id === programId);
+        const label = r ? windowRangeText(r.start, r.dayCount) : 'Bu';
+        const count = (blocks || []).length;
+        return (
+          <Modal open onClose={() => !deleting && setDeleteAsk(false)} width={460} labelledBy="delete-title">
+            <h2 id="delete-title" className={s.modalTitle}>Programı sil</h2>
+            <div className={s.assignForm}>
+              <p>
+                <strong>{activeStudent?.name}</strong> için <strong>{label}</strong> haftasının
+                programı{count ? <> ve içindeki <strong>{count} görev</strong></> : ''} kalıcı
+                olarak silinecek. Öğrenci bu programı artık göremeyecek.
+              </p>
+              <p className={s.assignError}>Bu işlem geri alınamaz. Emin misiniz?</p>
+              <div className={s.assignActions}>
+                <Button variant="ghost" onClick={() => setDeleteAsk(false)} disabled={deleting}>
+                  Vazgeç
+                </Button>
+                <Button variant="danger" onClick={removeOpenProgram} disabled={deleting}>
+                  {deleting ? 'Siliniyor…' : 'Evet, sil'}
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        );
+      })()}
 
       {assignSource && mode === 'ogrenci' && activeStudent && (
         <AssignConfirm
