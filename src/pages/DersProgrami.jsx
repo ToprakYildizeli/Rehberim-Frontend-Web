@@ -347,15 +347,23 @@ export default function DersProgrami() {
       });
       return () => { alive = false; };
     }
-    // Öğrenci modu: boş taslakla açılır, pencere ilk boş günden başlar.
+    // Öğrenci modu: taslakla açılır, pencere ilk boş günden başlar. Öğrencinin
+    // rutini varsa taslak onun görevleriyle dolu gelir (19 Eyl 2026 kararı):
+    // rutin "her hafta buradan başla" demek, rehber üstünde oynayıp Ata der.
     forgetStudentProgram(scope);
-    Promise.all([listProgramRanges(scope), programDefaults()])
-      .then(([r, defaults]) => {
+    Promise.all([
+      listProgramRanges(scope),
+      programDefaults(),
+      listTemplates().catch(() => []),
+    ])
+      .then(([r, defaults, tpls]) => {
         if (!alive) return;
         const dayCount = defaults.dayCount || DEFAULT_DAY_COUNT;
+        const startDate = firstFreeStart(r, dayCount);
+        const routine = tpls.find((t) => t.auto_apply && String(t.student) === String(scope));
         setRanges(r);
-        setWin({ startDate: firstFreeStart(r, dayCount), dayCount });
-        setBlocks([]);
+        setWin({ startDate, dayCount });
+        setBlocks(routine ? templateToBlocks(routine, startDate, dayCount).blocks : []);
       })
       .catch(() => {
         if (!alive) return;
@@ -577,6 +585,10 @@ export default function DersProgrami() {
     } else {
       if (!activeStudent) return;
       await setRoutine(tpl.id, activeStudent.id);
+      // Boş taslaktayken rutin açıldıysa hemen görünsün.
+      if (mode === 'ogrenci' && programId == null && !(blocks || []).length) {
+        setBlocks(templateToBlocks(tpl, win.startDate, win.dayCount).blocks);
+      }
     }
     await reloadTemplates();
   }
