@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Check, Copy, LogOut, Moon, Palette, ShieldCheck, SlidersHorizontal,
-  Sun, User, Users,
+  Check, Copy, LogOut, MessageSquarePlus, Moon, Palette, ShieldCheck,
+  SlidersHorizontal, Sun, User, Users,
 } from 'lucide-react';
 import { Card, CardHeader, Button, Field, Input } from '../components/ui';
 import AchievementsSection from '../components/settings/AchievementsSection';
@@ -10,6 +10,7 @@ import AvatarSection from '../components/settings/AvatarSection';
 import CalendarDataSection from '../components/settings/CalendarDataSection';
 import CatalogSection from '../components/settings/CatalogSection';
 import DangerZoneSection from '../components/settings/DangerZoneSection';
+import FeedbackDialog from '../components/settings/FeedbackDialog';
 import KvkkSection from '../components/settings/KvkkSection';
 import PreferencesSection from '../components/settings/PreferencesSection';
 import ParentInvitesSection from '../components/settings/ParentInvitesSection';
@@ -116,6 +117,8 @@ export default function Ayarlar() {
     }
   }
 
+  const [feedback, setFeedback] = useState(false);
+
   async function handleLogout() {
     await clearSession();
     navigate('/giris', { replace: true });
@@ -154,8 +157,13 @@ export default function Ayarlar() {
       {/* Hesap sekmesi başlığıyla birlikte daralır: yalnız kartları ortalamak,
           başlığı solda tek başına bırakıp hizasız gösteriyordu. */}
       <div className={`${s.content} ${tab === 'hesap' ? st.narrowContent : ''}`}>
+        {/* "Bildir" her sekmede görünür: kullanıcı hangi ekranda takıldıysa
+            oradan yazabilsin (kullanıcı isteği, 20 Eyl 2026). */}
         <header className={s.contentHead}>
           <h2 className={s.contentTitle}>{active.label}</h2>
+          <Button variant="soft" size="sm" onClick={() => setFeedback(true)}>
+            <MessageSquarePlus size={14} /> Bildir
+          </Button>
         </header>
 
       {/* ---------------------------------------------------------- PROFİL */}
@@ -335,6 +343,7 @@ export default function Ayarlar() {
       </>
       )}
       </div>
+      {feedback && <FeedbackDialog onClose={() => setFeedback(false)} />}
     </div>
   );
 }

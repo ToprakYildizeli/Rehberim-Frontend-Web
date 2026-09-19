@@ -45,7 +45,14 @@
 .navLabel { font-size: 0.85rem; font-weight: 600; min-width: 0; }
 
 /* ---- içerik ---- */
-.contentHead { grid-column: 1 / -1; margin-bottom: calc(var(--space-2) * -1); }
+.contentHead {
+  grid-column: 1 / -1;
+  margin-bottom: calc(var(--space-2) * -1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
 .contentTitle { font-size: 1.1rem; font-weight: 700; color: var(--text); margin: 0; }
 
 /* Kartlar kalan genişliğe yayılıyor; dar olanlar yan yana geliyor.
