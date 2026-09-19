@@ -9,6 +9,7 @@ import {
   Card, Button, Field, Select, Input, Textarea, NumberInput, PillGroup, Spinner, Modal,
 } from '../components/ui';
 import DateField from '../components/ui/DateField';
+import StudentPicker from '../components/ui/StudentPicker';
 import { listStudents } from '../api/students';
 import { getSchedule, saveSchedule, setGeneralWindow } from '../api/schedule';
 import {
@@ -758,22 +759,16 @@ export default function DersProgrami() {
           <div className={s.ribbonGroup}>
             <PillGroup options={MODES} value={mode} onChange={switchMode} />
             {mode === 'ogrenci' && (
-              <Select
+              <StudentPicker
                 className={s.studentSelect}
+                students={students}
                 value={studentId}
-                onChange={(e) => {
-                  setStudentId(e.target.value);
-                  setParams({ ogrenci: e.target.value }, { replace: true });
+                onChange={(id) => {
+                  setStudentId(id);
+                  setParams({ ogrenci: id }, { replace: true });
                 }}
-                aria-label="Öğrenci seç"
-                disabled={students.length === 0}
-              >
-                {students.length === 0
-                  ? <option value="">Henüz öğrenciniz yok</option>
-                  : students.map((st) => (
-                    <option value={st.id} key={st.id}>{st.name} · {st.grade}</option>
-                  ))}
-              </Select>
+                ariaLabel="Öğrenci seç"
+              />
             )}
             {loadedTemplate && (
               <span className={s.tplBadge} title="Şablon Kaydet bu şablonu günceller">
@@ -1362,7 +1357,7 @@ function AssignModal({
   blocks, boardStart, boardDayCount, onClose,
 }) {
   const [studentId, setStudentId] = useState(
-    lockedStudent ? String(lockedStudent.id) : String(students[0]?.id || '')
+    lockedStudent ? String(lockedStudent.id) : ''
   );
   // Öğrenci modunda tahtanın kendi programı taşınır; yeni program açılmaz.
   const movesBoard = source.type === 'board' && Boolean(lockedStudent);
@@ -1449,15 +1444,13 @@ function AssignModal({
         <div className={s.assignForm}>
           {!lockedStudent && (
             <Field label="Öğrenci">
-              <Select
+              <StudentPicker
+                students={students}
                 value={studentId}
-                onChange={(e) => setStudentId(e.target.value)}
-                disabled={students.length === 0}
-              >
-                {students.length === 0
-                  ? <option value="">Henüz öğrenciniz yok</option>
-                  : students.map((st) => <option key={st.id} value={st.id}>{st.name} · {st.grade}</option>)}
-              </Select>
+                onChange={setStudentId}
+                placeholder="Öğrenci adı yazın…"
+                ariaLabel="Öğrenci"
+              />
             </Field>
           )}
           {movesBoard && (
