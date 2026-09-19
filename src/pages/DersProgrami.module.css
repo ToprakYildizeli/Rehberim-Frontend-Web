@@ -719,6 +719,67 @@
 
 .rowLabel + .subjCell { border-left: 1px solid var(--border); }
 
+/* Ders satırlı görünüm: hücre bloğun rengiyle tamamen kaplanır. */
+.subjCell { position: relative; }
+.subjCellFilled { cursor: pointer; }
+/* Sürüklerken üstünde durulan gün sütununun tamamı; blok bu sütuna düşer. */
+.colOver { background: var(--accent-subtle); }
+/* Bloğun gerçekten ineceği hücre (kendi ders satırı). */
+.cellTarget { box-shadow: inset 0 0 0 2px var(--accent); }
+
+.chipFill {
+  position: absolute;
+  inset: 2px;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  padding: 4px 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.2;
+  overflow: hidden;
+  cursor: grab;
+}
+.chipFill:active { cursor: grabbing; }
+.chipFillText {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.chipFillNote { flex-shrink: 0; opacity: 0.85; }
+.chipMore {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+/* Hücre düzenleme penceresi */
+.cellItem {
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.cellItemHead { display: flex; align-items: center; justify-content: space-between; }
+.cellItemGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-2);
+}
+
 .chipBlock {
   display: flex;
   align-items: center;

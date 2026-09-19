@@ -173,6 +173,12 @@ export default function DersProgrami() {
   const [blocks, setBlocks] = useState(null);
   const [library, setLibrary] = useState([]);
   const [activeDrag, setActiveDrag] = useState(null);
+  // Ders satırlı görünümde sürüklerken üstünde durulan gün sütunu (tümü vurgulanır).
+  const [overDay, setOverDay] = useState(null);
+  // Ders satırlı görünümde tıklanan hücre: { dayIndex, rowKey } → düzenleme penceresi.
+  const [cellEdit, setCellEdit] = useState(null);
+  // Sürükleme bitince bırakılan hücreye "tıklama" da düşer; o tıklama pencere açmasın.
+  const lastDragEnd = useRef(0);
 
   // Program penceresi: başlangıç günü + gün sayısı. Tahtanın sütunları budur.
   const [win, setWin] = useState({ startDate: null, dayCount: DEFAULT_DAY_COUNT });
@@ -622,8 +628,15 @@ export default function DersProgrami() {
     setActiveDrag(event.active.data.current);
   }
 
+  function handleDragOver(event) {
+    const parts = event.over ? String(event.over.id).split(':') : [];
+    setOverDay(parts[1] === 'row' ? Number(parts[0]) : null);
+  }
+
   function handleDragEnd(event) {
     setActiveDrag(null);
+    setOverDay(null);
+    lastDragEnd.current = Date.now();
     const { active, over } = event;
     if (!over) return;
 
@@ -637,10 +650,10 @@ export default function DersProgrami() {
 
     let startMin;
     if (parts[1] === 'row') {
-      // Ders düzeninde satır = dersin kendisi. Bir blok yalnız kendi satırına
-      // bırakılabilir; başka bir dersin satırına bırakmak dersini değiştirmek
-      // olurdu, bu da istenmiyor.
-      if (parts.slice(2).join(':') !== payload.rowKey) return;
+      // Ders düzeninde bırakma yeri GÜN SÜTUNU: hangi satırın üstüne
+      // bırakılırsa bırakılsın blok o günün kendi ders satırına düşer (dersini
+      // değiştirmek istenmiyor). Eskiden yalnız kendi satırı kabul ediliyordu,
+      // yanlış satıra bırakınca hiçbir şey olmuyordu.
       startMin = firstFreeSlot(blocks, dayIndex, durationMin, payload.blockId);
       if (startMin === null) return;                       // o güne sığmıyor
     } else {
@@ -673,6 +686,40 @@ export default function DersProgrami() {
 
   function removeBlock(id) {
     commit(blocks.filter((b) => b.id !== id));
+  }
+
+  /** Hücre penceresindeki düzenlemeleri uygular. Süre uzayıp o günkü başka bir
+   *  blokla çakışırsa blok günün ilk boş dilimine kayar; sığmazsa hata döner. */
+  function saveCell(edits) {
+    let next = blocks.map((b) => {
+      const e = edits[b.id];
+      if (!e) return b;
+      const patch = { durationMin: e.durationMin, note: (e.note || '').trim() };
+      if (b.kind === 'external') {
+        patch.topic = (e.topic || '').trim() || 'Dış meşguliyet';
+      } else if (b.kind === 'study') {
+        const book = library.find((bk) => String(bk.id) === e.book);
+        Object.assign(patch, {
+          type: e.type,
+          typeName: e.type ? taskTypeMap[e.type]?.name ?? b.typeName : null,
+          topic: e.topic,
+          book: e.book ? Number(e.book) : null,
+          bookLabel: e.book ? (book?.label ?? b.bookLabel) : null,
+        });
+      }
+      return { ...b, ...patch };
+    });
+    for (const id of Object.keys(edits)) {
+      const b = next.find((x) => x.id === id);
+      if (!b) continue;
+      if (b.startMin + b.durationMin <= BOARD_END_MIN
+        && !overlaps(next, b.dayIndex, b.startMin, b.durationMin, b.id)) continue;
+      const slot = firstFreeSlot(next, b.dayIndex, b.durationMin, b.id);
+      if (slot === null) return `${b.durationMin} dakikalık blok bu güne sığmıyor.`;
+      next = next.map((x) => (x.id === id ? { ...x, startMin: slot } : x));
+    }
+    commit(next);
+    return null;
   }
 
   function clearAll() {
@@ -1058,7 +1105,8 @@ export default function DersProgrami() {
           sensors={sensors}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveDrag(null)}
+          onDragOver={handleDragOver}
+          onDragCancel={() => { setActiveDrag(null); setOverDay(null); }}
         >
           <div className={s.layout}>
             {/* Baskıda kâğıda yalnız bu kutu çıkar; kenar çubuğu, üst çubuk,
@@ -1101,7 +1149,12 @@ export default function DersProgrami() {
                       editing={rowsEditing}
                       onRemoveRow={(key) => setRows((rowKeys ?? []).filter((k) => k !== key))}
                       canRemoveRow={!rowHasBlocks(row.key)}
-                      muted={Boolean(activeDrag) && activeDrag.rowKey !== row.key}
+                      overDay={overDay}
+                      dragRowKey={activeDrag?.rowKey ?? null}
+                      onOpenCell={(dayIndex, rowKey) => {
+                        if (Date.now() - lastDragEnd.current < 300) return;
+                        setCellEdit({ dayIndex, rowKey });
+                      }}
                     />
                   ))}
               </div>
@@ -1393,6 +1446,26 @@ export default function DersProgrami() {
         subjectMap={subjectMap}
         inStudent={mode === 'ogrenci'}
       />
+
+      {cellEdit && (() => {
+        const items = (blocks || [])
+          .filter((b) => b.dayIndex === cellEdit.dayIndex && subjectRowKey(b) === cellEdit.rowKey)
+          .sort((a, b) => a.startMin - b.startMin);
+        if (!items.length) return null;
+        const day = days.find((d) => d.index === cellEdit.dayIndex);
+        return (
+          <CellEditor
+            key={`${cellEdit.dayIndex}:${cellEdit.rowKey}`}
+            items={items}
+            dayText={day ? `${day.dayNum} ${day.monthShort} ${day.short}` : ''}
+            taskTypes={taskTypes}
+            library={library}
+            onSave={saveCell}
+            onRemove={removeBlock}
+            onClose={() => setCellEdit(null)}
+          />
+        );
+      })()}
 
       {confirmAsk && (
         <Modal open onClose={() => setConfirmAsk(null)} width={460} labelledBy="confirm-title">
@@ -2032,11 +2105,11 @@ function ensureBlockValid(b) {
   return b;
 }
 
-function SubjectRow({ row, days, blocks, onRemove, onEditNote, editing, onRemoveRow,
-                     canRemoveRow, muted }) {
+function SubjectRow({ row, days, blocks, editing, onRemoveRow, canRemoveRow,
+                     overDay, dragRowKey, onOpenCell }) {
   return (
     <>
-      <span className={`${s.rowLabel} ${muted ? s.rowMuted : ''}`} title={row.label}>
+      <span className={s.rowLabel} title={row.label}>
         <span className={s.rowDot} style={{ background: row.color }} />
         <span className={s.rowName}>{row.label}</span>
         {editing && (
@@ -2059,30 +2132,29 @@ function SubjectRow({ row, days, blocks, onRemove, onEditNote, editing, onRemove
           key={`${day.index}:${row.key}`}
           dayIndex={day.index}
           rowKey={row.key}
-          muted={muted}
+          columnOver={overDay === day.index}
+          isTarget={overDay === day.index && dragRowKey === row.key}
           items={blocks
             .filter((b) => b.dayIndex === day.index && subjectRowKey(b) === row.key)
             .sort((a, b) => a.startMin - b.startMin)}
-          onRemove={onRemove}
-          onEditNote={onEditNote}
+          onOpen={onOpenCell}
         />
       ))}
     </>
   );
 }
 
-function SubjectCell({ dayIndex, rowKey, items, onRemove, onEditNote, muted }) {
-  // Saat serbest: bu hücreye bırakılan blok o günün ilk boş dilimine yerleşir.
-  const { setNodeRef, isOver } = useDroppable({ id: `${dayIndex}:row:${rowKey}` });
+function SubjectCell({ dayIndex, rowKey, items, columnOver, isTarget, onOpen }) {
+  // Bırakma yeri gün sütunu; hücre yalnız o sütunun bir parçası (bkz. handleDragEnd).
+  const { setNodeRef } = useDroppable({ id: `${dayIndex}:row:${rowKey}` });
   return (
     <div
       ref={setNodeRef}
-      className={[s.subjCell, muted ? s.cellMuted : '', isOver && !muted ? s.cellOver : '']
-        .filter(Boolean).join(' ')}
+      className={cx(s.subjCell, columnOver && s.colOver, isTarget && s.cellTarget,
+        items.length > 0 && s.subjCellFilled)}
+      onClick={items.length ? () => onOpen(dayIndex, rowKey) : undefined}
     >
-      {items.map((b) => (
-        <SubjectChip key={b.id} block={b} onRemove={onRemove} onEditNote={onEditNote} />
-      ))}
+      {items.length > 0 && <SubjectChip block={items[0]} extra={items.length - 1} />}
     </div>
   );
 }
@@ -2091,10 +2163,12 @@ function SubjectCell({ dayIndex, rowKey, items, onRemove, onEditNote, muted }) {
  *  Satır zaten dersi söylüyor; saat ve süre bu ekranda gösterilmiyor. */
 function chipText(b) {
   if (b.kind === 'exam') return 'Deneme';
-  return b.topic || b.bookLabel || b.typeName || '—';
+  return b.topic || b.bookLabel || b.typeName || blockLabel(b);
 }
 
-function SubjectChip({ block, onRemove, onEditNote }) {
+/** Hücreyi bloğun rengiyle tamamen kaplar. Aynı hücrede birden çok görev varsa
+ *  ilki görünür, kalanı "+N" rozetiyle; hepsi tıklayınca açılan pencerede. */
+function SubjectChip({ block, extra }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
     data: {
@@ -2109,35 +2183,139 @@ function SubjectChip({ block, onRemove, onEditNote }) {
   return (
     <div
       ref={setNodeRef}
-      className={`${s.chipBlock} ${isDragging ? s.blockDragging : ''}`}
-      style={{ borderLeftColor: block.subjectColor }}
-      title={block.note || undefined}
+      className={cx(s.chipFill, isDragging && s.blockDragging)}
+      style={{ background: block.subjectColor }}
+      title={block.note || chipText(block)}
       {...listeners}
       {...attributes}
     >
-      <span className={s.chipLabel}>{chipText(block)}</span>
-      <div className={s.chipActions}>
-        <button
-          type="button"
-          className={cx(s.chipBtn, block.note && s.chipBtnOn)}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => onEditNote(block.id)}
-          title={block.note || 'Açıklama ekle'}
-          aria-label={`${blockLabel(block)} — ${chipText(block)} bloğunun açıklamasını düzenle`}
-        >
-          <StickyNote size={10} />
-        </button>
-        <button
-          type="button"
-          className={s.chipBtn}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => onRemove(block.id)}
-          aria-label={`${blockLabel(block)} — ${chipText(block)} bloğunu kaldır`}
-        >
-          <X size={10} />
-        </button>
-      </div>
+      <span className={s.chipFillText}>{chipText(block)}</span>
+      {block.note && <StickyNote size={10} className={s.chipFillNote} aria-hidden />}
+      {extra > 0 && <span className={s.chipMore}>+{extra}</span>}
     </div>
+  );
+}
+
+/**
+ * Ders satırlı görünümde tıklanan hücrenin görevleri: hepsi görünür ve
+ * düzenlenir (çalışma türü, konu, kitap, süre, açıklama) ya da silinir.
+ * Ders değiştirilemez — satır dersin kendisi; başka derse taşımak istenmiyor.
+ */
+function CellEditor({ items, dayText, taskTypes, library, onSave, onRemove, onClose }) {
+  const [edits, setEdits] = useState(() => Object.fromEntries(items.map((b) => [b.id, {
+    type: b.type ? String(b.type) : '',
+    topic: b.topic || '',
+    book: b.book != null ? String(b.book) : '',
+    durationMin: b.durationMin,
+    note: b.note || '',
+  }])));
+  const [topicsBySubject, setTopicsBySubject] = useState({});
+  const [error, setError] = useState('');
+
+  const subjectIds = [...new Set(items.filter((b) => b.kind === 'study' && b.subject)
+    .map((b) => String(b.subject)))].join(',');
+  useEffect(() => {
+    let alive = true;
+    subjectIds.split(',').filter(Boolean).forEach((id) => {
+      listTopics(id)
+        .then((t) => { if (alive) setTopicsBySubject((m) => ({ ...m, [id]: t })); })
+        .catch(() => {});
+    });
+    return () => { alive = false; };
+  }, [subjectIds]);
+
+  const set = (id, patch) => setEdits((e) => ({ ...e, [id]: { ...e[id], ...patch } }));
+
+  function save() {
+    const msg = onSave(edits);
+    if (msg) setError(msg); else onClose();
+  }
+
+  return (
+    <Modal open onClose={onClose} width={560} labelledBy="cell-title">
+      <h2 id="cell-title" className={s.modalTitle}>
+        {blockLabel(items[0])} · {dayText}
+      </h2>
+      <div className={s.assignForm}>
+        {items.map((b) => {
+          const e = edits[b.id] ?? {};
+          const topics = topicsBySubject[String(b.subject)] ?? [];
+          const books = library.filter((bk) => bk.kind === 'ders'
+            && String(bk.subject) === String(b.subject));
+          const hasBook = books.some((bk) => String(bk.id) === e.book);
+          return (
+            <div key={b.id} className={s.cellItem} style={{ borderLeftColor: b.subjectColor }}>
+              <div className={s.cellItemHead}>
+                <strong>
+                  {b.kind === 'exam' ? 'Deneme' : b.kind === 'external' ? 'Dış meşguliyet' : 'Çalışma'}
+                </strong>
+                <Button variant="ghost" size="sm" onClick={() => onRemove(b.id)}>
+                  <Trash2 size={13} /> Sil
+                </Button>
+              </div>
+              {b.kind === 'external' && (
+                <Field label="Ad">
+                  <Input value={e.topic} onChange={(ev) => set(b.id, { topic: ev.target.value })} />
+                </Field>
+              )}
+              {b.kind === 'study' && (
+                <div className={s.cellItemGrid}>
+                  <Field label="Çalışma türü">
+                    <Select value={e.type} onChange={(ev) => set(b.id, { type: ev.target.value })}>
+                      <option value="">—</option>
+                      {taskTypes.map((x) => <option value={x.id} key={x.id}>{x.name}</option>)}
+                    </Select>
+                  </Field>
+                  <Field label="Konu">
+                    <Select value={e.topic} onChange={(ev) => set(b.id, { topic: ev.target.value })}>
+                      <option value="">Konu yok</option>
+                      {e.topic && !topics.some((t) => t.name === e.topic) && (
+                        <option value={e.topic}>{e.topic}</option>
+                      )}
+                      {topics.map((t) => <option value={t.name} key={t.id}>{t.name}</option>)}
+                    </Select>
+                  </Field>
+                  {(books.length > 0 || e.book) && (
+                    <Field label="Kitap">
+                      <Select value={e.book} onChange={(ev) => set(b.id, { book: ev.target.value })}>
+                        <option value="">Kitap yok</option>
+                        {e.book && !hasBook && <option value={e.book}>{b.bookLabel || 'Mevcut kitap'}</option>}
+                        {books.map((bk) => <option value={bk.id} key={bk.id}>{bk.label}</option>)}
+                      </Select>
+                    </Field>
+                  )}
+                </div>
+              )}
+              <div className={s.cellItemGrid}>
+                <Field label="Süre (dk)">
+                  <NumberInput
+                    value={e.durationMin}
+                    min={MIN_DURATION}
+                    max={MAX_DURATION}
+                    onCommit={(n) => set(b.id, { durationMin: n })}
+                    aria-label="Süre (dakika)"
+                  />
+                </Field>
+              </div>
+              <Field label="Açıklama (öğrenci görür)">
+                <Textarea
+                  rows={2}
+                  maxLength={NOTE_MAX}
+                  value={e.note}
+                  placeholder="Ör. 45-70. sayfa · 40 soru"
+                  onChange={(ev) => set(b.id, { note: ev.target.value })}
+                />
+              </Field>
+            </div>
+          );
+        })}
+        {error && <p className={s.assignError}>{error}</p>}
+        <div className={s.assignActions}>
+          <Button variant="ghost" onClick={onClose}>Vazgeç</Button>
+          <Button onClick={save}>Kaydet</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
