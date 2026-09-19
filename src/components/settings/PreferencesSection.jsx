@@ -103,8 +103,11 @@ export default function PreferencesSection() {
         <CardHeader title="Program varsayılanları" />
         {/* Alanlar içeriklerine göre dar: gün sayısı iki haneli bir sayı,
             kutunun kart genişliğine yayılması için sebep yok. */}
-        <div className={s.prefRow}>
-          <Field label="Gün sayısı" className={s.prefNum}>
+        {/* Beş alan üç eşit sütunlu bir ızgarada: hepsi aynı genişlik ve yükseklikte
+            (20 Eyl 2026 geri bildirimi — içeriğe göre daralan satırda boyutlar
+            birbirini tutmuyor, son alan alt satıra düşüyordu). */}
+        <div className={s.prefGrid}>
+          <Field label="Gün sayısı">
             <NumberInput
               value={prefs.default_day_count}
               min={1}
@@ -112,10 +115,18 @@ export default function PreferencesSection() {
               onCommit={(v) => save('default_day_count', v, 600)}
             />
           </Field>
+          <Field label="Blok süresi (dk)">
+            <NumberInput
+              value={prefs.default_block_minutes}
+              min={5}
+              max={720}
+              onCommit={(v) => save('default_block_minutes', v, 600)}
+            />
+          </Field>
           {/* Tahta düzeni eskiden yalnız tarayıcıda tutuluyordu; rehber her
               cihazda yeniden seçmek zorunda kalıyordu (kullanıcı isteği,
               13 Eyl 2026). Artık tercihlerde. */}
-          <Field label="Tahta düzeni" className={s.prefSelect}>
+          <Field label="Tahta düzeni">
             <Select
               value={prefs.default_board_layout}
               onChange={(e) => save('default_board_layout', e.target.value)}
@@ -127,7 +138,7 @@ export default function PreferencesSection() {
           {/* Saatli tahtanın aralığı (20 Eyl 2026). Seçenekler birbirini
               kısıtlıyor ki bitiş başlangıçtan önce seçilemesin; sunucu da
               ayrıca reddediyor. */}
-          <Field label="Tahta başlangıcı" className={s.prefSelect}>
+          <Field label="Tahta başlangıcı">
             <Select
               value={prefs.board_start_hour}
               onChange={(e) => save('board_start_hour', Number(e.target.value))}
@@ -137,7 +148,7 @@ export default function PreferencesSection() {
               ))}
             </Select>
           </Field>
-          <Field label="Tahta bitişi" className={s.prefSelect}>
+          <Field label="Tahta bitişi">
             <Select
               value={prefs.board_end_hour}
               onChange={(e) => save('board_end_hour', Number(e.target.value))}
@@ -148,28 +159,20 @@ export default function PreferencesSection() {
               })}
             </Select>
           </Field>
-          <Field label="Blok süresi (dk)" className={s.prefNum}>
-            <NumberInput
-              value={prefs.default_block_minutes}
-              min={5}
-              max={720}
-              onCommit={(v) => save('default_block_minutes', v, 600)}
-            />
-          </Field>
         </div>
-        <ul className={s.toggleList}>
+        <ul className={s.prefToggles}>
           <li>
             <Toggle
               checked={prefs.routine_prefill}
               onChange={(v) => save('routine_prefill', v)}
-              label="Öğrencinin rutini Yeni Plan'a eklensin"
+              label="Rutini Yeni Plan'a ekle"
             />
           </li>
           <li>
             <Toggle
               checked={prefs.notify_student_on_assign}
               onChange={(v) => save('notify_student_on_assign', v)}
-              label="Program atanınca öğrenciye e-posta gönder"
+              label="Atama e-postası"
             />
           </li>
         </ul>

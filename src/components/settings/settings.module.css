@@ -239,6 +239,45 @@
 
 .prefNum { width: 110px; flex: 0 0 auto; }
 
+/* Program varsayılanları: beş alan üç eşit sütunda (beşi tek satırda
+   "Saat satırlı" gibi seçenekleri kesiyordu), kontroller sütunu dolduruyor →
+   hepsi aynı genişlik ve yükseklikte, iki satırın sütunları hizalı. */
+.prefGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Sütun aralığı Panel bölümleri anahtarlarıyla (.toggleList) aynı ki iki
+     kartın sütunları piksel piksel hizalansın. */
+  column-gap: var(--space-2);
+  row-gap: var(--space-4);
+  margin-top: var(--space-2);
+}
+.prefGrid > label > * { width: 100%; }
+
+/* Altındaki anahtarlar alanlarla aynı üç sütunda: hem üstteki kutularla hem
+   Panel bölümleri kartındaki anahtarlarla hizalı. */
+.prefToggles {
+  list-style: none;
+  margin: var(--space-4) 0 var(--space-2);
+  padding: 0;
+  display: grid;
+  /* Panel bölümleri listesiyle (.toggleList) birebir aynı tanım: minmax(0, 1fr)
+     satır yüksekliğini metni daha dar varsayarak hesaplıyor, anahtar 46 yerine
+     59 piksel çıkıyordu. */
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+/* Kırılımlar Panel bölümleri listesiyle (.toggleList) aynı: iki kart her
+   genişlikte aynı sütun sayısında ve hizalı kalsın. */
+@media (max-width: 1100px) {
+  .prefGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .prefToggles { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 720px) {
+  .prefGrid { grid-template-columns: 1fr; }
+  .prefToggles { grid-template-columns: 1fr; }
+}
+
 /* Dokuz anahtar sabit üç sütunda (3x3). `auto-fill` bırakılsaydı genişliğe göre
    2 ya da 4 sütuna kayıp son satırı tek başına bırakabiliyordu. */
 .toggleList {
