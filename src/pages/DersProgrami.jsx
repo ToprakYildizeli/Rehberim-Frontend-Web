@@ -464,6 +464,16 @@ export default function DersProgrami() {
       setWin(saved.win || { startDate: firstFreeStart(ranges, win.dayCount), dayCount: win.dayCount });
       return;
     }
+    const r = ranges.find((x) => String(x.id) === String(id));
+    if (r?.isApproved) {
+      window.alert('Bu hafta onaylanmış; onaylanmış program düzenlenemez.');
+      return;
+    }
+    const label = r ? windowRangeText(r.start, r.dayCount) : 'Seçilen';
+    if (!window.confirm(
+      `${label} haftasının programını düzenlemek istediğinize emin misiniz?\n`
+      + 'Değişiklikler öğrenciye anında yansır.'
+    )) return;
     if (programId == null) draftStore.current = { blocks: blocks || [], win };
     setBlocks(null);
     try {
@@ -893,10 +903,10 @@ export default function DersProgrami() {
                 onChange={(e) => selectProgram(e.target.value)}
                 aria-label="Program"
               >
-                <option value="">Yeni plan (kaydedilmemiş)</option>
+                <option value="">Yeni Plan</option>
                 {ranges.map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {windowRangeText(r.start, r.dayCount)}{r.isCurrent ? ' · bu hafta' : ''} · düzenle
+                  <option key={r.id} value={r.id} disabled={r.isApproved}>
+                    {windowRangeText(r.start, r.dayCount)}{r.isApproved ? ' · onaylı' : ''}
                   </option>
                 ))}
               </Select>
@@ -1002,9 +1012,11 @@ export default function DersProgrami() {
               <Button className={s.action} variant="danger" size="sm" onClick={clearAll} title="Tümünü temizle">
                 <Trash2 size={13} /> Temizle
               </Button>
-              <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
-                <Send size={13} /> Ata
-              </Button>
+              {!(mode === 'ogrenci' && programId != null) && (
+                <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
+                  <Send size={13} /> Ata
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -1357,18 +1369,30 @@ export default function DersProgrami() {
         inStudent={mode === 'ogrenci'}
       />
 
-      {assignSource && (
+      {assignSource && mode === 'ogrenci' && activeStudent && (
+        <AssignConfirm
+          source={assignSource}
+          student={activeStudent}
+          win={win}
+          busyRanges={busyRanges}
+          blocks={blocks || []}
+          onAssigned={() => {
+            // Yeni program listeye ve dolu günlere hemen yansısın. Taslak
+            // tahtada kalır, pencere bir sonraki boş güne kayar: aynı plan
+            // başka bir haftaya da atanabilsin.
+            getStudentPrograms(scope).then(setHistory).catch(() => {});
+            listProgramRanges(scope).then((r) => {
+              setRanges(r);
+              setWin((w) => ({ ...w, startDate: firstFreeStart(r, w.dayCount, w.startDate) }));
+            }).catch(() => {});
+          }}
+          onClose={() => setAssignSource(null)}
+        />
+      )}
+      {assignSource && mode !== 'ogrenci' && (
         <AssignModal
           source={assignSource}
           students={students}
-          lockedStudent={mode === 'ogrenci' ? activeStudent : null}
-          onAssigned={(prog) => {
-            // Yeni program program listesine ve dolu günlere hemen yansısın.
-            // Taslak tahtada kalır: aynı planı başka bir tarihe de atayabilsin.
-            if (mode === 'ogrenci' && String(prog?.student) === String(studentId)) {
-              refreshStudentData();
-            }
-          }}
           blocks={blocks || []}
           boardStart={win.startDate}
           boardDayCount={win.dayCount}
@@ -1477,14 +1501,87 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
 
 /** Atama modalı — öğrenci + pencere (başlangıç + gün sayısı) seçilir. */
 /**
- * Programı / şablonu öğrenciye atama penceresi. **Her zaman yeni program açar**;
- * öğrencinin mevcut programlarına dokunmaz, hepsi dolu gün sayılır.
- * Öğrenci modunda öğrenci sorulmaz (`lockedStudent`).
+ * Öğrenci modunda atama: öğrenci, tarih ve plan ana ekranda zaten belli.
+ * Pencere yalnız özet gösterip onay ister; burada hiçbir şey değiştirilmez
+ * (kullanıcı kararı, 19 Eyl 2026). Her zaman yeni program açar.
+ */
+function AssignConfirm({ source, student, win, busyRanges, blocks, onAssigned, onClose }) {
+  const [busy, setBusy] = useState(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState('');
+
+  const blocked = makeStartBlocker(busyRanges, win.dayCount);
+  const clash = Boolean(win.startDate && blocked && blocked(win.startDate));
+  const isTemplate = source.type === 'template';
+  const noBoard = !isTemplate && blocks.length === 0;
+  const range = win.startDate ? windowRangeText(win.startDate, win.dayCount) : '—';
+
+  async function confirm() {
+    setBusy(true); setError('');
+    const target = { startDate: win.startDate, dayCount: win.dayCount };
+    try {
+      const prog = isTemplate
+        ? await assignTemplate(source.id, student.id, target)
+        : await assignBoard(student.id, blocks, win.startDate, target);
+      onAssigned?.(prog);
+      setResult(prog);
+    } catch (err) {
+      setError(apiMessage(err, 'Atama başarısız oldu.'));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} width={480} labelledBy="assign-title">
+      <h2 id="assign-title" className={s.modalTitle}>
+        {isTemplate ? 'Şablonu ata' : 'Programı ata'}
+      </h2>
+      {result ? (
+        <div className={s.assignForm}>
+          <p><strong>{result.student_name}</strong> için program atandı.</p>
+          <p className={s.assignWeek}>
+            {result.start_date} – {result.end_date} ({result.day_count} gün) · {result.tasks?.length || 0} görev
+          </p>
+          <Button block onClick={onClose}>Kapat</Button>
+        </div>
+      ) : (
+        <div className={s.assignForm}>
+          <p>Aşağıdaki program atanacak. Emin misiniz?</p>
+          <dl className={s.assignSummary}>
+            <dt>Öğrenci</dt><dd>{student.name}{student.grade ? ` · ${student.grade}` : ''}</dd>
+            <dt>Tarih</dt><dd>{range} · {win.dayCount} gün</dd>
+            {isTemplate
+              ? <><dt>Şablon</dt><dd>{source.name}</dd></>
+              : <><dt>Görev</dt><dd>{blocks.length} blok</dd></>}
+          </dl>
+          {clash && (
+            <p className={s.assignError}>
+              Bu tarih aralığı öğrencinin mevcut bir programıyla çakışıyor. Ana ekrandan başka bir başlangıç günü seçin.
+            </p>
+          )}
+          {noBoard && <p className={s.assignError}>Tahta boş — önce blok ekleyin.</p>}
+          {error && <p className={s.assignError}>{error}</p>}
+          <div className={s.assignActions}>
+            <Button variant="ghost" onClick={onClose}>Vazgeç</Button>
+            <Button onClick={confirm} disabled={busy || clash || noBoard || !win.startDate}>
+              {busy ? 'Atanıyor…' : 'Ata'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
+/**
+ * Genel Program'dan atama: öğrenci ve tarih burada seçilir. **Her zaman yeni
+ * program açar**; öğrencinin mevcut programlarına dokunmaz, hepsi dolu gün sayılır.
  */
 function AssignModal({
-  source, students, lockedStudent, onAssigned, blocks, boardStart, boardDayCount, onClose,
+  source, students, onAssigned, blocks, boardStart, boardDayCount, onClose,
 }) {
-  const [studentId, setStudentId] = useState(lockedStudent ? String(lockedStudent.id) : '');
+  const [studentId, setStudentId] = useState('');
   const [date, setDate] = useState('');
   const [dayCount, setDayCount] = useState(boardDayCount || DEFAULT_DAY_COUNT);
   const [ranges, setRanges] = useState([]);
@@ -1543,8 +1640,7 @@ function AssignModal({
     }
   }
 
-  const baseTitle = source.type === 'template' ? `Şablonu ata: ${source.name}` : 'Programı ata';
-  const title = lockedStudent ? `${baseTitle} · ${lockedStudent.name}` : baseTitle;
+  const title = source.type === 'template' ? `Şablonu ata: ${source.name}` : 'Programı ata';
   const noBoard = source.type === 'board' && blocks.length === 0;
 
   return (
@@ -1560,17 +1656,15 @@ function AssignModal({
         </div>
       ) : (
         <div className={s.assignForm}>
-          {!lockedStudent && (
-            <Field label="Öğrenci">
-              <StudentPicker
-                students={students}
-                value={studentId}
-                onChange={setStudentId}
-                placeholder="Öğrenci adı yazın…"
-                ariaLabel="Öğrenci"
-              />
-            </Field>
-          )}
+          <Field label="Öğrenci">
+            <StudentPicker
+              students={students}
+              value={studentId}
+              onChange={setStudentId}
+              placeholder="Öğrenci adı yazın…"
+              ariaLabel="Öğrenci"
+            />
+          </Field>
           <div className={s.assignWindow}>
             <Field label="Başlangıç (görüşme günü)">
               <DateField

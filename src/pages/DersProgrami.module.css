@@ -584,6 +584,18 @@
 .assignForm { display: flex; flex-direction: column; gap: var(--space-3); }
 .assignWeek { font-size: 0.85rem; font-weight: 600; color: var(--accent); margin: 0; }
 .assignHint { font-size: 0.75rem; color: var(--text-muted); margin: 0; }
+.assignSummary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px var(--space-4);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-alt);
+  border-radius: var(--radius-md);
+  font-size: 0.88rem;
+}
+.assignSummary dt { color: var(--text-muted); }
+.assignSummary dd { margin: 0; font-weight: 600; color: var(--text); }
 .assignError { font-size: 0.78rem; color: var(--error); margin: 0; }
 .assignActions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 

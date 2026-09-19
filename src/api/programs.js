@@ -188,6 +188,8 @@ export async function listProgramRanges(studentId) {
       end: p.end_date,
       dayCount: p.day_count || DEFAULT_DAY_COUNT,
       isCurrent: p.start_date <= now && now <= p.end_date,
+      // Rehberin onayladığı hafta mühürlüdür; planlayıcıda düzenlenmez.
+      isApproved: !!p.is_approved,
     }));
 }
 
