@@ -61,7 +61,7 @@ export default function StudentPicker({
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
       setActive((i) => Math.max(i - 1, 0));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === 'Enter' || e.keyCode === 13) {
       if (open && matches[active]) {
         e.preventDefault();
         pick(matches[active]);

@@ -326,6 +326,22 @@ export default function DersProgrami() {
     return () => { alive = false; };
   }, [scope]);
 
+  /** Öğrenci modunda tahtayı sunucudaki gerçek hâline getirir.
+   *  Tahtanın dışında (atama penceresinden) program değişince ya da bir kayıt
+   *  reddedilince çağrılır; aksi hâlde tahta sunucuda olmayan bir şeyi gösterir. */
+  const reloadBoard = useCallback(async () => {
+    if (!scope) return;
+    try {
+      const d = await getSchedule(scope);
+      setBlocks(d.blocks);
+      setWin({ startDate: d.startDate, dayCount: d.dayCount });
+      setProgramId(d.programId);
+    } catch {
+      /* tahta olduğu gibi kalır; hata mesajı zaten gösteriliyor */
+    }
+    getStudentPrograms(scope).then(setHistory).catch(() => {});
+  }, [scope]);
+
   const commit = useCallback(
     (raw) => {
       // Ders satırlı görünümde satır değiştirmek bloğun türünü de değiştirebilir;
@@ -341,9 +357,16 @@ export default function DersProgrami() {
           // Backend blok kaydedilirken süre hafızasını günceller; yerel kopyayı tazele.
           loadDurationMemory().then(setDurationMemory).catch(() => {});
         })
-        .catch(() => {});
+        .catch((err) => {
+          // Eskiden sessizce yutuluyordu: blok tahtada kalıyor ama sunucuya hiç
+          // gitmiyordu (ör. program oluşturma örtüşmeden 400). Rehber kaydettiğini
+          // sanıyordu, öğrenci hiçbir şey görmüyordu. Artık hata gösteriliyor ve
+          // tahta sunucudaki gerçek hâline dönüyor.
+          setWindowError(apiMessage(err, 'Değişiklik kaydedilemedi.'));
+          reloadBoard();
+        });
     },
-    [scope, win, programId]
+    [scope, win, programId, reloadBoard]
   );
 
   /** Pencereyi değiştirir. Program varsa backend'e PATCH'lenir (örtüşme reddedilir). */
@@ -1229,16 +1252,18 @@ export default function DersProgrami() {
           boardProgramId={mode === 'ogrenci' ? programId : null}
           resolveBoardProgramId={async () => programId ?? (await getSchedule(scope)).programId}
           onMoveBoard={changeWindow}
+          onAssigned={(prog) => {
+            // Atama bu tahtanın öğrencisine yapıldıysa tahta yenilenmeli; yoksa
+            // eski (çoğu zaman boş) hâlini gösterir ve üstüne eklenen bloklar
+            // çakışmadan reddedilir.
+            if (mode === 'ogrenci' && String(prog?.student ?? studentId) === String(studentId)) {
+              reloadBoard();
+            }
+          }}
           blocks={blocks || []}
           boardStart={win.startDate}
           boardDayCount={win.dayCount}
-          onClose={() => {
-            setAssignSource(null);
-            // Atama öğrencinin program listesini değiştirmiş olabilir.
-            if (mode === 'ogrenci' && studentId) {
-              getStudentPrograms(studentId).then(setHistory).catch(() => {});
-            }
-          }}
+          onClose={() => setAssignSource(null)}
         />
       )}
 
@@ -1354,7 +1379,7 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
  */
 function AssignModal({
   source, students, lockedStudent, boardProgramId, resolveBoardProgramId, onMoveBoard,
-  blocks, boardStart, boardDayCount, onClose,
+  onAssigned, blocks, boardStart, boardDayCount, onClose,
 }) {
   const [studentId, setStudentId] = useState(
     lockedStudent ? String(lockedStudent.id) : ''
@@ -1404,6 +1429,7 @@ function AssignModal({
           const msg = await onMoveBoard({ startDate: date || boardStart, dayCount });
           if (msg) { setError(msg); return; }
           const start = date || boardStart;
+          onAssigned?.({ student: studentId });
           setResult({
             student_name: lockedStudent.name,
             start_date: start,
@@ -1417,6 +1443,7 @@ function AssignModal({
       const prog = source.type === 'template'
         ? await assignTemplate(source.id, studentId, win)
         : await assignBoard(studentId, blocks, boardStart, win);
+      onAssigned?.(prog);
       setResult(prog);
     } catch (err) {
       setError(apiMessage(err, 'Atama başarısız oldu.'));
