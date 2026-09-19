@@ -191,6 +191,9 @@ export default function DersProgrami() {
   // "Programı sil" onay penceresi.
   const [deleteAsk, setDeleteAsk] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  /* Tema uyumlu onay penceresi (tarayıcının düz window.confirm kutusu yerine):
+     `{ title, body, confirmLabel, danger, onConfirm }`. */
+  const [confirmAsk, setConfirmAsk] = useState(null);
 
   // Şablonlar + atama
   const [templates, setTemplates] = useState([]);
@@ -468,15 +471,17 @@ export default function DersProgrami() {
       return;
     }
     const r = ranges.find((x) => String(x.id) === String(id));
-    if (r?.isApproved) {
-      window.alert('Bu hafta onaylanmış; onaylanmış program düzenlenemez.');
-      return;
-    }
+    if (r?.isApproved) return;   // listede zaten seçilemez
     const label = r ? windowRangeText(r.start, r.dayCount) : 'Seçilen';
-    if (!window.confirm(
-      `${label} haftasının programını düzenlemek istediğinize emin misiniz?\n`
-      + 'Değişiklikler öğrenciye anında yansır.'
-    )) return;
+    setConfirmAsk({
+      title: 'Haftayı düzenle',
+      body: <><strong>{label}</strong> haftasının programını düzenlemek istediğinize emin misiniz? Değişiklikler öğrenciye anında yansır.</>,
+      confirmLabel: 'Düzenle',
+      onConfirm: () => openProgram(id),
+    });
+  }
+
+  async function openProgram(id) {
     if (programId == null) draftStore.current = { blocks: blocks || [], win };
     setBlocks(null);
     try {
@@ -660,10 +665,23 @@ export default function DersProgrami() {
 
   function clearAll() {
     // Açık bir programda "Temizle" öğrencinin görevlerini siler; taslakta değil.
-    if (scope && programId != null
-      && !window.confirm('Bu programdaki bütün görevler silinecek. Emin misiniz?')) return;
-    commit([]);
-    setLoadedTemplate(null);   // boş board = artık bir şablon düzenlenmiyor
+    const doClear = () => {
+      commit([]);
+      setLoadedTemplate(null);   // boş board = artık bir şablon düzenlenmiyor
+    };
+    if (scope && programId != null) {
+      const r = ranges.find((x) => x.id === programId);
+      const label = r ? windowRangeText(r.start, r.dayCount) : 'Bu';
+      setConfirmAsk({
+        title: 'Programı temizle',
+        body: <><strong>{label}</strong> haftasındaki bütün görevler silinecek. Öğrenci bu görevleri artık göremeyecek.</>,
+        confirmLabel: 'Evet, temizle',
+        danger: true,
+        onConfirm: doClear,
+      });
+      return;
+    }
+    doClear();
   }
 
   /** Tahtanın penceresinden önce başlayan en yakın programın bloklarını getirir.
@@ -918,14 +936,6 @@ export default function DersProgrami() {
               <Button variant="danger" size="sm" onClick={() => setDeleteAsk(true)} title="Bu programı sil">
                 <Trash2 size={13} /> Programı sil
               </Button>
-            )}
-            {loadedTemplate && (
-              <span className={s.tplBadge} title="Şablon Kaydet bu şablonu günceller">
-                <Bookmark size={12} /> {loadedTemplate.name}
-                <button type="button" className={s.tplBadgeX} onClick={() => setLoadedTemplate(null)} aria-label="Şablon bağını kaldır">
-                  <X size={11} />
-                </button>
-              </span>
             )}
           </div>
 
@@ -1371,6 +1381,25 @@ export default function DersProgrami() {
         subjectMap={subjectMap}
         inStudent={mode === 'ogrenci'}
       />
+
+      {confirmAsk && (
+        <Modal open onClose={() => setConfirmAsk(null)} width={460} labelledBy="confirm-title">
+          <h2 id="confirm-title" className={s.modalTitle}>{confirmAsk.title}</h2>
+          <div className={s.assignForm}>
+            <p>{confirmAsk.body}</p>
+            {confirmAsk.danger && <p className={s.assignError}>Bu işlem geri alınamaz.</p>}
+            <div className={s.assignActions}>
+              <Button variant="ghost" onClick={() => setConfirmAsk(null)}>Vazgeç</Button>
+              <Button
+                variant={confirmAsk.danger ? 'danger' : 'primary'}
+                onClick={() => { const run = confirmAsk.onConfirm; setConfirmAsk(null); run(); }}
+              >
+                {confirmAsk.confirmLabel}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
 
       {deleteAsk && programId != null && (() => {
         const r = ranges.find((x) => x.id === programId);

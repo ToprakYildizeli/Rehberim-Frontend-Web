@@ -112,8 +112,16 @@
 
 .dayCountInput { width: 62px; }
 
-.studentSelect { min-width: 190px; }
-.programSelect { min-width: 200px; }
+.studentSelect { width: 210px; }
+/* Yalnız tarih aralığı yazıyor ("28 Eyl – 4 Eki"); geniş olmasına gerek yok. */
+.programSelect { width: 150px; }
+
+/* Aramalı öğrenci seçici şeritte açılır listeyle aynı boyda dursun. */
+.ribbon .studentSelect input {
+  height: var(--ctl-h);
+  padding-top: 0;
+  padding-bottom: 0;
+}
 
 .hint {
   font-size: 0.78rem;
@@ -600,34 +608,7 @@
 .assignActions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }
 
 /* Düzenlenen şablon göstergesi */
-.tplBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.76rem;
-  font-weight: 600;
-  color: var(--accent-text);
-  background: var(--accent-subtle);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-pill);
-  padding: 4px 8px 4px 10px;
-  max-width: 220px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.tplBadgeX {
-  display: grid;
-  place-items: center;
-  width: 16px; height: 16px;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.tplBadgeX:hover { color: var(--error); }
+
 
 /* ---------- Alt yatay özet çubuğu (geçen hafta · şu anki · toplam) ---------- */
 .sumBar {
