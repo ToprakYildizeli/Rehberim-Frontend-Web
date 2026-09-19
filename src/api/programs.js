@@ -171,6 +171,53 @@ export async function getStudentProgram(studentId) {
   return { ...entry, blocks: entry.blocks.map((b) => ({ ...b })) };
 }
 
+/** Öğrencinin programlarının yalnız tarih aralıkları (yeni başta).
+ *
+ *  Tarih seçicideki dolu günler için. `slim=1` görevleri getirmiyor: tam liste
+ *  rehberin bütün programlarını görevleriyle taşıyor ve canlıda öğrenci
+ *  seçildikten saniyeler sonra dolu günler beliriyordu (19 Eyl 2026). */
+export async function listProgramRanges(studentId) {
+  const { data } = await api.get('/programs/', { params: { slim: 1 } });
+  const now = today();
+  return data
+    .filter((p) => String(p.student) === String(studentId))
+    .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))
+    .map((p) => ({
+      id: p.id,
+      start: p.start_date,
+      end: p.end_date,
+      dayCount: p.day_count || DEFAULT_DAY_COUNT,
+      isCurrent: p.start_date <= now && now <= p.end_date,
+    }));
+}
+
+/** Öğrencinin belirli bir programını tahtada düzenlemek için açar.
+ *  Önbelleğe o program yazılır; tahtadaki değişiklikler (persistStudentSchedule)
+ *  yalnız bu programa gider. */
+export async function openStudentProgram(studentId, programId) {
+  const [{ data }, defaults] = await Promise.all([
+    api.get(`/programs/${programId}/`),
+    programDefaults(),
+  ]);
+  const entry = programToEntry(data, defaults.dayCount);
+  cache.set(String(studentId), entry);
+  return { ...entry, blocks: entry.blocks.map((b) => ({ ...b })) };
+}
+
+/** Programı (görevleriyle) siler. Geri alınamaz; çağıran onay almalı. */
+export async function deleteProgram(programId) {
+  await api.delete(`/programs/${programId}/`);
+  for (const [key, entry] of cache.entries()) {
+    if (entry.programId === programId) cache.delete(key);
+  }
+}
+
+/** Öğrenci için taslak tahta: hiçbir programa bağlı değil, kaydedilmez.
+ *  Önbellek temizlenir ki yanlışlıkla eski bir programa yazılmasın. */
+export function forgetStudentProgram(studentId) {
+  cache.delete(String(studentId));
+}
+
 /** Öğrencinin TÜM programlarını (geçmiş dahil) salt-okunur döndürür.
  *  Detay sayfasının "Ders Programı" sekmesi için; en yeni başta sıralı. */
 export async function getStudentPrograms(studentId) {

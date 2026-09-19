@@ -13,9 +13,9 @@ import StudentPicker from '../components/ui/StudentPicker';
 import { listStudents } from '../api/students';
 import { getSchedule, saveSchedule, setGeneralWindow } from '../api/schedule';
 import {
-  suggestNextWeekStart, getStudentPrograms, updateProgramWindow,
-  windowDays, windowRangeText, studyMinutes, externalMinutes,
-  addDays, fmtMin, fmtHours, SLOT_MIN, DEFAULT_DAY_COUNT, programDefaults,
+  getStudentPrograms, updateProgramWindow, listProgramRanges, openStudentProgram,
+  forgetStudentProgram, deleteProgram, windowDays, windowRangeText, studyMinutes, externalMinutes,
+  addDays, fmtMin, fmtHours, SLOT_MIN, DEFAULT_DAY_COUNT, programDefaults, today,
 } from '../api/programs';
 import {
   listTemplates, createTemplate, updateTemplate, deleteTemplate, templateToBlocks,
@@ -95,6 +95,15 @@ function makeStartBlocker(busyRanges, dayCount) {
   };
 }
 
+/** `from`dan itibaren `dayCount` günlük pencerenin hiçbir programla çakışmadığı
+ *  ilk başlangıç günü. */
+function firstFreeStart(ranges, dayCount, from = today()) {
+  const blocked = makeStartBlocker(ranges, dayCount);
+  let d = from;
+  for (let i = 0; blocked && i < 730 && blocked(d); i += 1) d = addDays(d, 1);
+  return d;
+}
+
 /** Backend hata gövdesinden ilk okunabilir mesajı çıkarır. */
 function apiMessage(err, fallback) {
   const data = err?.response?.data;
@@ -167,8 +176,18 @@ export default function DersProgrami() {
 
   // Program penceresi: başlangıç günü + gün sayısı. Tahtanın sütunları budur.
   const [win, setWin] = useState({ startDate: null, dayCount: DEFAULT_DAY_COUNT });
+  /* Öğrenci modunda tahtada AÇIK olan program; `null` = yeni plan taslağı.
+     Taslak hiçbir yere kaydedilmez, yalnız "Ata" ile yeni program olur. Mevcut
+     bir programı düzenlemek için şeritteki program seçiminden açıkça seçilir
+     (19 Eyl 2026). Eskiden öğrenci modu doğrudan güncel programı açıyor ve her
+     değişikliği ona yazıyordu: rehber yeni hafta planladığını sanırken eski
+     programı değiştiriyordu. */
   const [programId, setProgramId] = useState(null);
   const [windowError, setWindowError] = useState('');
+  // Öğrencinin programlarının tarih aralıkları (dolu günler + program seçimi).
+  const [ranges, setRanges] = useState([]);
+  // Taslaktan bir programa geçip geri dönünce taslak kaybolmasın.
+  const draftStore = useRef({ blocks: [], win: null });
 
   // Şablonlar + atama
   const [templates, setTemplates] = useState([]);
@@ -198,7 +217,6 @@ export default function DersProgrami() {
      çağırmak tahtayı ve kaydetme kuyruğunu gereksiz yere döverdi. */
   const [noteEdit, setNoteEdit] = useState(null);
 
-  const lastWeek = useRef(null);
   const scope = mode === 'ogrenci' && studentId ? studentId : null;
 
   const subjectMap = useMemo(
@@ -311,19 +329,42 @@ export default function DersProgrami() {
     let alive = true;
     setBlocks(null);
     setWindowError('');
-    getSchedule(scope).then((d) => {
-      if (!alive) return;
-      setBlocks(d.blocks);
-      setWin({ startDate: d.startDate, dayCount: d.dayCount });
-      setProgramId(d.programId);
-      lastWeek.current = d.blocks;
-    });
-    if (scope) {
-      listBooks(scope).then((d) => { if (alive) setLibrary(d); });
-    } else {
+    setProgramId(null);
+    draftStore.current = { blocks: [], win: null };
+    if (!scope) {
+      setRanges([]);
       setLibrary([]);
+      getSchedule(null).then((d) => {
+        if (!alive) return;
+        setBlocks(d.blocks);
+        setWin({ startDate: d.startDate, dayCount: d.dayCount });
+      });
+      return () => { alive = false; };
     }
+    // Öğrenci modu: boş taslakla açılır, pencere ilk boş günden başlar.
+    forgetStudentProgram(scope);
+    Promise.all([listProgramRanges(scope), programDefaults()])
+      .then(([r, defaults]) => {
+        if (!alive) return;
+        const dayCount = defaults.dayCount || DEFAULT_DAY_COUNT;
+        setRanges(r);
+        setWin({ startDate: firstFreeStart(r, dayCount), dayCount });
+        setBlocks([]);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setWin({ startDate: today(), dayCount: DEFAULT_DAY_COUNT });
+        setBlocks([]);
+      });
+    listBooks(scope).then((d) => { if (alive) setLibrary(d); });
     return () => { alive = false; };
+  }, [scope]);
+
+  /** Öğrencinin program listesi değişince (atama, taşıma) dolu günler ve özet. */
+  const refreshStudentData = useCallback(() => {
+    if (!scope) return;
+    listProgramRanges(scope).then(setRanges).catch(() => {});
+    getStudentPrograms(scope).then(setHistory).catch(() => {});
   }, [scope]);
 
   /** Öğrenci modunda tahtayı sunucudaki gerçek hâline getirir.
@@ -331,16 +372,17 @@ export default function DersProgrami() {
    *  reddedilince çağrılır; aksi hâlde tahta sunucuda olmayan bir şeyi gösterir. */
   const reloadBoard = useCallback(async () => {
     if (!scope) return;
-    try {
-      const d = await getSchedule(scope);
-      setBlocks(d.blocks);
-      setWin({ startDate: d.startDate, dayCount: d.dayCount });
-      setProgramId(d.programId);
-    } catch {
-      /* tahta olduğu gibi kalır; hata mesajı zaten gösteriliyor */
+    if (programId != null) {
+      try {
+        const d = await openStudentProgram(scope, programId);
+        setBlocks(d.blocks);
+        setWin({ startDate: d.startDate, dayCount: d.dayCount });
+      } catch {
+        /* tahta olduğu gibi kalır; hata mesajı zaten gösteriliyor */
+      }
     }
-    getStudentPrograms(scope).then(setHistory).catch(() => {});
-  }, [scope]);
+    refreshStudentData();
+  }, [scope, programId, refreshStudentData]);
 
   const commit = useCallback(
     (raw) => {
@@ -348,11 +390,11 @@ export default function DersProgrami() {
       // dış bloğun adı boş kalmasın (backend başlık ister).
       const next = raw.map(ensureBlockValid);
       setBlocks(next);                       // iyimser güncelleme
+      // Öğrenci taslağı kaydedilmez; program yalnız "Ata" ile oluşur.
+      if (scope && programId == null) return;
       saveSchedule(scope, next, win)
         .then((saved) => {
           if (!saved) return;
-          // Öğrenci modunda ilk blokla birlikte program açılmış olabilir.
-          if (scope && programId == null) getSchedule(scope).then((d) => setProgramId(d.programId));
           setBlocks(saved);                  // geçici id'ler → gerçek task id'leri
           // Backend blok kaydedilirken süre hafızasını günceller; yerel kopyayı tazele.
           loadDurationMemory().then(setDurationMemory).catch(() => {});
@@ -379,21 +421,62 @@ export default function DersProgrami() {
         setWin(next);
         return;
       }
-      if (programId == null) { setWin(next); return null; }
+      if (programId == null) { setWin(next); return; }   // taslak: yalnız yerel
       try {
-        const saved = await updateProgramWindow(programId, next);
-        setWin({ startDate: saved.start_date, dayCount: saved.day_count });
-        const fresh = await getSchedule(scope);
-        setBlocks(fresh.blocks);
-        return null;
+        await updateProgramWindow(programId, next);
+        const d = await openStudentProgram(scope, programId);
+        setWin({ startDate: d.startDate, dayCount: d.dayCount });
+        setBlocks(d.blocks);
+        refreshStudentData();
       } catch (err) {
-        const msg = apiMessage(err, 'Pencere değiştirilemedi.');
-        setWindowError(msg);
-        return msg;
+        setWindowError(apiMessage(err, 'Pencere değiştirilemedi.'));
       }
     },
-    [win, scope, programId]
+    [win, scope, programId, refreshStudentData]
   );
+
+  /** Açık programı siler (ör. hatalı atamayla boş kalmış hafta) ve taslağa döner. */
+  async function removeOpenProgram() {
+    if (!scope || programId == null) return;
+    const r = ranges.find((x) => x.id === programId);
+    const label = r ? windowRangeText(r.start, r.dayCount) : 'Bu';
+    const count = (blocks || []).length;
+    if (!window.confirm(
+      `${label} programı${count ? ` ve içindeki ${count} görev` : ''} silinecek. Bu geri alınamaz.`
+    )) return;
+    try {
+      await deleteProgram(programId);
+      refreshStudentData();
+      await selectProgram('');
+    } catch (err) {
+      setWindowError(apiMessage(err, 'Program silinemedi.'));
+    }
+  }
+
+  /** Şerit: taslak ("") ya da düzenlenecek mevcut program. */
+  async function selectProgram(id) {
+    setWindowError('');
+    if (!id) {
+      forgetStudentProgram(scope);
+      setProgramId(null);
+      const saved = draftStore.current;
+      setBlocks(saved.blocks || []);
+      setWin(saved.win || { startDate: firstFreeStart(ranges, win.dayCount), dayCount: win.dayCount });
+      return;
+    }
+    if (programId == null) draftStore.current = { blocks: blocks || [], win };
+    setBlocks(null);
+    try {
+      const d = await openStudentProgram(scope, id);
+      setProgramId(Number(id));
+      setBlocks(d.blocks);
+      setWin({ startDate: d.startDate, dayCount: d.dayCount });
+    } catch (err) {
+      setWindowError(apiMessage(err, 'Program açılamadı.'));
+      setProgramId(null);
+      setBlocks(draftStore.current.blocks || []);
+    }
+  }
 
   // Öğrenci geçmişi (alttaki özet çubuğu: geçen hafta + toplam)
   useEffect(() => {
@@ -491,10 +574,10 @@ export default function DersProgrami() {
   // Öğrencinin dolu tarih aralıkları — düzenlenen programın kendisi hariç.
   // Programlar örtüşemediği için bu aralıklara denk gelen başlangıçlar seçilemez.
   const busyRanges = useMemo(
-    () => history
-      .filter((p) => p.id !== programId)
-      .map((p) => ({ start: p.startDate, end: p.endDate })),
-    [history, programId]
+    () => ranges
+      .filter((r) => r.id !== programId)
+      .map((r) => ({ start: r.start, end: r.end })),
+    [ranges, programId]
   );
   const isStartBlocked = useMemo(
     () => makeStartBlocker(busyRanges, win.dayCount),
@@ -563,13 +646,23 @@ export default function DersProgrami() {
   }
 
   function clearAll() {
-    lastWeek.current = blocks;
+    // Açık bir programda "Temizle" öğrencinin görevlerini siler; taslakta değil.
+    if (scope && programId != null
+      && !window.confirm('Bu programdaki bütün görevler silinecek. Emin misiniz?')) return;
     commit([]);
     setLoadedTemplate(null);   // boş board = artık bir şablon düzenlenmiyor
   }
 
+  /** Tahtanın penceresinden önce başlayan en yakın programın bloklarını getirir.
+   *  Bloklar kopya: görev kimlikleri atılır, tamamlanma sıfırlanır. */
   function loadLastWeek() {
-    if (lastWeek.current) commit(lastWeek.current);
+    const candidates = history.filter((p) => p.id !== programId && p.blocks?.length);
+    const prev = candidates.find((p) => p.startDate < win.startDate) || candidates[0];
+    if (!prev) { setWindowError('Yüklenecek önceki program yok.'); return; }
+    const stamp = Date.now();
+    commit(prev.blocks.map((b, i) => ({
+      ...b, id: `b${stamp}-${i}`, taskId: undefined, completion: 'none', isCompleted: false,
+    })));
   }
 
   /** "Bu güne ekle": draft'ı seçili günlere ilk boş dilime bırakır. */
@@ -792,6 +885,26 @@ export default function DersProgrami() {
                 }}
                 ariaLabel="Öğrenci seç"
               />
+            )}
+            {mode === 'ogrenci' && studentId && (
+              <Select
+                className={s.programSelect}
+                value={programId ?? ''}
+                onChange={(e) => selectProgram(e.target.value)}
+                aria-label="Program"
+              >
+                <option value="">Yeni plan (kaydedilmemiş)</option>
+                {ranges.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {windowRangeText(r.start, r.dayCount)}{r.isCurrent ? ' · bu hafta' : ''} · düzenle
+                  </option>
+                ))}
+              </Select>
+            )}
+            {mode === 'ogrenci' && programId != null && (
+              <Button variant="danger" size="sm" onClick={removeOpenProgram} title="Bu programı sil">
+                <Trash2 size={13} /> Programı sil
+              </Button>
             )}
             {loadedTemplate && (
               <span className={s.tplBadge} title="Şablon Kaydet bu şablonu günceller">
@@ -1249,15 +1362,11 @@ export default function DersProgrami() {
           source={assignSource}
           students={students}
           lockedStudent={mode === 'ogrenci' ? activeStudent : null}
-          boardProgramId={mode === 'ogrenci' ? programId : null}
-          resolveBoardProgramId={async () => programId ?? (await getSchedule(scope)).programId}
-          onMoveBoard={changeWindow}
           onAssigned={(prog) => {
-            // Atama bu tahtanın öğrencisine yapıldıysa tahta yenilenmeli; yoksa
-            // eski (çoğu zaman boş) hâlini gösterir ve üstüne eklenen bloklar
-            // çakışmadan reddedilir.
-            if (mode === 'ogrenci' && String(prog?.student ?? studentId) === String(studentId)) {
-              reloadBoard();
+            // Yeni program program listesine ve dolu günlere hemen yansısın.
+            // Taslak tahtada kalır: aynı planı başka bir tarihe de atayabilsin.
+            if (mode === 'ogrenci' && String(prog?.student) === String(studentId)) {
+              refreshStudentData();
             }
           }}
           blocks={blocks || []}
@@ -1368,78 +1477,60 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
 
 /** Atama modalı — öğrenci + pencere (başlangıç + gün sayısı) seçilir. */
 /**
- * Programı / şablonu öğrenciye atama penceresi.
- *
- * **Öğrenci modunda tahta zaten o öğrencinin programı** (19 Eyl 2026 düzeltmesi):
- * ilk blok eklendiği anda program oluşturulup öğrenciye görünür oluyor. Eskiden
- * "Ata" burada da yeni program açmaya çalışıyordu; tahtanın kendi programı
- * dolu aralık sayıldığı için seçilen günler üstü çiziliyor, atama örtüşmeden
- * reddediliyordu. Artık tahta programı seçilen tarihe **taşınıyor**, öğrenci
- * yeniden sorulmuyor. Şablon atamak ise her zaman yeni program açar.
+ * Programı / şablonu öğrenciye atama penceresi. **Her zaman yeni program açar**;
+ * öğrencinin mevcut programlarına dokunmaz, hepsi dolu gün sayılır.
+ * Öğrenci modunda öğrenci sorulmaz (`lockedStudent`).
  */
 function AssignModal({
-  source, students, lockedStudent, boardProgramId, resolveBoardProgramId, onMoveBoard,
-  onAssigned, blocks, boardStart, boardDayCount, onClose,
+  source, students, lockedStudent, onAssigned, blocks, boardStart, boardDayCount, onClose,
 }) {
-  const [studentId, setStudentId] = useState(
-    lockedStudent ? String(lockedStudent.id) : ''
-  );
-  // Öğrenci modunda tahtanın kendi programı taşınır; yeni program açılmaz.
-  const movesBoard = source.type === 'board' && Boolean(lockedStudent);
-  const [date, setDate] = useState(movesBoard ? (boardStart || '') : '');
+  const [studentId, setStudentId] = useState(lockedStudent ? String(lockedStudent.id) : '');
+  const [date, setDate] = useState('');
   const [dayCount, setDayCount] = useState(boardDayCount || DEFAULT_DAY_COUNT);
   const [ranges, setRanges] = useState([]);
+  const [loadingRanges, setLoadingRanges] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
-  // Seçilen öğrencinin dolu aralıkları: hem öneriyi hem kapalı günleri belirler.
-  // Taşınan program kendisiyle çakışmaz, listeden çıkarılır.
+  // Seçilen öğrencinin dolu aralıkları (hafif liste) + varsayılan tarih.
+  // Yüklenene kadar hiçbir gün seçilemez: eskiden bu arada bütün günler boş
+  // görünüyordu ve dolu bir gün seçilebiliyordu.
   useEffect(() => {
-    if (!studentId) { setRanges([]); return undefined; }
+    if (!studentId) { setRanges([]); setDate(''); return undefined; }
     let alive = true;
-    getStudentPrograms(studentId)
-      .then((progs) => {
+    setLoadingRanges(true);
+    setDate('');
+    setError('');
+    listProgramRanges(studentId)
+      .then((r) => {
         if (!alive) return;
-        setRanges(progs
-          .filter((p) => !(movesBoard && p.id === boardProgramId))
-          .map((p) => ({ start: p.startDate, end: p.endDate })));
+        const rr = r.map((x) => ({ start: x.start, end: x.end }));
+        setRanges(rr);
+        // Tahtada seçili gün uygunsa o, değilse ilk boş gün.
+        const blocked = makeStartBlocker(rr, dayCount);
+        const preferred = source.type === 'board' && boardStart && boardStart >= today()
+          ? boardStart : null;
+        setDate(preferred && !(blocked && blocked(preferred))
+          ? preferred
+          : firstFreeStart(rr, dayCount));
       })
-      .catch(() => { if (alive) setRanges([]); });
+      .catch(() => { if (alive) setError('Öğrencinin programları yüklenemedi.'); })
+      .finally(() => { if (alive) setLoadingRanges(false); });
     return () => { alive = false; };
-  }, [studentId, movesBoard, boardProgramId]);
+  }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isBlocked = useMemo(() => makeStartBlocker(ranges, dayCount), [ranges, dayCount]);
-
-  useEffect(() => {
-    if (!studentId || movesBoard) return undefined;
-    let alive = true;
-    suggestNextWeekStart(studentId).then((d) => { if (alive) setDate(d); }).catch(() => {});
-    return () => { alive = false; };
-  }, [studentId, movesBoard]);
+  const isBlocked = useMemo(
+    () => (loadingRanges ? () => true : makeStartBlocker(ranges, dayCount)),
+    [loadingRanges, ranges, dayCount]
+  );
+  const dateBlocked = Boolean(date && isBlocked && isBlocked(date));
 
   async function confirm() {
-    if (!studentId) return;
+    if (!studentId || !date || dateBlocked) return;
     setBusy(true); setError('');
-    const win = { startDate: date || undefined, dayCount };
+    const win = { startDate: date, dayCount };
     try {
-      if (movesBoard) {
-        const id = await resolveBoardProgramId();
-        if (id != null) {
-          const msg = await onMoveBoard({ startDate: date || boardStart, dayCount });
-          if (msg) { setError(msg); return; }
-          const start = date || boardStart;
-          onAssigned?.({ student: studentId });
-          setResult({
-            student_name: lockedStudent.name,
-            start_date: start,
-            end_date: addDays(start, dayCount - 1),
-            day_count: dayCount,
-            tasks: blocks,
-          });
-          return;
-        }
-      }
       const prog = source.type === 'template'
         ? await assignTemplate(source.id, studentId, win)
         : await assignBoard(studentId, blocks, boardStart, win);
@@ -1480,21 +1571,17 @@ function AssignModal({
               />
             </Field>
           )}
-          {movesBoard && (
-            <p className={s.assignHint}>
-              Tahtadaki program {lockedStudent.name} için zaten kaydediliyor; burada
-              yalnız hangi tarihlerde geçerli olacağını seçiyorsunuz.
-            </p>
-          )}
           <div className={s.assignWindow}>
             <Field label="Başlangıç (görüşme günü)">
               <DateField
                 value={date}
                 onChange={setDate}
-                isDisabled={isBlocked}
-                disabledHint={ranges.length
-                  ? 'Üstü çizili günler öğrencinin mevcut bir programıyla çakışıyor.'
-                  : undefined}
+                isDisabled={studentId ? isBlocked : undefined}
+                disabledHint={loadingRanges
+                  ? 'Öğrencinin programları yükleniyor…'
+                  : ranges.length
+                    ? 'Üstü çizili günler öğrencinin mevcut bir programıyla çakışıyor.'
+                    : undefined}
                 ariaLabel="Program başlangıç tarihi"
               />
             </Field>
@@ -1508,14 +1595,22 @@ function AssignModal({
               />
             </Field>
           </div>
-          {date && (
-            <p className={s.assignHint}>Bitiş: {addDays(date, dayCount - 1)}</p>
+          {loadingRanges && <p className={s.assignHint}>Öğrencinin programları yükleniyor…</p>}
+          {date && !loadingRanges && (
+            <p className={dateBlocked ? s.assignError : s.assignHint}>
+              {dateBlocked
+                ? 'Bu tarih aralığı öğrencinin mevcut bir programıyla çakışıyor.'
+                : `Bitiş: ${addDays(date, dayCount - 1)}`}
+            </p>
           )}
           {noBoard && <p className={s.assignHint}>Board boş — önce blok ekleyin.</p>}
           {error && <p className={s.assignError}>{error}</p>}
           <div className={s.assignActions}>
             <Button variant="ghost" onClick={onClose}>Vazgeç</Button>
-            <Button onClick={confirm} disabled={busy || !studentId || noBoard}>
+            <Button
+              onClick={confirm}
+              disabled={busy || !studentId || !date || loadingRanges || dateBlocked || noBoard}
+            >
               {busy ? 'Atanıyor…' : 'Ata'}
             </Button>
           </div>
