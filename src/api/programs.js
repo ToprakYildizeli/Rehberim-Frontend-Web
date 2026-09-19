@@ -43,6 +43,10 @@ export async function programDefaults() {
     dayCount: prefs.default_day_count || DEFAULT_DAY_COUNT,
     scheduleType: prefs.default_schedule_type || 'timed',
     boardLayout: prefs.default_board_layout || 'hours',
+    startHour: prefs.board_start_hour ?? 7,
+    endHour: prefs.board_end_hour ?? 23,
+    blockMinutes: prefs.default_block_minutes || 60,
+    routinePrefill: prefs.routine_prefill !== false,
   };
 }
 

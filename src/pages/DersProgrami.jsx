@@ -26,7 +26,6 @@ import {
   loadDurationMemory, durationKey,
   BLOCK_KINDS, EXAM_SCOPES, blockLabel, blockColor,
 } from '../api/catalog';
-import { HOURS } from '../mocks/data';
 import s from './DersProgrami.module.css';
 
 const ROW_H = 38;
@@ -128,9 +127,9 @@ const FORMAT_TO_TYPE = {
 const fmtHour = (h) => `${String(h).padStart(2, '0')}:00`;
 const timeRange = (b) => `${fmtMin(b.startMin)}-${fmtMin(b.startMin + b.durationMin)}`;
 
-/** Tahtanın son dakikası (son saat satırının sonu) — bloklar bunu aşamaz. */
-const BOARD_END_MIN = (HOURS[HOURS.length - 1] + 1) * 60;
-const BOARD_START_MIN = HOURS[0] * 60;
+/** Tahtanın saat aralığı (dakika). Rehberin tercihinden gelir (20 Eyl 2026);
+ *  tercih okunana kadar eski sabit aralık: 07:00–23:00. */
+const DEFAULT_BOUNDS = { start: 7 * 60, end: 23 * 60 };
 
 /** True when [start, start+duration) on `dayIndex` collides with an existing block.
  *  Dış meşguliyet blokları da sayılır — okuldayken çalışma bloğu konulamaz. */
@@ -149,15 +148,15 @@ function overlaps(blocks, dayIndex, startMin, durationMin, ignoreId) {
  *  Adaylar: 15 dk'lık ızgara **artı mevcut blokların bitiş saatleri**. Bitişler de
  *  aday olmasa 20 dk'lık bloklar ızgaraya oturmak zorunda kalır ve aralarında
  *  gereksiz boşluk kalırdı (09:00, 09:30, 10:00 yerine 09:00, 09:20, 09:40). */
-function firstFreeSlot(blocks, dayIndex, durationMin, ignoreId) {
+function firstFreeSlot(blocks, dayIndex, durationMin, ignoreId, bounds = DEFAULT_BOUNDS) {
   const sameDay = blocks.filter((b) => b.dayIndex === dayIndex && b.id !== ignoreId);
   const candidates = new Set();
-  for (let t = BOARD_START_MIN; t + durationMin <= BOARD_END_MIN; t += SLOT_MIN) {
+  for (let t = bounds.start; t + durationMin <= bounds.end; t += SLOT_MIN) {
     candidates.add(t);
   }
   sameDay.forEach((b) => {
     const end = b.startMin + b.durationMin;
-    if (end >= BOARD_START_MIN && end + durationMin <= BOARD_END_MIN) candidates.add(end);
+    if (end >= bounds.start && end + durationMin <= bounds.end) candidates.add(end);
   });
   const sorted = [...candidates].sort((a, b) => a - b);
   return sorted.find((t) => !overlaps(sameDay, dayIndex, t, durationMin)) ?? null;
@@ -175,6 +174,10 @@ export default function DersProgrami() {
   const [activeDrag, setActiveDrag] = useState(null);
   // Ders satırlı görünümde sürüklerken üstünde durulan gün sütunu (tümü vurgulanır).
   const [overDay, setOverDay] = useState(null);
+  // Planlayıcı tercihleri (Ayarlar → Tercihler): saat aralığı, blok süresi, rutin.
+  const [boardPrefs, setBoardPrefs] = useState({
+    startHour: 7, endHour: 23, blockMinutes: 60, routinePrefill: true,
+  });
   // Ders satırlı görünümde tıklanan hücre: { dayIndex, rowKey } → düzenleme penceresi.
   const [cellEdit, setCellEdit] = useState(null);
   // Sürükleme bitince bırakılan hücreye "tıklama" da düşer; o tıklama pencere açmasın.
@@ -366,7 +369,9 @@ export default function DersProgrami() {
         if (!alive) return;
         const dayCount = defaults.dayCount || DEFAULT_DAY_COUNT;
         const startDate = firstFreeStart(r, dayCount);
-        const routine = tpls.find((t) => t.auto_apply && String(t.student) === String(scope));
+        const routine = defaults.routinePrefill
+          ? tpls.find((t) => t.auto_apply && String(t.student) === String(scope))
+          : null;
         setRanges(r);
         setWin({ startDate, dayCount });
         setBlocks(routine ? templateToBlocks(routine, startDate, dayCount).blocks : []);
@@ -528,7 +533,11 @@ export default function DersProgrami() {
   useEffect(() => {
     let alive = true;
     programDefaults()
-      .then(({ boardLayout }) => { if (alive && boardLayout) setView(boardLayout); })
+      .then(({ boardLayout, startHour, endHour, blockMinutes, routinePrefill }) => {
+        if (!alive) return;
+        if (boardLayout) setView(boardLayout);
+        setBoardPrefs({ startHour, endHour, blockMinutes, routinePrefill });
+      })
       .catch(() => {});
     return () => { alive = false; };
   }, []);
@@ -599,6 +608,23 @@ export default function DersProgrami() {
     await reloadTemplates();
   }
 
+  /* Saatli tahtanın aralığı: tercih, ama mevcut bloklar dışında kalırsa onları
+     kapsayacak kadar genişler — aksi hâlde 06:30'daki bir görev tahtada
+     görünmez olur ve rehber silindi sanır. */
+  const bounds = useMemo(() => {
+    let start = boardPrefs.startHour * 60;
+    let end = boardPrefs.endHour * 60;
+    (blocks ?? []).forEach((b) => {
+      start = Math.min(start, Math.floor(b.startMin / 60) * 60);
+      end = Math.max(end, Math.ceil((b.startMin + b.durationMin) / 60) * 60);
+    });
+    return { start: Math.max(0, start), end: Math.min(24 * 60, end) };
+  }, [boardPrefs.startHour, boardPrefs.endHour, blocks]);
+  const boardHours = useMemo(
+    () => Array.from({ length: (bounds.end - bounds.start) / 60 }, (_, i) => bounds.start / 60 + i),
+    [bounds]
+  );
+
   // Çalışma saati dış meşguliyetleri saymaz; onlar ayrı gösterilir.
   const totalMin = useMemo(() => studyMinutes(blocks ?? []), [blocks]);
   const outsideMin = useMemo(() => externalMinutes(blocks ?? []), [blocks]);
@@ -654,13 +680,13 @@ export default function DersProgrami() {
       // bırakılırsa bırakılsın blok o günün kendi ders satırına düşer (dersini
       // değiştirmek istenmiyor). Eskiden yalnız kendi satırı kabul ediliyordu,
       // yanlış satıra bırakınca hiçbir şey olmuyordu.
-      startMin = firstFreeSlot(blocks, dayIndex, durationMin, payload.blockId);
+      startMin = firstFreeSlot(blocks, dayIndex, durationMin, payload.blockId, bounds);
       if (startMin === null) return;                       // o güne sığmıyor
     } else {
       startMin = Number(parts[1]);
     }
 
-    if (startMin + durationMin > BOARD_END_MIN) return;
+    if (startMin < bounds.start || startMin + durationMin > bounds.end) return;
     if (overlaps(blocks, dayIndex, startMin, durationMin, payload.blockId)) return;
 
     if (payload.dragKind === 'new') {
@@ -712,9 +738,9 @@ export default function DersProgrami() {
     for (const id of Object.keys(edits)) {
       const b = next.find((x) => x.id === id);
       if (!b) continue;
-      if (b.startMin + b.durationMin <= BOARD_END_MIN
+      if (b.startMin + b.durationMin <= bounds.end
         && !overlaps(next, b.dayIndex, b.startMin, b.durationMin, b.id)) continue;
-      const slot = firstFreeSlot(next, b.dayIndex, b.durationMin, b.id);
+      const slot = firstFreeSlot(next, b.dayIndex, b.durationMin, b.id, bounds);
       if (slot === null) return `${b.durationMin} dakikalık blok bu güne sığmıyor.`;
       next = next.map((x) => (x.id === id ? { ...x, startMin: slot } : x));
     }
@@ -761,7 +787,7 @@ export default function DersProgrami() {
     const base = draftFields;
     let next = [...blocks];
     draft.days.forEach((dayIndex) => {
-      const slot = firstFreeSlot(next, dayIndex, draft.durationMin);
+      const slot = firstFreeSlot(next, dayIndex, draft.durationMin, undefined, bounds);
       if (slot === null) return;
       next = [
         ...next,
@@ -823,13 +849,15 @@ export default function DersProgrami() {
      için başka bir öğrencide de aynı süre açılır. Kombinasyon değişmedikçe tetiklenmez,
      böylece elle girilen süre ezilmez. Ders/metodu olmayan bloklarda (dış meşguliyet,
      genel deneme) hafıza yoktur. */
+  /* Hafızada yoksa rehberin varsayılan blok süresi (Tercihler, 20 Eyl 2026):
+     "varsayılan 40 dk" dendiyse hiç kullanılmamış her kombinasyon 40 dk açılır. */
   useEffect(() => {
-    if (!showSubjectFields) return;
-    const remembered = durationMemory.get(
-      durationKey(draft.subject, draft.type, draft.topic)
-    );
-    if (remembered) setDraft((d) => ({ ...d, durationMin: remembered }));
-  }, [showSubjectFields, draft.subject, draft.type, draft.topic, durationMemory]);
+    const remembered = showSubjectFields
+      ? durationMemory.get(durationKey(draft.subject, draft.type, draft.topic))
+      : null;
+    setDraft((d) => ({ ...d, durationMin: remembered || boardPrefs.blockMinutes }));
+  }, [showSubjectFields, draft.subject, draft.type, draft.topic, durationMemory,
+    boardPrefs.blockMinutes]);
 
   // Kitap modu: öğrencinin ders-kitaplarındaki dersler + seçilen derse göre kitaplar.
   const bookSubjects = useMemo(() => {
@@ -1134,7 +1162,7 @@ export default function DersProgrami() {
                 ))}
 
                 {view === 'hours'
-                  ? HOURS.map((hour) => (
+                  ? boardHours.map((hour) => (
                     <HourRow key={hour} hour={hour} days={days} blocks={blocks}
                              onRemove={removeBlock} onEditNote={openNote} />
                   ))

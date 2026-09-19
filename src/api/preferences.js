@@ -19,6 +19,12 @@ export const DEFAULT_PREFERENCES = {
   default_day_count: 7,
   default_schedule_type: 'timed',
   default_board_layout: 'hours',   // tahta saat satırlı mı ders satırlı mı açılsın
+  // Planlayıcı (20 Eyl 2026)
+  board_start_hour: 7,             // saatli tahtanın ilk satırı
+  board_end_hour: 23,              // son satırın bitişi (7–23 → 07:00–23:00)
+  default_block_minutes: 60,       // yeni bloğun süresi; süre hafızası varsa o kazanır
+  routine_prefill: true,           // öğrencinin rutini Yeni Plan'ı doldursun
+  notify_student_on_assign: false, // atamada öğrenciye e-posta
   // Panel'in sekiz bölümü — sıra Panel'deki yerleşim sırası.
   show_kpis: true,
   show_net_chart: true,

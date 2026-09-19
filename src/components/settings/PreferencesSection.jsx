@@ -40,6 +40,8 @@ const PANEL_SECTIONS = [
 
 /** Bölüm değil **süzgeç**: Net Değişimi kartının içeriğini daraltır, kartı
  *  gizlemez. Ekranda diğerleriyle aynı ızgarada duruyor. */
+const hourLabel = (h) => `${String(h).padStart(2, '0')}:00`;
+
 const DROPS_ONLY = {
   key: 'net_change_drops_only',
   label: 'Yalnız net düşüşleri',
@@ -122,7 +124,55 @@ export default function PreferencesSection() {
               <option value="subjects">Ders satırlı</option>
             </Select>
           </Field>
+          {/* Saatli tahtanın aralığı (20 Eyl 2026). Seçenekler birbirini
+              kısıtlıyor ki bitiş başlangıçtan önce seçilemesin; sunucu da
+              ayrıca reddediyor. */}
+          <Field label="Tahta başlangıcı" className={s.prefSelect}>
+            <Select
+              value={prefs.board_start_hour}
+              onChange={(e) => save('board_start_hour', Number(e.target.value))}
+            >
+              {Array.from({ length: prefs.board_end_hour }, (_, h) => (
+                <option key={h} value={h}>{hourLabel(h)}</option>
+              ))}
+            </Select>
+          </Field>
+          <Field label="Tahta bitişi" className={s.prefSelect}>
+            <Select
+              value={prefs.board_end_hour}
+              onChange={(e) => save('board_end_hour', Number(e.target.value))}
+            >
+              {Array.from({ length: 24 - prefs.board_start_hour }, (_, i) => {
+                const h = prefs.board_start_hour + 1 + i;
+                return <option key={h} value={h}>{hourLabel(h)}</option>;
+              })}
+            </Select>
+          </Field>
+          <Field label="Blok süresi (dk)" className={s.prefNum}>
+            <NumberInput
+              value={prefs.default_block_minutes}
+              min={5}
+              max={720}
+              onCommit={(v) => save('default_block_minutes', v, 600)}
+            />
+          </Field>
         </div>
+        <ul className={s.toggleList}>
+          <li>
+            <Toggle
+              checked={prefs.routine_prefill}
+              onChange={(v) => save('routine_prefill', v)}
+              label="Öğrencinin rutini Yeni Plan'a eklensin"
+            />
+          </li>
+          <li>
+            <Toggle
+              checked={prefs.notify_student_on_assign}
+              onChange={(v) => save('notify_student_on_assign', v)}
+              label="Program atanınca öğrenciye e-posta gönder"
+            />
+          </li>
+        </ul>
       </Card>
 
       <Card className={s.wide}>
