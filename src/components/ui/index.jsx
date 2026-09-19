@@ -249,7 +249,7 @@ export function ProgressRing({ value, label, size = 88, stroke = 9, color = 'var
 }
 
 /* ---------- Modal ---------- */
-export function Modal({ open, onClose, children, width, labelledBy }) {
+export function Modal({ open, onClose, children, width, labelledBy, className }) {
   const overlayRef = useRef(null);
 
   useEffect(() => {
@@ -277,7 +277,7 @@ export function Modal({ open, onClose, children, width, labelledBy }) {
       }}
     >
       <div
-        className={s.modal}
+        className={cx(s.modal, className)}
         style={width ? { maxWidth: width } : undefined}
         role="dialog"
         aria-modal="true"

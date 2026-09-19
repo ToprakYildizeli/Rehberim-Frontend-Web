@@ -668,7 +668,12 @@
 }
 
 
-.assignWindow { display: grid; grid-template-columns: 1fr 84px; gap: var(--space-3); }
+.assignWindow { display: grid; grid-template-columns: 1fr 110px; gap: var(--space-3); }
+
+/* Atama penceresi: takvim ve öğrenci listesi açılır katmanlar. Modal'ın
+   varsayılan `overflow-y: auto`'su onları kutunun içine hapsedip kaydırmaya
+   zorluyordu ("pencere küçük kalıyor"); içerik kısa, taşmaya izin var. */
+.assignModal { overflow: visible; }
 
 /* ---------- Dış meşguliyet blokları (A3) ---------- */
 /* Çalışma saatine sayılmadıkları için çizgili zemin ve soluk metinle ayrışırlar. */

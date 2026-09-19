@@ -355,14 +355,17 @@ export default function DersProgrami() {
         setWin(next);
         return;
       }
-      if (programId == null) { setWin(next); return; }
+      if (programId == null) { setWin(next); return null; }
       try {
         const saved = await updateProgramWindow(programId, next);
         setWin({ startDate: saved.start_date, dayCount: saved.day_count });
         const fresh = await getSchedule(scope);
         setBlocks(fresh.blocks);
+        return null;
       } catch (err) {
-        setWindowError(apiMessage(err, 'Pencere değiştirilemedi.'));
+        const msg = apiMessage(err, 'Pencere değiştirilemedi.');
+        setWindowError(msg);
+        return msg;
       }
     },
     [win, scope, programId]
@@ -1227,11 +1230,20 @@ export default function DersProgrami() {
         <AssignModal
           source={assignSource}
           students={students}
-          defaultStudentId={mode === 'ogrenci' ? studentId : ''}
+          lockedStudent={mode === 'ogrenci' ? activeStudent : null}
+          boardProgramId={mode === 'ogrenci' ? programId : null}
+          resolveBoardProgramId={async () => programId ?? (await getSchedule(scope)).programId}
+          onMoveBoard={changeWindow}
           blocks={blocks || []}
           boardStart={win.startDate}
           boardDayCount={win.dayCount}
-          onClose={() => setAssignSource(null)}
+          onClose={() => {
+            setAssignSource(null);
+            // Atama öğrencinin program listesini değiştirmiş olabilir.
+            if (mode === 'ogrenci' && studentId) {
+              getStudentPrograms(studentId).then(setHistory).catch(() => {});
+            }
+          }}
         />
       )}
 
@@ -1335,9 +1347,26 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
 }
 
 /** Atama modalı — öğrenci + pencere (başlangıç + gün sayısı) seçilir. */
-function AssignModal({ source, students, defaultStudentId, blocks, boardStart, boardDayCount, onClose }) {
-  const [studentId, setStudentId] = useState(defaultStudentId || String(students[0]?.id || ''));
-  const [date, setDate] = useState('');
+/**
+ * Programı / şablonu öğrenciye atama penceresi.
+ *
+ * **Öğrenci modunda tahta zaten o öğrencinin programı** (19 Eyl 2026 düzeltmesi):
+ * ilk blok eklendiği anda program oluşturulup öğrenciye görünür oluyor. Eskiden
+ * "Ata" burada da yeni program açmaya çalışıyordu; tahtanın kendi programı
+ * dolu aralık sayıldığı için seçilen günler üstü çiziliyor, atama örtüşmeden
+ * reddediliyordu. Artık tahta programı seçilen tarihe **taşınıyor**, öğrenci
+ * yeniden sorulmuyor. Şablon atamak ise her zaman yeni program açar.
+ */
+function AssignModal({
+  source, students, lockedStudent, boardProgramId, resolveBoardProgramId, onMoveBoard,
+  blocks, boardStart, boardDayCount, onClose,
+}) {
+  const [studentId, setStudentId] = useState(
+    lockedStudent ? String(lockedStudent.id) : String(students[0]?.id || '')
+  );
+  // Öğrenci modunda tahtanın kendi programı taşınır; yeni program açılmaz.
+  const movesBoard = source.type === 'board' && Boolean(lockedStudent);
+  const [date, setDate] = useState(movesBoard ? (boardStart || '') : '');
   const [dayCount, setDayCount] = useState(boardDayCount || DEFAULT_DAY_COUNT);
   const [ranges, setRanges] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -1345,32 +1374,51 @@ function AssignModal({ source, students, defaultStudentId, blocks, boardStart, b
   const [error, setError] = useState('');
 
   // Seçilen öğrencinin dolu aralıkları: hem öneriyi hem kapalı günleri belirler.
+  // Taşınan program kendisiyle çakışmaz, listeden çıkarılır.
   useEffect(() => {
-    if (!studentId) return undefined;
+    if (!studentId) { setRanges([]); return undefined; }
     let alive = true;
     getStudentPrograms(studentId)
       .then((progs) => {
         if (!alive) return;
-        setRanges(progs.map((p) => ({ start: p.startDate, end: p.endDate })));
+        setRanges(progs
+          .filter((p) => !(movesBoard && p.id === boardProgramId))
+          .map((p) => ({ start: p.startDate, end: p.endDate })));
       })
       .catch(() => { if (alive) setRanges([]); });
     return () => { alive = false; };
-  }, [studentId]);
+  }, [studentId, movesBoard, boardProgramId]);
 
   const isBlocked = useMemo(() => makeStartBlocker(ranges, dayCount), [ranges, dayCount]);
 
   useEffect(() => {
-    if (!studentId) return undefined;
+    if (!studentId || movesBoard) return undefined;
     let alive = true;
     suggestNextWeekStart(studentId).then((d) => { if (alive) setDate(d); }).catch(() => {});
     return () => { alive = false; };
-  }, [studentId]);
+  }, [studentId, movesBoard]);
 
   async function confirm() {
     if (!studentId) return;
     setBusy(true); setError('');
     const win = { startDate: date || undefined, dayCount };
     try {
+      if (movesBoard) {
+        const id = await resolveBoardProgramId();
+        if (id != null) {
+          const msg = await onMoveBoard({ startDate: date || boardStart, dayCount });
+          if (msg) { setError(msg); return; }
+          const start = date || boardStart;
+          setResult({
+            student_name: lockedStudent.name,
+            start_date: start,
+            end_date: addDays(start, dayCount - 1),
+            day_count: dayCount,
+            tasks: blocks,
+          });
+          return;
+        }
+      }
       const prog = source.type === 'template'
         ? await assignTemplate(source.id, studentId, win)
         : await assignBoard(studentId, blocks, boardStart, win);
@@ -1382,11 +1430,12 @@ function AssignModal({ source, students, defaultStudentId, blocks, boardStart, b
     }
   }
 
-  const title = source.type === 'template' ? `Şablonu ata: ${source.name}` : 'Programı ata';
+  const baseTitle = source.type === 'template' ? `Şablonu ata: ${source.name}` : 'Programı ata';
+  const title = lockedStudent ? `${baseTitle} · ${lockedStudent.name}` : baseTitle;
   const noBoard = source.type === 'board' && blocks.length === 0;
 
   return (
-    <Modal open onClose={onClose} width={430} labelledBy="assign-title">
+    <Modal open onClose={onClose} width={560} labelledBy="assign-title" className={s.assignModal}>
       <h2 id="assign-title" className={s.modalTitle}>{title}</h2>
       {result ? (
         <div className={s.assignForm}>
@@ -1398,17 +1447,25 @@ function AssignModal({ source, students, defaultStudentId, blocks, boardStart, b
         </div>
       ) : (
         <div className={s.assignForm}>
-          <Field label="Öğrenci">
-            <Select
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-              disabled={students.length === 0}
-            >
-              {students.length === 0
-                ? <option value="">Henüz öğrenciniz yok</option>
-                : students.map((st) => <option key={st.id} value={st.id}>{st.name} · {st.grade}</option>)}
-            </Select>
-          </Field>
+          {!lockedStudent && (
+            <Field label="Öğrenci">
+              <Select
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                disabled={students.length === 0}
+              >
+                {students.length === 0
+                  ? <option value="">Henüz öğrenciniz yok</option>
+                  : students.map((st) => <option key={st.id} value={st.id}>{st.name} · {st.grade}</option>)}
+              </Select>
+            </Field>
+          )}
+          {movesBoard && (
+            <p className={s.assignHint}>
+              Tahtadaki program {lockedStudent.name} için zaten kaydediliyor; burada
+              yalnız hangi tarihlerde geçerli olacağını seçiyorsunuz.
+            </p>
+          )}
           <div className={s.assignWindow}>
             <Field label="Başlangıç (görüşme günü)">
               <DateField
