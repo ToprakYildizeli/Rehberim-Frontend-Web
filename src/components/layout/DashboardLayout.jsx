@@ -8,6 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import { Avatar } from '../ui';
 import ConsentGate from '../ConsentGate';
+import ErrorBoundary from '../ErrorBoundary';
 import { Logo, LogoMark } from '../ui/Logo';
 import s from './layout.module.css';
 
@@ -184,7 +185,13 @@ export default function DashboardLayout() {
         </header>
 
         <main data-print="area" className={s.canvas}>
-          <Outlet />
+          {/* Sınır Outlet'i sarıyor, kökü DEĞİL: patlayan bir sayfada kenar
+              çubuğu ve üst çubuk ayakta kalsın, kullanıcı başka bir sayfaya
+              geçerek kurtulabilsin. `key` olarak yol veriliyor — gezinince React
+              sınırı yeniden kurar, yoksa bir kez patlayıp orada kalırdı. */}
+          <ErrorBoundary key={location.pathname}>
+            <Outlet />
+          </ErrorBoundary>
         </main>
         {/* Onayı eksik kullanıcıya hukuki metinleri gösterir; kapatılabilir
             (bkz. ConsentGate). */}
