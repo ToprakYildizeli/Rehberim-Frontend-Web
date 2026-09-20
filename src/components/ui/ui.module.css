@@ -49,7 +49,11 @@
 .card {
   background: var(--bg-card);
   border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
+  /* `--radius-lg` (12px), `--radius-xl` (16px) değil: 16px küçük kartlarda
+     köşeleri baskın hâle getiriyor ve arayüzü yumuşak/tüketici görünümüne
+     çekiyordu. Ölçek token'ı yanlış değil, kartın seçtiği basamak yanlıştı —
+     modal 16px'te kalıyor, orada geniş yüzeyle oranlı. */
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow);
   transition: background 0.2s, border-color 0.2s;
 }

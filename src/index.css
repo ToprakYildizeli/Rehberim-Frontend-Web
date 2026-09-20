@@ -17,7 +17,16 @@
   --error: #dc2626;
   --error-bg: #fef2f2;
   --error-border: #fecaca;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+  /* Kart gölgesi İKİ KATMANLI: yakın katman (1px) nesneyi yüzeye oturtur, uzak
+     katman (3/10px) derinliği verir. Önce tek bir `0 4px 24px` vardı ve her
+     kartta aynı geniş, bulanık gölge duruyordu — kartlar yüzeye oturmuş değil
+     havada asılı görünüyor, bu da arayüzü "hazır şablon" gibi gösteriyordu.
+     On iki paletin hepsi aynı desene çevrildi; her biri kendi rengini koruyor.
+
+     `--shadow-lg` bilerek BÜYÜK kaldı: onu yalnız modal ve açılır katmanlar
+     kullanıyor (7 yer) ve onların gerçekten sayfanın üstünde yüzmesi gerekiyor.
+     Duran kartla yüzen katman aynı gölgeyi taşımamalı — ayrım bilgi veriyor. */
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.05), 0 3px 10px rgba(0, 0, 0, 0.06);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.12);
   --hero-gradient: linear-gradient(155deg, #f0f7ff 0%, #f8f9fb 45%, #faf5ff 100%);
   --preview-bg: #ffffff;
@@ -125,7 +134,7 @@
   --error: #f87171;
   --error-bg: #2d1515;
   --error-border: rgba(127, 29, 29, 0.4);
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.24), 0 3px 10px rgba(0, 0, 0, 0.32);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.55);
   --hero-gradient: linear-gradient(155deg, #0a0e1a 0%, #0d1117 45%, #0f0d1e 100%);
   --preview-bg: #1a1f2e;
@@ -209,7 +218,7 @@
   --accent-subtle: #f7f2fb;
   --accent-badge: #efe6f8;
   --accent-text: #6b4e8f;
-  --shadow: 0 4px 24px rgba(126, 96, 148, 0.10);
+  --shadow: 0 1px 2px rgba(126, 96, 148, 0.07), 0 3px 10px rgba(126, 96, 148, 0.09);
   --shadow-lg: 0 20px 60px rgba(126, 96, 148, 0.16);
   --hero-gradient: linear-gradient(155deg, #f9f2fb 0%, #fbf8f6 45%, #fdf3ee 100%);
   --preview-bg: #ffffff;
@@ -256,7 +265,7 @@
   --accent-subtle: rgba(196, 167, 224, 0.12);
   --accent-badge: #3a2f4a;
   --accent-text: #d9c5ec;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.40);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 3px 10px rgba(0, 0, 0, 0.36);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.58);
   --hero-gradient: linear-gradient(155deg, #1d1526 0%, #17141c 45%, #241823 100%);
   --preview-bg: #241f2d;
@@ -304,7 +313,7 @@
   --accent-subtle: #eef5f0;
   --accent-badge: #e2efe7;
   --accent-text: #3d6b4e;
-  --shadow: 0 4px 24px rgba(47, 68, 56, 0.08);
+  --shadow: 0 1px 2px rgba(47, 68, 56, 0.06), 0 3px 10px rgba(47, 68, 56, 0.07);
   --shadow-lg: 0 20px 60px rgba(47, 68, 56, 0.14);
   --hero-gradient: linear-gradient(155deg, #eef5f0 0%, #f6f7f3 45%, #f4f3ea 100%);
   --preview-bg: #ffffff;
@@ -351,7 +360,7 @@
   --accent-subtle: rgba(127, 185, 148, 0.12);
   --accent-badge: #24402e;
   --accent-text: #a3d1b3;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.38);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.27), 0 3px 10px rgba(0, 0, 0, 0.34);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.56);
   --hero-gradient: linear-gradient(155deg, #121c14 0%, #10160f 45%, #171c12 100%);
   --preview-bg: #1b251d;
@@ -399,7 +408,7 @@
   --accent-subtle: #f5f3ff;
   --accent-badge: #ede9fe;
   --accent-text: #5b21b6;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 8px 28px rgba(0, 0, 0, 0.06);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 3px 10px rgba(0, 0, 0, 0.07);
   --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.08), 0 24px 64px rgba(0, 0, 0, 0.14);
   --hero-gradient: linear-gradient(155deg, #f5f3ff 0%, #ffffff 45%, #fafafa 100%);
   --preview-bg: #ffffff;
@@ -446,7 +455,7 @@
   --accent-subtle: rgba(167, 139, 250, 0.12);
   --accent-badge: #3b2d63;
   --accent-text: #c4b5fd;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.5), 0 8px 28px rgba(0, 0, 0, 0.4);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.35), 0 3px 10px rgba(0, 0, 0, 0.45);
   --shadow-lg: 0 2px 6px rgba(0, 0, 0, 0.5), 0 24px 64px rgba(0, 0, 0, 0.6);
   --hero-gradient: linear-gradient(155deg, #140f24 0%, #09090b 45%, #0f0f11 100%);
   --preview-bg: #18181b;
@@ -494,7 +503,7 @@
   --accent-subtle: #ecf7fa;
   --accent-badge: #d7eef4;
   --accent-text: #0b5163;
-  --shadow: 0 4px 24px rgba(14, 62, 78, 0.10);
+  --shadow: 0 1px 2px rgba(14, 62, 78, 0.07), 0 3px 10px rgba(14, 62, 78, 0.09);
   --shadow-lg: 0 20px 60px rgba(14, 62, 78, 0.16);
   --hero-gradient: linear-gradient(155deg, #e6f5fa 0%, #f4f8fa 45%, #eef7f4 100%);
   --preview-bg: #ffffff;
@@ -541,7 +550,7 @@
   --accent-subtle: rgba(34, 211, 238, 0.12);
   --accent-badge: #14414f;
   --accent-text: #7dd8e8;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.40);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 3px 10px rgba(0, 0, 0, 0.36);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.58);
   --hero-gradient: linear-gradient(155deg, #0b2130 0%, #0a1820 45%, #0a1f1e 100%);
   --preview-bg: #142934;
@@ -588,7 +597,7 @@
   --accent-subtle: #fdf1ec;
   --accent-badge: #fae0d6;
   --accent-text: #9c4327;
-  --shadow: 0 4px 24px rgba(120, 70, 50, 0.10);
+  --shadow: 0 1px 2px rgba(120, 70, 50, 0.07), 0 3px 10px rgba(120, 70, 50, 0.09);
   --shadow-lg: 0 20px 60px rgba(120, 70, 50, 0.16);
   --hero-gradient: linear-gradient(155deg, #fdeee4 0%, #fdf7f2 45%, #fbf0e6 100%);
   --preview-bg: #ffffff;
@@ -635,7 +644,7 @@
   --accent-subtle: rgba(240, 132, 92, 0.12);
   --accent-badge: #4a2b1f;
   --accent-text: #f6a888;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.42);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.29), 0 3px 10px rgba(0, 0, 0, 0.38);
   --shadow-lg: 0 20px 60px rgba(0, 0, 0, 0.60);
   --hero-gradient: linear-gradient(155deg, #2a1712 0%, #1c1310 45%, #251a12 100%);
   --preview-bg: #2b1f1a;
