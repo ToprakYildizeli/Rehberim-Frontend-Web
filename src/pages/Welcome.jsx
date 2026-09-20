@@ -167,7 +167,28 @@ function SignupForm() {
         password: form.password,
         first_name: form.first_name,
         last_name: form.last_name,
+        // Sürüm gönderilmiyor; sunucu yürürlükteki sürümü yazıyor.
+        consents: ['aydinlatma', 'acik_riza'],
       });
+
+      /* Kayıt TOKEN DÖNDÜRMÜYOR: hesap açılıyor ama e-postaya giden kod
+         girilene kadar kullanılamıyor (auth-contract §5.1b). Bu dal eklendiğinde
+         `/kayit` sayfasına doğrulama adımı konmuş ama buradaki form atlanmıştı;
+         `saveSession` koşulsuz çağrıldığı için token'sız gövdeden localStorage'a
+         `"undefined"` metni yazılıyor, kullanıcı panele alınıyor ve bir sonraki
+         açılışta uygulama bembeyaz bir sayfaya dönüyordu.
+
+         Doğrulama adımı `/kayit` sayfasında duruyor ve oradaki stillere bağlı
+         (bu sayfanın CSS modülünde `form`/`label`/`error` sınıfları yok), bu
+         yüzden adımı kopyalamak yerine oraya yönlendiriyoruz. */
+      if (data.email_verification_required) {
+        navigate('/kayit', {
+          replace: true,
+          state: { verify: { username: data.username, email: data.email } },
+        });
+        return;
+      }
+
       saveSession(data.access, data.refresh, data.user);
       navigate('/panel');
     } catch (err) {

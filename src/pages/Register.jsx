@@ -1,6 +1,6 @@
 import VerifyEmailStep from '../components/VerifyEmailStep';
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { registerCounselor } from '../api/auth';
 import { getLegalDocument } from '../api/legal';
 import { useAuth } from '../context/AuthContext';
@@ -20,6 +20,7 @@ const INITIAL = {
 
 export default function Register() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { saveSession } = useAuth();
 
   const [form, setForm] = useState(INITIAL);
@@ -34,8 +35,12 @@ export default function Register() {
   const [reading, setReading] = useState(null);   // okunan metin (modal)
   /* Kayıttan sonra doğrulama adımı: `{ username, email }` ya da `null`.
      Ayrı bir sayfa değil — kullanıcı aynı kartta kalsın, "kaydım oldu mu?"
-     diye düşünmesin. */
-  const [verify, setVerify] = useState(null);
+     diye düşünmesin.
+
+     Başlangıç değeri yönlendirici durumundan da gelebilir: tanıtım sayfasındaki
+     kayıt formu (`Welcome`) kendi doğrulama adımını taşımıyor ve kaydı açtıktan
+     sonra kullanıcıyı buraya gönderiyor. */
+  const [verify, setVerify] = useState(() => location.state?.verify ?? null);
 
   function handleChange(e) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
