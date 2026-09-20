@@ -7,7 +7,9 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [accessToken, setAccessToken] = useState(() => localStorage.getItem('access'));
-  const [refreshToken, setRefreshToken] = useState(() => localStorage.getItem('refresh'));
+  // Refresh token bilerek state'te TUTULMUYOR: `client.js` onu yenileme sırasında
+  // localStorage'da güncelliyor, buradaki bir kopya anında bayatlar. Tek kaynak
+  // localStorage; ihtiyaç duyan yer oradan okur.
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem('user');
     return stored ? JSON.parse(stored) : null;
@@ -15,7 +17,6 @@ export function AuthProvider({ children }) {
 
   const saveSession = useCallback((access, refresh, userData) => {
     setAccessToken(access);
-    setRefreshToken(refresh);
     setUser(userData);
     localStorage.setItem('access', access);
     localStorage.setItem('refresh', refresh);
@@ -29,11 +30,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   const clearSession = useCallback(async () => {
-    if (refreshToken && accessToken) {
-      try { await apiLogout(refreshToken, accessToken); } catch (_) {}
+    // Token'lar localStorage'dan okunuyor, state'ten DEĞİL: `client.js` 401
+    // sonrası yenilemede localStorage'ı güncelliyor ama bu provider'ın state'i
+    // haberdar olmuyor. State'ten okunsaydı çıkışta rotasyonla geçersizleşmiş
+    // eski token gönderilir, istek sessizce düşer ve kullanıcının GERÇEK refresh
+    // token'ı kara listeye hiç alınmazdı — ömrü (7 gün) boyunca geçerli kalırdı.
+    const refresh = localStorage.getItem('refresh');
+    const access = localStorage.getItem('access');
+    if (refresh && access) {
+      try { await apiLogout(refresh, access); } catch (_) {}
     }
     setAccessToken(null);
-    setRefreshToken(null);
     setUser(null);
     localStorage.removeItem('access');
     localStorage.removeItem('refresh');
@@ -42,7 +49,7 @@ export function AuthProvider({ children }) {
     // yapan ikinci rehber öncekinin ayarlarını görürdü.
     clearPreferencesCache();
     clearDashboardCache();   // sonraki kullanıcı öncekinin panosunu görmesin
-  }, [accessToken, refreshToken]);
+  }, []);
 
   return (
     <AuthContext.Provider

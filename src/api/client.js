@@ -80,6 +80,12 @@ api.interceptors.response.use(
       const { data } = await refreshing;
       refreshing = null;
       localStorage.setItem('access', data.access);
+      // Sunucu refresh token'ı DÖNDÜRÜYOR (SIMPLE_JWT.ROTATE_REFRESH_TOKENS) ve
+      // bu yanıtla birlikte eskisini kara listeye alıyor
+      // (BLACKLIST_AFTER_ROTATION). Yenisi saklanmazsa elimizde geçersiz bir
+      // token kalır: ilk yenileme çalışır, ikincisi "Token is blacklisted"
+      // alır ve kullanıcı girişten ~60 dakika sonra oturumdan atılır.
+      if (data.refresh) localStorage.setItem('refresh', data.refresh);
       config.headers.Authorization = `Bearer ${data.access}`;
       return api(config);
     } catch (e) {
