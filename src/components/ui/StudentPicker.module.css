@@ -6,7 +6,7 @@
   border: 1.5px solid var(--border-input);
   border-radius: var(--radius-md);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   color: var(--text);
   /* `outline: none` kaldırıldı: görünür odak index.css'teki ortak
      `:focus-visible` katmanından geliyor (WCAG 2.4.7). */
@@ -64,12 +64,12 @@
   gap: var(--space-2);
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  font-size: 0.86rem;
+  font-size: var(--fs-md);
   color: var(--text);
   cursor: pointer;
 }
 .optionActive { background: var(--bg-alt); }
 .optionSelected .name { font-weight: 700; color: var(--accent); }
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.grade { font-size: 0.75rem; color: var(--text-muted); flex-shrink: 0; }
-.empty { padding: 10px; font-size: 0.82rem; color: var(--text-muted); }
+.grade { font-size: var(--fs-xs); color: var(--text-muted); flex-shrink: 0; }
+.empty { padding: 10px; font-size: var(--fs-sm); color: var(--text-muted); }

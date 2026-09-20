@@ -42,7 +42,7 @@
 
 }
 
-.navLabel { font-size: 0.85rem; font-weight: 600; min-width: 0; }
+.navLabel { font-size: var(--fs-md); font-weight: 600; min-width: 0; }
 
 /* ---- içerik ---- */
 .contentHead {
@@ -53,7 +53,7 @@
   justify-content: space-between;
   gap: var(--space-3);
 }
-.contentTitle { font-size: 1.1rem; font-weight: 700; color: var(--text); margin: 0; }
+.contentTitle { font-size: var(--fs-2xl); font-weight: 700; color: var(--text); margin: 0; }
 
 /* Kartlar kalan genişliğe yayılıyor; dar olanlar yan yana geliyor.
    Aynı satırdaki kartlar **eşit yükseklikte**: `align-items` verilmiyor, ızgaranın
@@ -85,8 +85,8 @@
 
 .option:last-child { border-bottom: none; padding-bottom: 0; }
 
-.optionLabel { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 0; }
-.optionHint { font-size: 0.75rem; color: var(--text-muted); margin: 3px 0 0; }
+.optionLabel { font-size: var(--fs-md); font-weight: 600; color: var(--text); margin: 0; }
+.optionHint { font-size: var(--fs-xs); color: var(--text-muted); margin: 3px 0 0; }
 
 .actions {
   display: flex;
@@ -96,13 +96,13 @@
 }
 
 .savedHint {
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--success);
 }
 
 .formError {
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--error);
   background: var(--error-bg);
   border: 1px solid var(--error-border);
@@ -112,7 +112,7 @@
 }
 
 .note {
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   background: var(--bg-alt);
   border-radius: var(--radius-md);
@@ -200,7 +200,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  font-size: 0.83rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text);
 }
@@ -208,7 +208,7 @@
 /* ---- davet kodu ---- */
 .code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 1.4rem;
+  font-size: var(--fs-4xl);
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--accent-text);

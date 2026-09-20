@@ -1,6 +1,6 @@
 /* Hukuki metnin biçimi. Yüksekliği çağıran veriyor (pencere içinde kayıyor). */
 .root {
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   line-height: 1.6;
   color: var(--text-secondary);
   background: var(--bg-alt);
@@ -19,9 +19,9 @@
   margin: var(--space-4) 0 var(--space-2);
   line-height: 1.35;
 }
-.h1 { font-size: 0.98rem; }
-.h2 { font-size: 0.9rem; }
-.h3 { font-size: 0.84rem; }
+.h1 { font-size: var(--fs-xl); }
+.h2 { font-size: var(--fs-md); }
+.h3 { font-size: var(--fs-sm); }
 
 /* İlk başlık üstünde boşluk bırakmasın. */
 .root > .h1:first-child,
@@ -55,7 +55,7 @@
 .table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.76rem;
+  font-size: var(--fs-xs);
 }
 
 .table th,

@@ -36,7 +36,7 @@
   align-items: center;
   justify-content: center;
   scroll-snap-align: center;
-  font-size: 1rem;
+  font-size: var(--fs-xl);
   font-weight: 600;
   color: var(--text);
   font-variant-numeric: tabular-nums;

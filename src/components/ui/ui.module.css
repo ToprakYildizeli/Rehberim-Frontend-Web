@@ -10,7 +10,7 @@
   border: none;
   border-radius: var(--radius-md);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
@@ -19,9 +19,9 @@
 
 .btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-.sizeSm { padding: 6px 12px; font-size: 0.8rem; }
+.sizeSm { padding: 6px 12px; font-size: var(--fs-sm); }
 .sizeMd { padding: 10px 16px; }
-.sizeLg { padding: 12px 20px; font-size: 0.95rem; }
+.sizeLg { padding: 12px 20px; font-size: var(--fs-lg); }
 
 .primary { background: var(--accent); color: #fff; }
 .primary:hover:not(:disabled) { background: var(--accent-hover); }
@@ -69,14 +69,14 @@
 }
 
 .cardTitle {
-  font-size: 0.98rem;
+  font-size: var(--fs-xl);
   font-weight: 700;
   color: var(--text);
   margin: 0;
 }
 
 .cardSub {
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   margin: 3px 0 0;
 }
@@ -86,7 +86,7 @@
   display: flex;
   flex-direction: column;
   gap: 5px;
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text-label);
   min-width: 0;
@@ -98,7 +98,7 @@
   border: 1.5px solid var(--border-input);
   border-radius: var(--radius-md);
   font-family: inherit;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   color: var(--text);
   background: var(--bg-input);
   transition: border-color 0.15s, box-shadow 0.15s, background 0.2s;
@@ -128,7 +128,7 @@ select.control {
 select.control:hover { border-color: var(--accent); }
 select.control:focus { background-color: var(--bg-input); }
 
-.fieldError { font-size: 0.78rem; color: var(--error); }
+.fieldError { font-size: var(--fs-xs); color: var(--error); }
 
 /* ---------- Search input ---------- */
 .search {
@@ -151,7 +151,7 @@ select.control:focus { background-color: var(--bg-input); }
   border: 1px solid var(--border);
   border-radius: var(--radius-pill);
   font-family: inherit;
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   color: var(--text);
   background: var(--bg-alt);
   transition: border-color 0.15s, box-shadow 0.15s, background 0.2s;
@@ -174,12 +174,12 @@ select.control:focus { background-color: var(--bg-input); }
   letter-spacing: 0.02em;
 }
 
-.avatarXs { width: 24px; height: 24px; font-size: 0.6rem; }
-.avatarSm { width: 32px; height: 32px; font-size: 0.68rem; }
-.avatarMd { width: 40px; height: 40px; font-size: 0.8rem; }
-.avatarLg { width: 52px; height: 52px; font-size: 1rem; }
+.avatarXs { width: 24px; height: 24px; font-size: var(--fs-3xs); }
+.avatarSm { width: 32px; height: 32px; font-size: var(--fs-2xs); }
+.avatarMd { width: 40px; height: 40px; font-size: var(--fs-sm); }
+.avatarLg { width: 52px; height: 52px; font-size: var(--fs-xl); }
 /* Ayarlar → Profil'deki büyük fotoğraf. */
-.avatarXl { width: 104px; height: 104px; font-size: 2rem; }
+.avatarXl { width: 104px; height: 104px; font-size: var(--fs-6xl); }
 
 /* ---------- Badge / Pill ---------- */
 .badge {
@@ -188,7 +188,7 @@ select.control:focus { background-color: var(--bg-input); }
   gap: 4px;
   padding: 3px 9px;
   border-radius: var(--radius-pill);
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   white-space: nowrap;
   line-height: 1.5;
@@ -232,7 +232,7 @@ select.control:focus { background-color: var(--bg-input); }
   font-weight: 700;
   color: var(--text);
 }
-.ringLabel { font-size: 0.75rem; color: var(--text-secondary); }
+.ringLabel { font-size: var(--fs-xs); color: var(--text-secondary); }
 
 /* ---------- Modal ---------- */
 .overlay {
@@ -326,8 +326,8 @@ select.control:focus { background-color: var(--bg-input); }
   color: var(--text-muted);
 }
 
-.emptyTitle { font-size: 0.95rem; font-weight: 600; color: var(--text); margin: 0; }
-.emptyText { font-size: 0.84rem; margin: 0; max-width: 340px; }
+.emptyTitle { font-size: var(--fs-lg); font-weight: 600; color: var(--text); margin: 0; }
+.emptyText { font-size: var(--fs-sm); margin: 0; max-width: 340px; }
 
 /* ---------- Spinner ---------- */
 .spinner {
@@ -354,7 +354,7 @@ select.control:focus { background-color: var(--bg-input); }
   background: transparent;
   color: var(--text-secondary);
   font-family: inherit;
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   font-weight: 500;
   padding: 6px 14px;
   border-radius: var(--radius-pill);

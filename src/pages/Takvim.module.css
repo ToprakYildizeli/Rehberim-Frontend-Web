@@ -14,7 +14,7 @@
 }
 
 .month {
-  font-size: 1rem;
+  font-size: var(--fs-xl);
   font-weight: 700;
   color: var(--text);
   margin: 0;
@@ -47,7 +47,7 @@
 
 .weekday {
   text-align: center;
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--text-muted);
   padding-bottom: var(--space-3);
@@ -64,7 +64,7 @@
   background: var(--bg-card);
   color: var(--text);
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -81,7 +81,7 @@
 .cellEmpty { cursor: default; border-color: transparent; background: transparent; }
 .cellEmpty:hover { background: transparent; }
 
-.cellDay { font-size: 0.78rem; line-height: 1.1; padding-left: 2px; }
+.cellDay { font-size: var(--fs-xs); line-height: 1.1; padding-left: 2px; }
 .cellToday .cellDay { font-weight: 700; color: var(--accent); }
 
 /* Çoklu seçim (13 Eyl 2026): aynı etkinlik birden çok güne eklenebiliyor,
@@ -109,9 +109,9 @@
   background: var(--bg-alt);
   padding: 2px 5px;
 }
-.chipTime { font-size: 0.58rem; font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+.chipTime { font-size: var(--fs-3xs); font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
 .chipText {
-  font-size: 0.63rem;
+  font-size: var(--fs-3xs);
   font-weight: 600;
   color: var(--text);
   min-width: 0;
@@ -120,7 +120,7 @@
   white-space: nowrap;
 }
 .chipMore {
-  font-size: 0.6rem;
+  font-size: var(--fs-3xs);
   font-weight: 600;
   color: var(--text-muted);
   padding-left: 5px;
@@ -128,14 +128,14 @@
 
 /* ---------- Agenda rail ---------- */
 .agendaDate {
-  font-size: 0.95rem;
+  font-size: var(--fs-lg);
   font-weight: 400;
   color: var(--text);
   margin: 0;
 }
 
 .agendaCount {
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   margin: 3px 0 var(--space-5);
 }
@@ -171,7 +171,7 @@
 }
 
 .eventTime {
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
@@ -182,7 +182,7 @@
 .eventName {
   /* Must be block — ellipsis truncation has no effect on an inline span. */
   display: block;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text);
   margin: 0;
@@ -191,7 +191,7 @@
   white-space: nowrap;
 }
 .eventNote {
-  font-size: 0.7rem;
+  font-size: var(--fs-2xs);
   color: var(--text-muted);
   margin: 2px 0 0;
   overflow: hidden;
@@ -220,7 +220,7 @@
   padding-top: var(--space-5);
 }
 
-.formTitle { font-size: 0.85rem; font-weight: 700; color: var(--text); margin: 0; }
+.formTitle { font-size: var(--fs-md); font-weight: 700; color: var(--text); margin: 0; }
 .formRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 
 .timePicker { display: flex; align-items: center; gap: 6px; }
@@ -234,7 +234,7 @@
 }
 
 @media (max-width: 560px) {
-  .cell { aspect-ratio: 1; padding: 4px; font-size: 0.74rem; }
+  .cell { aspect-ratio: 1; padding: 4px; font-size: var(--fs-xs); }
   .formRow { grid-template-columns: 1fr; }
 }
 
@@ -256,7 +256,7 @@
   color: var(--accent);
   border-radius: 999px;
   padding: 3px 10px;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
 }

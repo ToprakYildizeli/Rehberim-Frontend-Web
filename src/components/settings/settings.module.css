@@ -8,7 +8,7 @@
 }
 
 .note {
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   background: var(--bg-alt);
   border-radius: var(--radius-md);
@@ -18,7 +18,7 @@
 }
 
 .error {
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--error);
   background: var(--error-bg);
   border: 1px solid var(--error-border);
@@ -54,7 +54,7 @@
 .rowMain { flex: 1; min-width: 0; }
 
 .rowTitle {
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text);
   margin: 0;
@@ -62,7 +62,7 @@
 }
 
 .rowHint {
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   margin: 2px 0 0;
 }
@@ -87,7 +87,7 @@
 }
 
 .chip {
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--text-secondary);
   background: var(--bg-alt);
   border: 1px solid var(--border);
@@ -141,7 +141,7 @@
 /* Düzenlemedeki rozetin düğmeleri hep görünür — kaydet/vazgeç gizli olamaz. */
 .chipEdit .chipBtn { opacity: 1; }
 
-.chipEmpty { font-size: 0.78rem; color: var(--text-muted); }
+.chipEmpty { font-size: var(--fs-xs); color: var(--text-muted); }
 
 .addRow {
   display: flex;
@@ -164,7 +164,7 @@
 
 .inviteCode {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.95rem;
+  font-size: var(--fs-lg);
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--accent-text);
@@ -184,14 +184,14 @@
 
 /* ---- modal içerikleri ---- */
 .modalTitle {
-  font-size: 1rem;
+  font-size: var(--fs-xl);
   font-weight: 700;
   color: var(--text);
   margin: 0 0 var(--space-3);
 }
 
 .modalText {
-  font-size: 0.83rem;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   line-height: 1.6;
   margin: 0 0 var(--space-3);
@@ -222,7 +222,7 @@
 .wide { grid-column: 1 / -1; }
 
 .savedNote {
-  font-size: 0.78rem;
+  font-size: var(--fs-xs);
   color: var(--success);
   margin: var(--space-3) 0 0;
 }
@@ -344,7 +344,7 @@
 .toggleInput:checked + .toggleTrack .toggleKnob { transform: translateX(14px); }
 .toggleInput:focus-visible + .toggleTrack { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-.toggleLabel { font-size: 0.85rem; font-weight: 600; color: var(--text); min-width: 0; }
+.toggleLabel { font-size: var(--fs-md); font-weight: 600; color: var(--text); min-width: 0; }
 
 /* ---- takvim .ics aktarımı ---- */
 .icsRow {
@@ -375,7 +375,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--error);
   margin: 0;
 }
@@ -387,7 +387,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  font-size: 0.83rem;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
@@ -422,7 +422,7 @@
 .avatarActions { display: flex; align-items: center; gap: var(--space-2); }
 
 .avatarHint {
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   margin: 0;
   text-align: center;
@@ -463,7 +463,7 @@
   margin-top: 12px;
 }
 .pagerLabel {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -482,7 +482,7 @@
   gap: 12px;
   margin-bottom: 10px;
 }
-.scopeTitle { font-size: 13px; font-weight: 600; }
+.scopeTitle { font-size: var(--fs-sm); font-weight: 600; }
 .scopeBulk { display: flex; gap: 10px; }
 /* "Hepsi" / "Hiçbiri": çevresi belli düğmeler. Altı çizili metin bağlantıya
    benziyordu ve tıklanabilir olduğu anlaşılmıyordu. */
@@ -492,7 +492,7 @@
   border-radius: var(--radius-pill);
   padding: 3px 12px;
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
 }
@@ -517,7 +517,7 @@
 }
 .scopeList .toggle { width: 100%; }
 .scopeHint {
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   color: var(--text-muted);
   padding-left: 2px;
 }
@@ -552,7 +552,7 @@
 }
 .inviteCodeBig {
   font-family: var(--font-mono, monospace);
-  font-size: 26px;
+  font-size: var(--fs-5xl);
   font-weight: 700;
   letter-spacing: 3px;
   padding: 8px 16px;
@@ -578,15 +578,15 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 0.85rem;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text);
   overflow-wrap: anywhere;
 }
 
 /* ---- Bildir penceresi ---- */
-.dialogTitle { font-size: 1.05rem; font-weight: 700; margin: 0 0 var(--space-3); color: var(--text); }
+.dialogTitle { font-size: var(--fs-xl); font-weight: 700; margin: 0 0 var(--space-3); color: var(--text); }
 .dialogBody { display: flex; flex-direction: column; gap: var(--space-3); }
-.dialogLead { margin: 0; font-size: 0.88rem; color: var(--text-secondary); }
-.dialogHint { font-size: 0.75rem; color: var(--text-muted); }
+.dialogLead { margin: 0; font-size: var(--fs-md); color: var(--text-secondary); }
+.dialogHint { font-size: var(--fs-xs); color: var(--text-muted); }
 .dialogActions { display: flex; justify-content: flex-end; gap: var(--space-2); margin-top: var(--space-2); }

@@ -92,6 +92,40 @@
   --subj-genel: var(--text-muted);
 
   /* ---- scales (theme-independent) ---- */
+  /* ---- TİP ÖLÇEĞİ ----
+     Onu da 16px köküne göre `rem`: kullanıcı tarayıcısının yazı boyutunu
+     büyütürse arayüz onunla birlikte büyüyor (px sabitlenmiş olurdu).
+
+     **Neden gerekti:** ölçek yoktu. Kod tabanında 49 farklı `font-size` değeri
+     vardı ve px ile rem karışıktı — `0.72` / `0.73` / `0.74` / `0.75rem` yan
+     yana duruyordu. Aralarındaki fark yarım pikselin altında, yani kimse
+     göremiyor; ama hiçbir şey birbiriyle ilişkili görünmediği için sayfanın
+     ritmi yoktu. Bu, her bileşenin ayrı ayrı göz kararı boyutlandırıldığının
+     işaretiydi.
+
+     Basamaklar arasındaki en küçük fark 1px: iki basamak birbirine
+     karışmıyor. Yeni bir boyuta ihtiyaç duyuyorsanız muhtemelen bileşen
+     yanlış basamağı seçmiştir — önce ölçeğe bakın.
+
+     Display basamakları da (26/32/40px) ölçeğin parçası: giriş kartı başlığı ve
+     KPI rakamı hiyerarşinin içinde, dışarıda bırakmak onları sistemin denetimi
+     dışına çıkarırdı. */
+  --fs-3xs: 0.625rem;    /* 10px — yalnız mikro etiket, rozet */
+  --fs-2xs: 0.6875rem;   /* 11px */
+  --fs-xs:  0.75rem;     /* 12px — meta, yardım metni */
+  --fs-sm:  0.8125rem;   /* 13px — tablo hücresi, ikincil metin */
+  --fs-md:  0.875rem;    /* 14px — GÖVDE */
+  --fs-lg:  0.9375rem;   /* 15px */
+  --fs-xl:  1rem;        /* 16px — kart başlığı */
+  --fs-2xl: 1.125rem;    /* 18px */
+  --fs-3xl: 1.25rem;     /* 20px — sayfa başlığı */
+  --fs-4xl: 1.375rem;    /* 22px */
+  /* Display basamakları: sayfa/bölüm başlıkları ve büyük sayı göstergeleri.
+     Aralar geniş çünkü bunlar gövde metniyle değil birbirleriyle kıyaslanıyor. */
+  --fs-5xl: 1.625rem;    /* 26px — giriş/kayıt kartı başlığı */
+  --fs-6xl: 2rem;        /* 32px — KPI rakamı, büyük avatar baş harfi */
+  --fs-7xl: 2.5rem;      /* 40px — tanıtım sayfası hero */
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;

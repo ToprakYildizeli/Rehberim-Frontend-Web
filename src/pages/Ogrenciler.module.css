@@ -14,7 +14,7 @@
 
 .inviteText { min-width: 0; }
 .inviteLabel {
-  font-size: 0.74rem;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -25,7 +25,7 @@
 
 .inviteCode {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 1.35rem;
+  font-size: var(--fs-4xl);
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--accent-text);
@@ -58,20 +58,20 @@
 .head:hover { background: var(--bg-alt); }
 
 .headText { flex: 1; min-width: 0; }
-.name { font-size: 0.9rem; font-weight: 700; color: var(--text); margin: 0; }
-.grade { font-size: 0.74rem; color: var(--text-muted); margin: 2px 0 0; }
+.name { font-size: var(--fs-md); font-weight: 700; color: var(--text); margin: 0; }
+.grade { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
 
 .nextMeeting {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   white-space: nowrap;
 }
 
 .netPill {
-  font-size: 0.75rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--bg-alt);
@@ -120,11 +120,11 @@
 }
 
 .meetingIcon { color: var(--text-muted); display: flex; flex-shrink: 0; }
-.meetingLabel { font-size: 0.7rem; color: var(--text-muted); margin: 0; }
-.meetingValue { font-size: 0.85rem; font-weight: 600; color: var(--text); margin: 2px 0 0; }
+.meetingLabel { font-size: var(--fs-2xs); color: var(--text-muted); margin: 0; }
+.meetingValue { font-size: var(--fs-md); font-weight: 600; color: var(--text); margin: 2px 0 0; }
 
 .sectionLabel {
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text);
   margin: 0 0 var(--space-3);
@@ -164,8 +164,8 @@
   transition: height 0.4s ease;
 }
 
-.miniValue { font-size: 0.62rem; font-weight: 700; color: #fff; }
-.miniLabel { font-size: 0.65rem; color: var(--text-muted); }
+.miniValue { font-size: var(--fs-3xs); font-weight: 700; color: #fff; }
+.miniLabel { font-size: var(--fs-3xs); color: var(--text-muted); }
 
 /* Haftalık program strip */
 .week {
@@ -185,7 +185,7 @@
 }
 
 .dayName {
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--text-muted);
   text-align: center;
@@ -202,7 +202,7 @@
 }
 
 .blockSubject {
-  font-size: 0.65rem;
+  font-size: var(--fs-3xs);
   font-weight: 700;
   color: var(--text);
   display: block;
@@ -212,7 +212,7 @@
 }
 
 .blockTopic {
-  font-size: 0.6rem;
+  font-size: var(--fs-3xs);
   color: var(--text-muted);
   display: block;
   overflow: hidden;
@@ -221,7 +221,7 @@
 }
 
 .dayEmpty {
-  font-size: 0.62rem;
+  font-size: var(--fs-3xs);
   color: var(--text-muted);
   text-align: center;
   margin: auto 0;

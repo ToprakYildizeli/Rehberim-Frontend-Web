@@ -46,7 +46,7 @@
 }
 
 .navLink {
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
@@ -61,7 +61,7 @@
 }
 
 .navCta {
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: #fff;
   text-decoration: none;
@@ -102,7 +102,7 @@
   gap: 8px;
   background: var(--accent-badge);
   color: var(--accent-text);
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -138,7 +138,7 @@
 }
 
 .heroSubtitle {
-  font-size: 1.05rem;
+  font-size: var(--fs-xl);
   color: var(--text-secondary);
   line-height: 1.75;
   margin: 0 0 36px;
@@ -160,7 +160,7 @@
   color: #fff;
   padding: 13px 24px;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   text-decoration: none;
   transition: background 0.15s, transform 0.1s;
@@ -171,7 +171,7 @@
 .btnGhost {
   display: inline-flex;
   align-items: center;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
@@ -185,7 +185,7 @@
 .btnGhost:hover { border-color: var(--accent); color: var(--accent); }
 
 .heroNote {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   margin: 0;
 }
@@ -246,7 +246,7 @@
 }
 
 .previewBarTitle {
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--text-muted);
   letter-spacing: 0.02em;
@@ -269,19 +269,19 @@
 
 .previewGreetName {
   margin: 0 0 3px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--text);
 }
 
 .previewGreetSub {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   color: var(--text-muted);
 }
 
 .previewMonth {
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--accent);
   background: var(--accent-badge);
@@ -291,7 +291,7 @@
 
 .previewSectionLabel {
   margin: 0 0 8px;
-  font-size: 10px;
+  font-size: var(--fs-3xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -312,7 +312,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
@@ -331,13 +331,13 @@
 }
 
 .previewStudentName {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--text);
 }
 
 .previewStudentPct {
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
 }
 
@@ -356,7 +356,7 @@
 }
 
 .previewStudentGrade {
-  font-size: 10px;
+  font-size: var(--fs-3xs);
   color: var(--text-muted);
 }
 
@@ -374,7 +374,7 @@
 }
 
 .previewExamSubject {
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   color: var(--text-secondary);
   width: 62px;
   flex-shrink: 0;
@@ -394,7 +394,7 @@
 }
 
 .previewExamNet {
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   color: var(--text);
   width: 30px;
@@ -411,7 +411,7 @@
 
 .sectionTag {
   display: inline-block;
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -428,7 +428,7 @@
 }
 
 .sectionSub {
-  font-size: 1rem;
+  font-size: var(--fs-xl);
   color: var(--text-secondary);
   margin: 0 0 52px;
   max-width: 560px;
@@ -465,14 +465,14 @@
 }
 
 .featureTitle {
-  font-size: 15px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--text);
   margin: 0 0 8px;
 }
 
 .featureDesc {
-  font-size: 13.5px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   line-height: 1.65;
   margin: 0;
@@ -510,7 +510,7 @@
 }
 
 .stepNum {
-  font-size: 2.5rem;
+  font-size: var(--fs-7xl);
   font-weight: 800;
   color: var(--accent);
   opacity: 0.3;
@@ -520,14 +520,14 @@
 }
 
 .stepTitle {
-  font-size: 17px;
+  font-size: var(--fs-xl);
   font-weight: 700;
   color: var(--text);
   margin: 0 0 10px;
 }
 
 .stepDesc {
-  font-size: 14px;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
   line-height: 1.7;
   margin: 0;
@@ -573,7 +573,7 @@
 
 /* Hangi platformdan kullanıldığını söyleyen rozet (Web / Mobil). */
 .roleTag {
-  font-size: 11px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -583,7 +583,7 @@
 }
 
 .roleCard h3 {
-  font-size: 18px;
+  font-size: var(--fs-2xl);
   font-weight: 700;
   color: var(--text);
   margin: 0 0 16px;
@@ -599,7 +599,7 @@
 }
 
 .roleList li {
-  font-size: 14px;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
   padding-left: 20px;
   position: relative;
@@ -645,7 +645,7 @@
 }
 
 .footerLinks a {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--footer-text);
   text-decoration: none;
   transition: color 0.15s;
@@ -656,7 +656,7 @@
 .footerBrand { color: #fff; flex-shrink: 0; }
 
 .footerCopy {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--footer-text);
 }
 
@@ -668,7 +668,7 @@
 }
 
 .navSection {
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
@@ -699,7 +699,7 @@
   border-radius: 16px;
   background: var(--bg-alt);
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   text-align: center;
   padding: 24px;
 }
@@ -735,7 +735,7 @@
 }
 
 .checkList li {
-  font-size: 14px;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
   padding-left: 22px;
   position: relative;
@@ -770,7 +770,7 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-secondary);
   min-width: 0;
@@ -780,7 +780,7 @@
   width: 100%;
   padding: 10px 12px;
   font: inherit;
-  font-size: 14px;
+  font-size: var(--fs-md);
   font-weight: 400;
   color: var(--text);
   background: var(--bg);
@@ -796,10 +796,10 @@
   box-shadow: 0 0 0 3px var(--accent-badge);
 }
 
-.fieldError { font-size: 12px; font-weight: 500; color: var(--error); }
+.fieldError { font-size: var(--fs-xs); font-weight: 500; color: var(--error); }
 
 .formError {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--error);
   background: var(--error-bg);
   border: 1px solid var(--error-border);
@@ -809,7 +809,7 @@
 }
 
 .signupFoot {
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   text-align: center;
   margin: 4px 0 0;
@@ -848,7 +848,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 18px 22px;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text);
   cursor: pointer;
@@ -869,7 +869,7 @@
 .faqAnswer {
   margin: 0;
   padding: 0 22px 20px;
-  font-size: 14px;
+  font-size: var(--fs-md);
   line-height: 1.75;
   color: var(--text-secondary);
 }
@@ -919,14 +919,14 @@ a.contactCard:hover {
 }
 
 .contactLabel {
-  font-size: 12px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
 }
 
-.contactValue { font-size: 15px; font-weight: 600; color: var(--text); }
+.contactValue { font-size: var(--fs-lg); font-weight: 600; color: var(--text); }
 
 /* ─── Duyarlı düzen ───
    Sayfanın tamamı tek sütuna iniyor. Tanıtım sayfası en çok telefonda

@@ -6,7 +6,7 @@
   gap: 6px;
   width: 100%;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--text);
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -40,7 +40,7 @@
   margin-bottom: var(--space-2);
 }
 
-.monthName { font-size: 0.8rem; font-weight: 700; color: var(--text); }
+.monthName { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
 
 .navBtn {
   background: transparent;
@@ -62,7 +62,7 @@
 
 .wd {
   text-align: center;
-  font-size: 0.62rem;
+  font-size: var(--fs-3xs);
   font-weight: 600;
   color: var(--text-muted);
   padding-bottom: 3px;
@@ -74,7 +74,7 @@
   background: transparent;
   color: var(--text);
   font-family: inherit;
-  font-size: 0.72rem;
+  font-size: var(--fs-xs);
   border-radius: var(--radius-sm);
   cursor: pointer;
   transition: background 0.12s, color 0.12s;
@@ -100,7 +100,7 @@
 
 .hint {
   margin: var(--space-2) 0 0;
-  font-size: 0.64rem;
+  font-size: var(--fs-3xs);
   color: var(--text-muted);
   line-height: 1.35;
 }

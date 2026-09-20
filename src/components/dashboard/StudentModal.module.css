@@ -9,14 +9,14 @@
 .headText { flex: 1; min-width: 0; }
 
 .name {
-  font-size: 1.2rem;
+  font-size: var(--fs-3xl);
   font-weight: 700;
   color: var(--text);
   margin: 0;
 }
 
 .meta {
-  font-size: 0.8rem;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
   margin: 3px 0 0;
 }
@@ -38,8 +38,8 @@
   gap: 5px;
 }
 
-.statLabel { font-size: 0.7rem; color: var(--text-muted); }
-.statValue { font-size: 1.25rem; font-weight: 700; color: var(--text); }
+.statLabel { font-size: var(--fs-2xs); color: var(--text-muted); }
+.statValue { font-size: var(--fs-3xl); font-weight: 700; color: var(--text); }
 
 .section { margin-bottom: var(--space-6); }
 .section:last-child { margin-bottom: 0; }
@@ -48,7 +48,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.88rem;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text);
   margin: 0 0 var(--space-3);
@@ -63,8 +63,8 @@
   gap: var(--space-3);
 }
 
-.subjectName { font-size: 0.8rem; color: var(--text-secondary); }
-.subjectPct { font-size: 0.8rem; font-weight: 600; color: var(--text); text-align: right; }
+.subjectName { font-size: var(--fs-sm); color: var(--text-secondary); }
+.subjectPct { font-size: var(--fs-sm); font-weight: 600; color: var(--text); text-align: right; }
 
 .analysis {
   background: var(--violet-bg);
@@ -74,7 +74,7 @@
 }
 
 .analysisText {
-  font-size: 0.83rem;
+  font-size: var(--fs-sm);
   line-height: 1.6;
   color: var(--text-secondary);
   margin: 0 0 var(--space-3);
@@ -89,7 +89,7 @@
   padding: 0;
   color: var(--accent);
   font-family: inherit;
-  font-size: 0.82rem;
+  font-size: var(--fs-sm);
   font-weight: 600;
   cursor: pointer;
 }
