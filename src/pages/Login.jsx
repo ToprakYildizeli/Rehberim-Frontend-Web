@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { login, logout } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/ui';
+import VerifyEmailStep from '../components/VerifyEmailStep';
 import { Logo } from '../components/ui/Logo';
 import styles from './Auth.module.css';
 
@@ -13,6 +14,10 @@ export default function Login() {
   const [form, setForm] = useState({ username: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  /* Doğrulanmamış rehber hesabı: sunucu 400 + `email_verification_required`
+     döndürüyor. Şifre hatası gibi göstermek yerine kod adımına geçiyoruz —
+     kullanıcı kayıt sırasında kodu girmeden çıkmış olabilir. */
+  const [verify, setVerify] = useState(null);
 
   function handleChange(e) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -46,7 +51,12 @@ export default function Login() {
       saveSession(data.access, data.refresh, data.user);
       navigate('/dashboard');
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Giriş başarısız. Bilgilerinizi kontrol edin.';
+      const data = err.response?.data;
+      if (data?.email_verification_required) {
+        setVerify({ username: data.username || form.username });
+        return;
+      }
+      const msg = data?.detail || 'Giriş başarısız. Bilgilerinizi kontrol edin.';
       setError(msg);
     } finally {
       setLoading(false);
@@ -61,9 +71,23 @@ export default function Login() {
         <Link to="/" className={styles.logo} aria-label="Rehberim ana sayfa">
           <Logo height={29} />
         </Link>
-        <h1 className={styles.heading}>Hoş geldiniz</h1>
-        <p className={styles.sub}>Rehber hesabınızla giriş yapın.</p>
+        <h1 className={styles.heading}>
+          {verify ? 'E-postanızı Doğrulayın' : 'Hoş geldiniz'}
+        </h1>
+        {!verify && <p className={styles.sub}>Rehber hesabınızla giriş yapın.</p>}
 
+        {verify && (
+          <VerifyEmailStep
+            username={verify.username}
+            styles={styles}
+            onVerified={(data) => {
+              saveSession(data.access, data.refresh, data.user);
+              navigate('/dashboard');
+            }}
+          />
+        )}
+
+        {!verify && (
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <label className={styles.label}>
             Kullanıcı adı
@@ -99,6 +123,7 @@ export default function Login() {
             {loading ? 'Giriş yapılıyor…' : 'Giriş Yap'}
           </button>
         </form>
+        )}
 
         <p className={styles.footer}>
           Hesabınız yok mu?{' '}

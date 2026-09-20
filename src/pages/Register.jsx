@@ -1,3 +1,4 @@
+import VerifyEmailStep from '../components/VerifyEmailStep';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { registerCounselor } from '../api/auth';
@@ -31,6 +32,10 @@ export default function Register() {
   // düğmesi kapalı.
   const [accepted, setAccepted] = useState(false);
   const [reading, setReading] = useState(null);   // okunan metin (modal)
+  /* Kayıttan sonra doğrulama adımı: `{ username, email }` ya da `null`.
+     Ayrı bir sayfa değil — kullanıcı aynı kartta kalsın, "kaydım oldu mu?"
+     diye düşünmesin. */
+  const [verify, setVerify] = useState(null);
 
   function handleChange(e) {
     setForm(f => ({ ...f, [e.target.name]: e.target.value }));
@@ -59,6 +64,12 @@ export default function Register() {
         consents: ['aydinlatma', 'acik_riza'],
       };
       const { data } = await registerCounselor(payload);
+      // Kayıt artık token döndürmüyor: hesap açıldı ama e-postaya giden kod
+      // girilene kadar kullanılamıyor (auth-contract §5.1b).
+      if (data.email_verification_required) {
+        setVerify({ username: data.username, email: data.email });
+        return;
+      }
       saveSession(data.access, data.refresh, data.user);
       navigate('/dashboard');
     } catch (err) {
@@ -95,9 +106,26 @@ export default function Register() {
         <Link to="/" className={styles.logo} aria-label="Rehberim ana sayfa">
           <Logo height={29} />
         </Link>
-        <h1 className={styles.heading}>Hesap Oluşturun</h1>
-        <p className={styles.sub}>Rehber hesabı açmak birkaç saniye sürer.</p>
+        <h1 className={styles.heading}>
+          {verify ? 'E-postanızı Doğrulayın' : 'Hesap Oluşturun'}
+        </h1>
+        {!verify && (
+          <p className={styles.sub}>Rehber hesabı açmak birkaç saniye sürer.</p>
+        )}
 
+        {verify && (
+          <VerifyEmailStep
+            username={verify.username}
+            email={verify.email}
+            styles={styles}
+            onVerified={(data) => {
+              saveSession(data.access, data.refresh, data.user);
+              navigate('/dashboard');
+            }}
+          />
+        )}
+
+        {!verify && (
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
           <div className={styles.row}>
             <label className={styles.label}>
@@ -209,6 +237,7 @@ export default function Register() {
             {loading ? 'Hesap oluşturuluyor…' : 'Hesap Oluştur'}
           </button>
         </form>
+        )}
 
         <p className={styles.footer}>
           Zaten hesabınız var mı?{' '}

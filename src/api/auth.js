@@ -8,6 +8,16 @@ export function registerCounselor(data) {
   return api.post('/auth/register/counselor/', data);
 }
 
+/** Kayıt kodunu doğrular (auth-contract §5.1b). Başarılıysa token döner. */
+export function verifyEmail(username, code) {
+  return api.post('/auth/verify-email/', { username, code });
+}
+
+/** Yeni kod ister. Yanıt hesabın var olup olmadığını söylemez. */
+export function resendVerification(username) {
+  return api.post('/auth/verify-email/resend/', { username });
+}
+
 export function refreshToken(refresh) {
   return api.post('/auth/refresh/', { refresh });
 }
