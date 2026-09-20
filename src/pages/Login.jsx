@@ -7,6 +7,12 @@ import VerifyEmailStep from '../components/VerifyEmailStep';
 import { Logo } from '../components/ui/Logo';
 import styles from './Auth.module.css';
 
+/* Sunucu hatayı serializer üzerinden yükseltirse DRF her alanı listeye sarıyor
+   (`{"username": ["ayse"]}`). Dizi kullanıcı adını doğrulama ucuna yollamak
+   "Not a valid string." hatası veriyordu; gelen değeri tek değere indiriyoruz.
+   Sunucu tarafı düzeltildi, bu eski paketlere karşı ikinci savunma. */
+const tekDeger = (v) => (Array.isArray(v) ? v[0] : v);
+
 export default function Login() {
   const navigate = useNavigate();
   const { saveSession } = useAuth();
@@ -52,11 +58,11 @@ export default function Login() {
       navigate('/dashboard');
     } catch (err) {
       const data = err.response?.data;
-      if (data?.email_verification_required) {
-        setVerify({ username: data.username || form.username });
+      if (tekDeger(data?.email_verification_required)) {
+        setVerify({ username: tekDeger(data.username) || form.username });
         return;
       }
-      const msg = data?.detail || 'Giriş başarısız. Bilgilerinizi kontrol edin.';
+      const msg = tekDeger(data?.detail) || 'Giriş başarısız. Bilgilerinizi kontrol edin.';
       setError(msg);
     } finally {
       setLoading(false);
