@@ -612,7 +612,8 @@ button.row:hover { background: var(--bg-alt); }
   color: var(--text); background: var(--bg-input);
   border: 1px solid var(--border); border-radius: var(--radius-sm);
 }
-.netSearch:focus { outline: none; border-color: var(--accent); }
+/* `outline: none` kaldırıldı — bkz. index.css'teki odak katmanı. */
+.netSearch:focus { border-color: var(--accent); }
 
 .netCount { font-size: 0.74rem; color: var(--text-muted); }
 

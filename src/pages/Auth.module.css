@@ -100,7 +100,8 @@
   border-radius: 8px;
   font-size: 0.95rem;
   color: var(--text);
-  outline: none;
+  /* `outline: none` kaldırıldı: görünür odak index.css'teki ortak
+     `:focus-visible` katmanından geliyor (WCAG 2.4.7). */
   background: var(--bg-input);
   transition: border-color 0.15s, background 0.2s;
 }

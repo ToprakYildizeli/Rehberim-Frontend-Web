@@ -786,7 +786,8 @@
   background: var(--bg);
   border: 1.5px solid var(--border);
   border-radius: 9px;
-  outline: none;
+  /* `outline: none` kaldırıldı: görünür odak index.css'teki ortak
+     `:focus-visible` katmanından geliyor (WCAG 2.4.7). */
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 

@@ -682,6 +682,58 @@ body {
 #root { min-height: 100vh; }
 
 /* ---------------------------------------------------------------------------
+   Etkileşim durumları — odak halkası ve basılma geri bildirimi
+   ---------------------------------------------------------------------------
+   Tek yerde duruyor; bileşenlerin tek tek kendi odak stilini yazması gerekmiyor.
+
+   **Neden gerekti:** paylaşılan bileşenlerde `outline: none` yazılıp yerine bir
+   şey konmamıştı (`ui.module.css` içindeki `.control` ve `.searchInput`), `.btn`in
+   ise hiç odak stili yoktu. Form alanlarında odak yalnızca kenarlık rengiyle
+   belirtiliyordu — klavyeyle gezen kullanıcı nerede olduğunu göremiyor
+   (WCAG 2.4.7) ve düğmeye basınca hiçbir şey olmadığı için arayüz ölü duruyordu.
+
+   `:where()` ile yazılıyor: özgüllüğü **sıfır**, yani bir bileşen kendi odak
+   stilini tanımlarsa o kazanır. Buradaki kural bir taban, bir dayatma değil.
+
+   `:focus-visible` (`:focus` değil): fareyle tıklanan düğmede halka çıkmaz,
+   yalnız klavye/erişilebilirlik gezinmesinde çıkar. */
+
+/* `border-radius` BURAYA YAZILMAZ: modern tarayıcılar `outline`ı elemanın kendi
+   yarıçapını izleyerek çiziyor. Buradan dayatmak, pill biçimli bir düğmeyi
+   odaklandığı anda köşeli gösterirdi. */
+:where(a, button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Form alanlarında halka yerine yumuşak bir kuşak: `outline` köşeleri kendi
+   yarıçapıyla çiziyor ve input'un etrafında kutu gibi duruyor.
+
+   **`@supports` şart.** `color-mix` desteklenmeyen bir tarayıcıda o bildirim
+   düşer; kuşak `outline: none` ile aynı blokta olsaydı geriye hiçbir odak
+   göstergesi kalmazdı — yani eski hâlinden kötü. Taban her yerde çalışan
+   `outline`, kuşak yalnız destekleyen tarayıcıda onun yerini alıyor. */
+@supports (box-shadow: 0 0 0 3px color-mix(in srgb, red 20%, transparent)) {
+  :where(input, select, textarea):focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+}
+
+/* Basılma: bir piksellik çökme, gözün "oldu" demesi için yeterli.
+   `:not(:disabled)` — kapalı düğme basılmış gibi görünmemeli.
+
+   Yalnız `button`: tahtadaki sürüklenebilir bloklar `div` ve kendi
+   `transform`unu taşıyor (dnd-kit), buradaki kural onlara hiç değmiyor. */
+:where(button):active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(button):active:not(:disabled) { transform: none; }
+}
+
+/* ---------------------------------------------------------------------------
    Baskı (Yazdır / PDF olarak kaydet)
    ---------------------------------------------------------------------------
    Rehberler haftalık programı kâğıda basmak ya da veliye PDF olarak vermek

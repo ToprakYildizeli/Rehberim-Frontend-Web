@@ -96,11 +96,13 @@
   font-family: inherit;
   font-size: 0.9rem;
   color: var(--text);
-  outline: none;
   background: var(--bg-input);
-  transition: border-color 0.15s, background 0.2s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.2s;
 }
 
+/* `outline: none` KALDIRILDI: yerine bir şey konmadığı için klavye odağı yalnız
+   kenarlık rengiyle belli oluyordu. Görünür odak kuşağı artık index.css'teki
+   ortak `:focus-visible` katmanından geliyor; buradaki kenarlık onu tamamlıyor. */
 .control:focus { border-color: var(--accent); }
 .control:disabled { opacity: 0.6; cursor: not-allowed; }
 .control::placeholder { color: var(--text-muted); }
@@ -148,10 +150,10 @@ select.control:focus { background-color: var(--bg-input); }
   font-size: 0.85rem;
   color: var(--text);
   background: var(--bg-alt);
-  outline: none;
-  transition: border-color 0.15s, background 0.2s;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.2s;
 }
 
+/* `outline: none` kaldırıldı — bkz. `.control`. */
 .searchInput:focus { border-color: var(--accent); background: var(--bg-input); }
 .searchInput::placeholder { color: var(--text-muted); }
 

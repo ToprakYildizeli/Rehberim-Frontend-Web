@@ -132,7 +132,8 @@
   border-radius: var(--radius-sm, 6px);
   padding: 1px 6px;
   width: 12ch;
-  outline: none;
+  /* `outline: none` kaldırıldı: görünür odak index.css'teki ortak
+     `:focus-visible` katmanından geliyor (WCAG 2.4.7). */
 }
 
 .chipInput:focus { border-color: var(--accent); }
