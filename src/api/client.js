@@ -79,6 +79,13 @@ api.interceptors.response.use(
       }
       const { data } = await refreshing;
       refreshing = null;
+      // Gövde beklenmedik şekilde boş gelirse yazma: `setItem(k, undefined)`
+      // localStorage'a `"undefined"` METNİNİ koyuyor ve o metin truthy olduğu
+      // için oturum "geçerli" görünüp bir sonraki açılışı kırıyor.
+      if (!data?.access) {
+        forceLogout();
+        return Promise.reject(error);
+      }
       localStorage.setItem('access', data.access);
       // Sunucu refresh token'ı DÖNDÜRÜYOR (SIMPLE_JWT.ROTATE_REFRESH_TOKENS) ve
       // bu yanıtla birlikte eskisini kara listeye alıyor
