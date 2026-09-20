@@ -69,7 +69,7 @@
   cursor: pointer;
 }
 .optionActive { background: var(--bg-alt); }
-.optionSelected .name { font-weight: 700; color: var(--accent); }
+.optionSelected .name { font-weight: 600; color: var(--accent); }
 .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .grade { font-size: var(--fs-xs); color: var(--text-muted); flex-shrink: 0; }
 .empty { padding: 10px; font-size: var(--fs-sm); color: var(--text-muted); }

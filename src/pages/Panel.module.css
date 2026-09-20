@@ -58,7 +58,7 @@
   right: 0;
   top: -8px;
   font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--accent);
   background: var(--bg-card);
   padding: 0 4px;
@@ -92,7 +92,7 @@
 
 .barValue {
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
 }
 
@@ -123,7 +123,7 @@
   background: var(--bg-alt);
   color: var(--text-secondary);
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: 600;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -203,7 +203,7 @@
 
 .alertName {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0;
 }
@@ -228,7 +228,7 @@
   flex-shrink: 0;
 }
 
-.feedName { font-size: var(--fs-sm); font-weight: 700; color: var(--text); margin: 0; }
+.feedName { font-size: var(--fs-sm); font-weight: 600; color: var(--text); margin: 0; }
 .feedText { font-size: var(--fs-xs); color: var(--text-secondary); margin: 2px 0 0; line-height: 1.4; }
 .feedTime { font-size: var(--fs-2xs); color: var(--text-muted); margin: 3px 0 0; }
 
@@ -303,7 +303,7 @@
   flex-shrink: 0;
 }
 
-.aiTitle { font-size: var(--fs-lg); font-weight: 700; color: var(--text); margin: 0; }
+.aiTitle { font-size: var(--fs-lg); font-weight: 600; color: var(--text); margin: 0; }
 .aiSub { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
 
 .aiList {
@@ -339,7 +339,7 @@
   margin-bottom: var(--space-2);
 }
 
-.aiCardName { flex: 1; font-size: var(--fs-sm); font-weight: 700; color: var(--text); min-width: 0; }
+.aiCardName { flex: 1; font-size: var(--fs-sm); font-weight: 600; color: var(--text); min-width: 0; }
 .aiCardGrade { font-size: var(--fs-2xs); color: var(--text-muted); }
 .aiCardBody { font-size: var(--fs-xs); line-height: 1.55; color: var(--text-secondary); margin: 0 0 var(--space-3); }
 
@@ -409,7 +409,7 @@
 
 .kpiValue {
   font-size: var(--fs-4xl);
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text);
   line-height: 1.1;
   /* Rakamlar eşit genişlikte — 7 ile 66.9 yan yanayken hizalar kaymasın. */
@@ -456,14 +456,14 @@ button.row:hover { background: var(--bg-alt); }
 .rowName { font-size: var(--fs-md); font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rowSub { font-size: var(--fs-xs); color: var(--text-muted); }
 .rowChevron { color: var(--text-muted); flex-shrink: 0; }
-.rowStat { font-size: var(--fs-md); font-weight: 700; color: var(--text); flex-shrink: 0; }
+.rowStat { font-size: var(--fs-md); font-weight: 600; color: var(--text); flex-shrink: 0; }
 
 .dateChip {
   display: flex; flex-direction: column; align-items: center;
   min-width: 52px; flex-shrink: 0;
   background: var(--bg-alt); border-radius: var(--radius-md); padding: 5px 6px;
 }
-.dateChipDay { font-size: var(--fs-xs); font-weight: 700; color: var(--text); }
+.dateChipDay { font-size: var(--fs-xs); font-weight: 600; color: var(--text); }
 .dateChipTime { font-size: var(--fs-2xs); color: var(--text-muted); }
 
 /* Kıyaslama */
@@ -475,7 +475,7 @@ button.row:hover { background: var(--bg-alt); }
    dropdown'lar önce kırpılıyordu. */
 .cmpHead > div:first-child { flex: 0 1 auto; min-width: 0; }
 .cmpHead > .cmpControls { flex: 1 1 auto; justify-content: flex-end; }
-.cmpTitle { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xl); font-weight: 700; margin: 0; color: var(--text); }
+.cmpTitle { display: flex; align-items: center; gap: 6px; font-size: var(--fs-xl); font-weight: 600; margin: 0; color: var(--text); }
 .rankList { display: flex; flex-direction: column; gap: 4px; }
 .rankRow {
   display: flex; align-items: center; gap: var(--space-3);
@@ -486,7 +486,7 @@ button.row:hover { background: var(--bg-alt); }
 .rankName { width: 120px; flex-shrink: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rankTrack { flex: 1; height: 12px; background: var(--bg-alt); border-radius: var(--radius-pill); overflow: hidden; min-width: 0; }
 .rankFill { display: block; height: 100%; min-width: 2px; border-radius: var(--radius-pill); transition: width 0.4s ease; }
-.rankValue { width: 108px; text-align: right; flex-shrink: 0; font-size: var(--fs-sm); font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.rankValue { width: 108px; text-align: right; flex-shrink: 0; font-size: var(--fs-sm); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
 
 @media (max-width: 1000px) {
   .kpiRow { grid-template-columns: repeat(2, 1fr); }
@@ -527,13 +527,13 @@ button.row:hover { background: var(--bg-alt); }
   position: absolute; inset: 26%; background: var(--bg-card); border-radius: 50%;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
 }
-.donutNum { font-size: var(--fs-3xl); font-weight: 800; color: var(--text); line-height: 1; }
+.donutNum { font-size: var(--fs-3xl); font-weight: 700; color: var(--text); line-height: 1; }
 .donutCap { font-size: var(--fs-3xs); color: var(--text-muted); }
 .donutLegend { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 130px; display: flex; flex-direction: column; gap: var(--space-2); }
 .donutItem { display: flex; align-items: center; gap: 8px; font-size: var(--fs-xs); color: var(--text-secondary); }
 .legDot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 .donutLabel { flex: 1; min-width: 0; }
-.donutVal { font-weight: 800; color: var(--text); font-variant-numeric: tabular-nums; }
+.donutVal { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
 
 @media (max-width: 1000px) {
   .chartRow { grid-template-columns: 1fr; }

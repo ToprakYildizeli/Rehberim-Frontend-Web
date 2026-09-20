@@ -50,7 +50,7 @@
 .logo {
   display: inline-block;
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent);
   text-decoration: none;
   letter-spacing: 0.04em;
@@ -59,7 +59,7 @@
 
 .heading {
   font-size: var(--fs-5xl);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0 0 6px;
 }

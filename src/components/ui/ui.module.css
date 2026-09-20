@@ -70,7 +70,7 @@
 
 .cardTitle {
   font-size: var(--fs-xl);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0;
 }
@@ -229,7 +229,7 @@ select.control:focus { background-color: var(--bg-input); }
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
 }
 .ringLabel { font-size: var(--fs-xs); color: var(--text-secondary); }

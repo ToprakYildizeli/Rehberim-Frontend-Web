@@ -10,7 +10,7 @@
 
 .name {
   font-size: var(--fs-3xl);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0;
 }
@@ -39,7 +39,7 @@
 }
 
 .statLabel { font-size: var(--fs-2xs); color: var(--text-muted); }
-.statValue { font-size: var(--fs-3xl); font-weight: 700; color: var(--text); }
+.statValue { font-size: var(--fs-3xl); font-weight: 600; color: var(--text); }
 
 .section { margin-bottom: var(--space-6); }
 .section:last-child { margin-bottom: 0; }
@@ -49,7 +49,7 @@
   align-items: center;
   gap: 6px;
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0 0 var(--space-3);
 }

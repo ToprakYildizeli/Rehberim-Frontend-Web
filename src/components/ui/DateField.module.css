@@ -40,7 +40,7 @@
   margin-bottom: var(--space-2);
 }
 
-.monthName { font-size: var(--fs-sm); font-weight: 700; color: var(--text); }
+.monthName { font-size: var(--fs-sm); font-weight: 600; color: var(--text); }
 
 .navBtn {
   background: transparent;
@@ -63,7 +63,7 @@
 .wd {
   text-align: center;
   font-size: var(--fs-3xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   padding-bottom: 3px;
 }
@@ -93,7 +93,7 @@
 .daySelected {
   background: var(--accent);
   color: #fff;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .daySelected:hover:not(:disabled) { background: var(--accent); color: #fff; }

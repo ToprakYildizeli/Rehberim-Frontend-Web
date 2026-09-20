@@ -15,7 +15,7 @@
 .inviteText { min-width: 0; }
 .inviteLabel {
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -58,7 +58,7 @@
 .head:hover { background: var(--bg-alt); }
 
 .headText { flex: 1; min-width: 0; }
-.name { font-size: var(--fs-md); font-weight: 700; color: var(--text); margin: 0; }
+.name { font-size: var(--fs-md); font-weight: 600; color: var(--text); margin: 0; }
 .grade { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
 
 .nextMeeting {
@@ -125,7 +125,7 @@
 
 .sectionLabel {
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0 0 var(--space-3);
 }
@@ -164,7 +164,7 @@
   transition: height 0.4s ease;
 }
 
-.miniValue { font-size: var(--fs-3xs); font-weight: 700; color: #fff; }
+.miniValue { font-size: var(--fs-3xs); font-weight: 600; color: #fff; }
 .miniLabel { font-size: var(--fs-3xs); color: var(--text-muted); }
 
 /* Haftalık program strip */
@@ -186,7 +186,7 @@
 
 .dayName {
   font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   text-align: center;
   padding-bottom: 4px;
@@ -203,7 +203,7 @@
 
 .blockSubject {
   font-size: var(--fs-3xs);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   display: block;
   overflow: hidden;

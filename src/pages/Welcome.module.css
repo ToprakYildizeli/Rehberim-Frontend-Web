@@ -126,7 +126,7 @@
 
 .heroTitle {
   font-size: clamp(2.2rem, 4vw, 3.2rem);
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text);
   line-height: 1.15;
   letter-spacing: -0.03em;
@@ -270,7 +270,7 @@
 .previewGreetName {
   margin: 0 0 3px;
   font-size: var(--fs-sm);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
 }
 
@@ -282,7 +282,7 @@
 
 .previewMonth {
   font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--accent);
   background: var(--accent-badge);
   padding: 3px 8px;
@@ -292,7 +292,7 @@
 .previewSectionLabel {
   margin: 0 0 8px;
   font-size: var(--fs-3xs);
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);
@@ -338,7 +338,7 @@
 
 .previewStudentPct {
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .previewProgressBg {
@@ -395,7 +395,7 @@
 
 .previewExamNet {
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   width: 30px;
   text-align: right;
@@ -412,7 +412,7 @@
 .sectionTag {
   display: inline-block;
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--accent);
@@ -421,7 +421,7 @@
 
 .sectionTitle {
   font-size: clamp(1.6rem, 3vw, 2.2rem);
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text);
   margin: 0 0 12px;
   letter-spacing: -0.02em;
@@ -466,7 +466,7 @@
 
 .featureTitle {
   font-size: var(--fs-lg);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0 0 8px;
 }
@@ -511,7 +511,7 @@
 
 .stepNum {
   font-size: var(--fs-7xl);
-  font-weight: 800;
+  font-weight: 700;
   color: var(--accent);
   opacity: 0.3;
   line-height: 1;
@@ -521,7 +521,7 @@
 
 .stepTitle {
   font-size: var(--fs-xl);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0 0 10px;
 }
@@ -574,7 +574,7 @@
 /* Hangi platformdan kullanıldığını söyleyen rozet (Web / Mobil). */
 .roleTag {
   font-size: var(--fs-2xs);
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 4px 10px;
@@ -584,7 +584,7 @@
 
 .roleCard h3 {
   font-size: var(--fs-2xl);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0 0 16px;
 }
@@ -771,7 +771,7 @@
   flex-direction: column;
   gap: 6px;
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-secondary);
   min-width: 0;
 }
@@ -920,7 +920,7 @@ a.contactCard:hover {
 
 .contactLabel {
   font-size: var(--fs-xs);
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--text-muted);

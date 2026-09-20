@@ -716,6 +716,12 @@
 body {
   margin: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Gövde ağırlığı AÇIKÇA yazılıyor. Zaten tarayıcı varsayılanı 400'dü ve düz
+     metin (açıklamalar, boş durum metinleri, alt başlıklar) beyan taşımadığı
+     için onu miras alıyordu — ama miras, niyetin yazılı olmasıyla aynı şey
+     değil. Ağırlık ölçeği: 400 gövde · 500 etiket · 600 başlık ve etkileşim ·
+     700 yalnız rakam göstergeleri ve kodlar. */
+  font-weight: 400;
   -webkit-font-smoothing: antialiased;
   background: var(--bg);
   color: var(--text);

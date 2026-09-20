@@ -15,7 +15,7 @@
 
 .month {
   font-size: var(--fs-xl);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0;
   text-transform: capitalize;
@@ -48,7 +48,7 @@
 .weekday {
   text-align: center;
   font-size: var(--fs-2xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text-muted);
   padding-bottom: var(--space-3);
 }
@@ -82,7 +82,7 @@
 .cellEmpty:hover { background: transparent; }
 
 .cellDay { font-size: var(--fs-xs); line-height: 1.1; padding-left: 2px; }
-.cellToday .cellDay { font-weight: 700; color: var(--accent); }
+.cellToday .cellDay { font-weight: 600; color: var(--accent); }
 
 /* Çoklu seçim (13 Eyl 2026): aynı etkinlik birden çok güne eklenebiliyor,
    o yüzden seçili gün belirgin olmalı — ince bir çerçeve, dört-beş seçili
@@ -93,7 +93,7 @@
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 .cellSelected .cellDay {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--accent);
 }
 
@@ -109,7 +109,7 @@
   background: var(--bg-alt);
   padding: 2px 5px;
 }
-.chipTime { font-size: var(--fs-3xs); font-weight: 700; color: var(--text-muted); flex-shrink: 0; }
+.chipTime { font-size: var(--fs-3xs); font-weight: 600; color: var(--text-muted); flex-shrink: 0; }
 .chipText {
   font-size: var(--fs-3xs);
   font-weight: 600;
@@ -172,7 +172,7 @@
 
 .eventTime {
   font-size: var(--fs-md);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   white-space: nowrap;
   flex-shrink: 0;
@@ -220,12 +220,12 @@
   padding-top: var(--space-5);
 }
 
-.formTitle { font-size: var(--fs-md); font-weight: 700; color: var(--text); margin: 0; }
+.formTitle { font-size: var(--fs-md); font-weight: 600; color: var(--text); margin: 0; }
 .formRow { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
 
 .timePicker { display: flex; align-items: center; gap: 6px; }
 .timePicker select { flex: 1; }
-.timeSep { color: var(--text-muted); font-weight: 700; }
+.timeSep { color: var(--text-muted); font-weight: 600; }
 .formActions { display: flex; gap: var(--space-3); }
 .formActions > * { flex: 1; }
 

@@ -37,12 +37,12 @@
 .navItemOn {
   background: var(--accent-subtle);
   color: var(--accent-text);
-  font-weight: 700;
+  font-weight: 600;
   box-shadow: inset 6px 0 0 var(--accent);
 
 }
 
-.navLabel { font-size: var(--fs-md); font-weight: 600; min-width: 0; }
+.navLabel { font-size: var(--fs-md); font-weight: 500; min-width: 0; }
 
 /* ---- içerik ---- */
 .contentHead {
@@ -53,7 +53,7 @@
   justify-content: space-between;
   gap: var(--space-3);
 }
-.contentTitle { font-size: var(--fs-2xl); font-weight: 700; color: var(--text); margin: 0; }
+.contentTitle { font-size: var(--fs-2xl); font-weight: 600; color: var(--text); margin: 0; }
 
 /* Kartlar kalan genişliğe yayılıyor; dar olanlar yan yana geliyor.
    Aynı satırdaki kartlar **eşit yükseklikte**: `align-items` verilmiyor, ızgaranın
@@ -85,7 +85,7 @@
 
 .option:last-child { border-bottom: none; padding-bottom: 0; }
 
-.optionLabel { font-size: var(--fs-md); font-weight: 600; color: var(--text); margin: 0; }
+.optionLabel { font-size: var(--fs-md); font-weight: 500; color: var(--text); margin: 0; }
 .optionHint { font-size: var(--fs-xs); color: var(--text-muted); margin: 3px 0 0; }
 
 .actions {
@@ -97,7 +97,7 @@
 
 .savedHint {
   font-size: var(--fs-xs);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--success);
 }
 
@@ -201,7 +201,7 @@
   align-items: center;
   gap: var(--space-1);
   font-size: var(--fs-sm);
-  font-weight: 600;
+  font-weight: 500;
   color: var(--text);
 }
 

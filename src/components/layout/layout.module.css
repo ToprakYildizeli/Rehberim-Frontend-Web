@@ -98,7 +98,7 @@
   padding: var(--space-6) var(--space-5);
   color: #fff;
   font-size: var(--fs-xl);
-  font-weight: 700;
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
@@ -189,7 +189,7 @@
 
 .pageTitle {
   font-size: var(--fs-2xl);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   margin: 0;
   white-space: nowrap;
@@ -227,7 +227,7 @@
   background: var(--danger);
   color: #fff;
   font-size: var(--fs-3xs);
-  font-weight: 700;
+  font-weight: 600;
   display: flex;
   align-items: center;
   justify-content: center;
