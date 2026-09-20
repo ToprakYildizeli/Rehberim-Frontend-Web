@@ -336,6 +336,12 @@ export default function DersProgrami() {
       if (!alive) return;
       setTopics(t);
       setDraft((d) => ({ ...d, topic: '' }));
+    }).catch(() => {
+      // Boşaltmak şart: aksi hâlde liste ÖNCEKİ dersin konularında kalıyor ve
+      // rehber, seçtiği derse ait sanıp yanlış konuyu bloğa yazabiliyordu.
+      if (!alive) return;
+      setTopics([]);
+      setDraft((d) => ({ ...d, topic: '' }));
     });
     return () => { alive = false; };
   }, [draft.subject]);
@@ -353,6 +359,14 @@ export default function DersProgrami() {
         if (!alive) return;
         setBlocks(d.blocks);
         setWin({ startDate: d.startDate, dayCount: d.dayCount });
+      }).catch(() => {
+        // Tahta `{!blocks ? <Spinner/>}` ile bekliyor; `blocks` null kalırsa
+        // sonsuza kadar döner. Öğrenci modundaki dal da aynı şeyi yapıyor:
+        // boş bir tahtayla aç, hatayı yaz — rehber çalışmaya başlayabilsin.
+        if (!alive) return;
+        setWin({ startDate: today(), dayCount: DEFAULT_DAY_COUNT });
+        setBlocks([]);
+        setWindowError('Kayıtlı taslak yüklenemedi; boş bir tahta açıldı.');
       });
       return () => { alive = false; };
     }
@@ -381,7 +395,10 @@ export default function DersProgrami() {
         setWin({ startDate: today(), dayCount: DEFAULT_DAY_COUNT });
         setBlocks([]);
       });
-    listBooks(scope).then((d) => { if (alive) setLibrary(d); });
+    // Kitaplık rafı yan bilgi; gelmezse boş kalır, tahtayı düşürmez.
+    listBooks(scope).then((d) => { if (alive) setLibrary(d); }).catch(() => {
+      if (alive) setLibrary([]);
+    });
     return () => { alive = false; };
   }, [scope]);
 

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Moon, Sun, X, Search, Inbox } from 'lucide-react';
+import { Moon, Sun, X, Search, Inbox, WifiOff } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { initialsOf, colorFor } from './avatarUtils';
 import { nextNumberState } from './numberInput';
@@ -318,6 +318,38 @@ export function EmptyState({ icon, title, text, action }) {
       {text && <p className={s.emptyText}>{text}</p>}
       {action}
     </div>
+  );
+}
+
+/* ---------- LoadError ---------- */
+/** Veri çekilemediğinde gösterilen ekran: ne olduğu + yeniden deneme yolu.
+ *
+ *  Neden ayrı bir bileşen: sayfaların çoğu veriyi `null` state ile bekliyor ve
+ *  `if (!veri) return <Spinner/>` ile muhafız kuruyor. İstek hata aldığında o
+ *  muhafız **sonsuza kadar** dönüyordu — kullanıcıya ne hata ne çıkış yolu.
+ *  Altı ekranda aynı durum vardı; hepsine ayrı ayrı JSX yazmak yerine tek kalıp.
+ *
+ *  `onRetry` verilirse düğme onu çağırır (veriyi yeniden çeker, sayfa
+ *  yenilenmez); verilmezse son çare olarak sayfayı yeniler.
+ */
+export function LoadError({
+  title = 'Veriler yüklenemedi',
+  text = 'Sunucuya bağlanılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+  onRetry,
+}) {
+  return (
+    <Card>
+      <EmptyState
+        icon={<WifiOff size={22} />}
+        title={title}
+        text={text}
+        action={
+          <Button onClick={onRetry || (() => window.location.reload())}>
+            Tekrar dene
+          </Button>
+        }
+      />
+    </Card>
   );
 }
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, CalendarDays, Copy, Check } from 'lucide-react';
 import {
-  Card, Avatar, Badge, SearchInput, EmptyState, Spinner, Button,
+  Card, Avatar, Badge, SearchInput, EmptyState, Spinner, Button, LoadError,
 } from '../components/ui';
 import { trendMeta } from '../components/dashboard/trend';
 import { listStudents } from '../api/students';
@@ -17,10 +17,13 @@ const fmtMeeting = (a) => { const [y, m, d] = a.date.split('-').map(Number); ret
 
 export default function Ogrenciler() {
   const [students, setStudents] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [query, setQuery] = useState('');
 
   useEffect(() => {
     let alive = true;
+    setFailed(false);
     // Öğrencileri çek + takvimden her öğrencinin son/sonraki toplantısını türet.
     Promise.all([listStudents(), listAppointments()]).then(([sts, appts]) => {
       if (!alive) return;
@@ -42,9 +45,9 @@ export default function Ogrenciler() {
         };
       });
       setStudents(enriched);
-    });
+    }).catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
-  }, []);
+  }, [reloadKey]);
 
   const filtered = useMemo(() => {
     if (!students) return [];
@@ -56,6 +59,17 @@ export default function Ogrenciler() {
         st.grade.toLocaleLowerCase('tr-TR').includes(q)
     );
   }, [students, query]);
+
+  // Hata muhafızı spinner'dan ÖNCE: aksi hâlde istek patladığında `students`
+  // sonsuza kadar `null` kalıyor ve ekran sonsuz spinner'a dönüyordu.
+  if (failed) {
+    return (
+      <LoadError
+        title="Öğrenciler yüklenemedi"
+        onRetry={() => { setStudents(null); setReloadKey((k) => k + 1); }}
+      />
+    );
+  }
 
   if (!students) {
     return <div style={{ display: 'grid', placeItems: 'center', padding: 60 }}><Spinner size={24} /></div>;

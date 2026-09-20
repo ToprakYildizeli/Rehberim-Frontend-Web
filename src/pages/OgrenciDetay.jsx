@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import {
   Card, Avatar, Badge, Button, Select, PillGroup, EmptyState, Spinner, ProgressBar, SearchInput,
+  LoadError,
 } from '../components/ui';
 import { getStudent } from '../api/students';
 import { listStudentBooks, getBook } from '../api/books';
@@ -56,6 +57,7 @@ export default function OgrenciDetay() {
   const navigate = useNavigate();
   const [student, setStudent] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [failed, setFailed] = useState(false);
   const [tab, setTab] = useState('kitaplar');
 
   useEffect(() => {
@@ -64,7 +66,7 @@ export default function OgrenciDetay() {
       if (!alive) return;
       if (st) setStudent(st);
       else setNotFound(true);
-    });
+    }).catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
   }, [id]);
 
@@ -75,6 +77,18 @@ export default function OgrenciDetay() {
         <Card>
           <EmptyState title="Öğrenci bulunamadı" text="Bu öğrenci mevcut değil veya erişiminiz yok." />
         </Card>
+      </div>
+    );
+  }
+
+  // Hata muhafızı spinner'dan ÖNCE: istek patladığında `student` sonsuza kadar
+  // `null` kalıyor ve sayfa sonsuz spinner'a dönüyordu. `notFound` (öğrenci yok)
+  // ile ayrı tutuluyor — biri yetki/varlık sorunu, öteki bağlantı sorunu.
+  if (failed) {
+    return (
+      <div className={s.page}>
+        <BackLink onClick={() => navigate('/ogrenciler')} />
+        <LoadError title="Öğrenci bilgileri yüklenemedi" />
       </div>
     );
   }
@@ -119,8 +133,14 @@ function BackLink({ onClick }) {
   );
 }
 
-/** Sekme yükleme/boş durumları için ortak sarmalayıcı. */
-function TabState({ loading, empty, emptyProps, children }) {
+/** Sekme yükleme/hata/boş durumları için ortak sarmalayıcı.
+ *
+ *  `failed` muhafızı `loading`den ÖNCE geliyor ve bu sıra kritik: sekmelerin
+ *  hepsi `loading={!veri}` kalıbını kullanıyor, yani istek hata aldığında veri
+ *  sonsuza kadar `null` kalıyor ve spinner hiç durmuyordu. Hata durumu olmadan
+ *  kullanıcıya ne olduğu söylenemiyor, yeniden deneme yolu da yok. */
+function TabState({ loading, failed, onRetry, empty, emptyProps, children }) {
+  if (failed) return <LoadError onRetry={onRetry} />;
   if (loading) return <div className={s.center}><Spinner size={22} /></div>;
   if (empty) return <Card><EmptyState {...emptyProps} /></Card>;
   return children;
@@ -151,6 +171,8 @@ const bookSubject = (b) => ((b.kind === 'okuma' || !b.subjectLabel) ? null : str
 
 function KitaplarTab({ studentId }) {
   const [books, setBooks] = useState(null);
+  const [booksFailed, setBooksFailed] = useState(false);
+  const [booksReload, setBooksReload] = useState(0);
   const [cat, setCat] = useState('all');       // TYT/AYT/Genel
   const [subj, setSubj] = useState('all');     // ders
   const [fmt, setFmt] = useState('all');       // Konu/Soru/Deneme
@@ -159,9 +181,11 @@ function KitaplarTab({ studentId }) {
 
   useEffect(() => {
     let alive = true;
-    listStudentBooks(studentId).then((d) => { if (alive) setBooks(d); });
+    listStudentBooks(studentId)
+      .then((d) => { if (alive) setBooks(d); })
+      .catch(() => { if (alive) setBooksFailed(true); });
     return () => { alive = false; };
-  }, [studentId]);
+  }, [studentId, booksReload]);
 
   // Seçili kategorideki mevcut dersler (ders dropdown'ı için)
   const subjectOptions = useMemo(() => {
@@ -192,6 +216,8 @@ function KitaplarTab({ studentId }) {
   return (
     <TabState
       loading={!books}
+      failed={booksFailed}
+      onRetry={() => { setBooksFailed(false); setBooksReload((k) => k + 1); }}
       empty={books && books.length === 0}
       emptyProps={{ icon: <BookOpen size={22} />, title: 'Kitap yok', text: 'Öğrenci henüz kitaplığına kitap eklememiş.' }}
     >
@@ -244,11 +270,17 @@ const bookStatusTone = (st) => (st === 'tamamlandi' ? 'success' : st === 'devam'
 function BookRow({ book }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [detailFailed, setDetailFailed] = useState(false);
 
   useEffect(() => {
     if (!open || detail) return undefined;
     let alive = true;
-    getBook(book.id).then((d) => { if (alive) setDetail(d); });
+    setDetailFailed(false);
+    getBook(book.id)
+      .then((d) => { if (alive) setDetail(d); })
+      // Kitabın içi `{!detail ? <Spinner/>}` ile bekliyor; hata durumunda
+      // satır açıldığı gibi sonsuza kadar dönüyordu.
+      .catch(() => { if (alive) setDetailFailed(true); });
     return () => { alive = false; };
   }, [open, detail, book.id]);
 
@@ -274,7 +306,11 @@ function BookRow({ book }) {
 
       {open && (
         <div className={s.bookBody}>
-          {!detail ? (
+          {detailFailed ? (
+            <p className={s.bookSummary}>
+              Kitabın konuları yüklenemedi. Satırı kapatıp yeniden açmayı deneyin.
+            </p>
+          ) : !detail ? (
             <div className={s.center}><Spinner size={18} /></div>
           ) : detail.topics.length > 0 ? (
             <>
@@ -379,6 +415,8 @@ function SortMenu({ value, options, onChange }) {
 
 function DenemelerTab({ studentId }) {
   const [exams, setExams] = useState(null);
+  const [examsFailed, setExamsFailed] = useState(false);
+  const [examsReload, setExamsReload] = useState(0);
   const [byType, setByType] = useState({});   // { tyt: [subjects], ayt: [...] } katalog
   const [typeFilter, setTypeFilter] = useState('all');
   const [sortBy, setSortBy] = useState('new');
@@ -394,9 +432,9 @@ function DenemelerTab({ studentId }) {
         .forEach((x) => grouped[x.category].push(x));
       setByType(grouped);
       setExams(ex);
-    });
+    }).catch(() => { if (alive) setExamsFailed(true); });
     return () => { alive = false; };
-  }, [studentId]);
+  }, [studentId, examsReload]);
 
   /** Denemeyi sınav bölümlerine göre gruplar; girilmeyen ders 0 net gösterilir.
    *
@@ -468,6 +506,8 @@ function DenemelerTab({ studentId }) {
   return (
     <TabState
       loading={!exams}
+      failed={examsFailed}
+      onRetry={() => { setExamsFailed(false); setExamsReload((k) => k + 1); }}
       empty={exams && exams.length === 0}
       emptyProps={{ icon: <ClipboardList size={22} />, title: 'Deneme yok', text: 'Öğrenci henüz deneme sonucu girmemiş.' }}
     >
@@ -589,6 +629,11 @@ function ExamRow({ exam, groups, aytFields }) {
 /* ---------------- Ders Programı (geçmiş dahil) ---------------- */
 function ProgramTab({ studentId }) {
   const [programs, setPrograms] = useState(null);
+  const [programsFailed, setProgramsFailed] = useState(false);
+  // Yeniden çekim anahtarı `version`dan AYRI: `version` görev işaretlendiğinde de
+  // artıyor ve listeyi baştan çekmek `patchProgram`ın yerinde güncellemesini boşa
+  // çıkarıp tahtayı sıfırlardı.
+  const [programsReload, setProgramsReload] = useState(0);
   const [activeId, setActiveId] = useState(null);
   // Onay ya da görev işareti değişince geçmiş kartı yeniden çekilsin.
   const [version, setVersion] = useState(0);
@@ -599,9 +644,9 @@ function ProgramTab({ studentId }) {
       if (!alive) return;
       setPrograms(d);
       setActiveId(d.length ? d[0].id : null);
-    });
+    }).catch(() => { if (alive) setProgramsFailed(true); });
     return () => { alive = false; };
-  }, [studentId]);
+  }, [studentId, programsReload]);
 
   const active = useMemo(
     () => (programs || []).find((p) => p.id === activeId) || null,
@@ -628,6 +673,8 @@ function ProgramTab({ studentId }) {
   return (
     <TabState
       loading={!programs}
+      failed={programsFailed}
+      onRetry={() => { setProgramsFailed(false); setProgramsReload((k) => k + 1); }}
       empty={programs && programs.length === 0}
       emptyProps={{ icon: <CalendarDays size={22} />, title: 'Program yok', text: 'Bu öğrenci için henüz ders programı oluşturulmamış.' }}
     >
@@ -1145,11 +1192,14 @@ function KonuTakibiTab({ student }) {
   const [catFilter, setCatFilter] = useState('all');        // Tümü | tyt | ayt
   const [saving, setSaving] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   // Tüm dersler + konuları + öğrencinin seviyeleri (önizleme metrikleri için tek seferde).
   useEffect(() => {
     let alive = true;
     setLoading(true);
+    setFailed(false);
     const params = student.isExam
       ? { curriculum: 'eski' }
       : { grade: student.gradeCode, curriculum: student.curriculum };
@@ -1167,9 +1217,9 @@ function KonuTakibiTab({ student }) {
       setTopicsBySubject(Object.fromEntries(pairs));
       setLevels(lv);
       setLoading(false);
-    });
+    }).catch(() => { if (alive) { setFailed(true); setLoading(false); } });
     return () => { alive = false; };
-  }, [student.id, student.isExam, student.gradeCode, student.curriculum]);
+  }, [student.id, student.isExam, student.gradeCode, student.curriculum, reloadKey]);
 
   async function changeLevel(topicId, level) {
     const prev = levels[topicId];
@@ -1199,6 +1249,17 @@ function KonuTakibiTab({ student }) {
     return overview.filter((x) => x.sub.label.toLocaleLowerCase('tr-TR').includes(q));
   }, [overview, query]);
 
+  // Hata muhafızı `loading`den önce; `setLoading(false)` catch içinde de çağrılıyor
+  // ki spinner her koşulda dursun. Aksi hâlde "Konu yok" boş durumu gösterilip
+  // hata, veri yokluğu gibi görünürdü.
+  if (failed) {
+    return (
+      <LoadError
+        title="Konu takibi yüklenemedi"
+        onRetry={() => setReloadKey((k) => k + 1)}
+      />
+    );
+  }
   if (loading) return <div className={s.center}><Spinner size={22} /></div>;
   if (!subjects || overview.length === 0) {
     return <Card><EmptyState icon={<Target size={22} />} title="Konu yok" text="Bu öğrenci için konu kataloğu bulunamadı." /></Card>;

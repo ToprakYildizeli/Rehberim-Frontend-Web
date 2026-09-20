@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Card, CardHeader, Field, NumberInput, Select, Spinner } from '../ui';
+import { Card, CardHeader, Field, NumberInput, Select, Spinner, LoadError } from '../ui';
 import { getPreferences, updatePreferences } from '../../api/preferences';
 import Toggle from './Toggle';
 import s from './settings.module.css';
@@ -49,17 +49,22 @@ const DROPS_ONLY = {
 
 export default function PreferencesSection() {
   const [prefs, setPrefs] = useState(null);        // null = yükleniyor
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState(null);
   const [savedAt, setSavedAt] = useState(null);
   const timers = useRef({});
 
   useEffect(() => {
     let alive = true;
-    getPreferences().then((p) => { if (alive) setPrefs(p); });
+    setLoadFailed(false);
+    getPreferences()
+      .then((p) => { if (alive) setPrefs(p); })
+      .catch(() => { if (alive) setLoadFailed(true); });
     const pending = timers.current;
     // Bekleyen yazımlar bileşen kapanınca iptal: kaldırılmış state'e set edilmesin.
     return () => { alive = false; Object.values(pending).forEach(clearTimeout); };
-  }, []);
+  }, [reloadKey]);
 
   async function write(field, value, previous) {
     try {
@@ -88,6 +93,17 @@ export default function PreferencesSection() {
       return;
     }
     timers.current[field] = setTimeout(() => write(field, value, previous), delay);
+  }
+
+  // Hata muhafızı spinner'dan ÖNCE: istek patladığında `prefs` sonsuza kadar
+  // `null` kalıyor ve Ayarlar → Tercihler sekmesi sonsuz spinner'a dönüyordu.
+  if (loadFailed) {
+    return (
+      <LoadError
+        title="Tercihler yüklenemedi"
+        onRetry={() => setReloadKey((k) => k + 1)}
+      />
+    );
   }
 
   if (prefs === null) {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import {
-  Card, Button, Avatar, Field, Input, Select, EmptyState, Spinner,
+  Card, Button, Avatar, Field, Input, Select, EmptyState, Spinner, LoadError,
 } from '../components/ui';
 import WheelPicker from '../components/ui/WheelPicker';
 import { listAppointments, createAppointment, deleteAppointment } from '../api/appointments';
@@ -45,20 +45,23 @@ export default function Takvim() {
   const [selectedDays, setSelectedDays] = useState([isoDate(TODAY)]);
   const selected = selectedDays[selectedDays.length - 1];
   const [items, setItems] = useState(null);
+  const [failed, setFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
   const [students, setStudents] = useState([]);
   const [form, setForm] = useState({ time: '09:00', studentId: '', category: 'Toplantı', note: '' });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let alive = true;
+    setFailed(false);
     Promise.all([listAppointments(), listStudents()]).then(([ap, st]) => {
       if (!alive) return;
       setItems(ap);
       setStudents(st);
       setForm((f) => ({ ...f, studentId: String(st[0]?.id ?? '') }));
-    });
+    }).catch(() => { if (alive) setFailed(true); });
     return () => { alive = false; };
-  }, []);
+  }, [reloadKey]);
 
   const byDate = useMemo(() => {
     const map = new Map();
@@ -118,6 +121,20 @@ export default function Takvim() {
   async function handleDelete(id) {
     await deleteAppointment(id);
     setItems((prev) => prev.filter((x) => x.id !== id));
+  }
+
+  // Hata muhafızı spinner'dan ÖNCE. Burada iki kat önemli: `byDate` hesabı
+  // `items ?? []` kullanıyor, yani muhafız olmasa hoca hata yerine BOŞ bir
+  // takvim görür ve "bugün toplantım yok" sanardı. Sessizce yanlış veri
+  // göstermek, hata göstermekten kötüdür.
+  if (failed) {
+    return (
+      <LoadError
+        title="Takvim yüklenemedi"
+        text="Etkinlikler alınamadı. Boş bir takvim göstermemek için yükleme durduruldu; tekrar deneyin."
+        onRetry={() => { setItems(null); setReloadKey((k) => k + 1); }}
+      />
+    );
   }
 
   if (!items) {
