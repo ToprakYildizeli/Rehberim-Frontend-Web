@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, CalendarDays, Copy, Check } from 'lucide-react';
+import { CalendarDays, Copy, Check } from 'lucide-react';
 import {
-  Card, Avatar, Badge, SearchInput, EmptyState, Spinner, Button, LoadError,
+  Card, Avatar, Badge, SearchInput, EmptyState, Spinner, Button, LoadError, Pagination,
 } from '../components/ui';
 import { trendMeta } from '../components/dashboard/trend';
 import { listStudents } from '../api/students';
 import { listAppointments } from '../api/appointments';
 import { useAuth } from '../context/AuthContext';
 import s from './Ogrenciler.module.css';
+
+/** Bir sayfada kaç öğrenci: ızgara 4 sütun, yani iki tam satır. */
+const PAGE_SIZE = 8;
 
 const MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -20,6 +23,7 @@ export default function Ogrenciler() {
   const [failed, setFailed] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let alive = true;
@@ -60,6 +64,12 @@ export default function Ogrenciler() {
     );
   }, [students, query]);
 
+  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  // Arama sonucu küçülünce seçili sayfa boşta kalmasın (ör. 3. sayfadayken
+  // tek sonuçlu bir arama yazıldı) — son geçerli sayfaya çek.
+  const current = Math.min(page, pageCount);
+  const visible = filtered.slice((current - 1) * PAGE_SIZE, current * PAGE_SIZE);
+
   // Hata muhafızı spinner'dan ÖNCE: aksi hâlde istek patladığında `students`
   // sonsuza kadar `null` kalıyor ve ekran sonsuz spinner'a dönüyordu.
   if (failed) {
@@ -84,22 +94,38 @@ export default function Ogrenciler() {
         placeholder="Öğrenci ara..."
         aria-label="Öğrenci ara"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={(e) => {
+          setQuery(e.target.value);
+          setPage(1);            // yeni arama her zaman ilk sayfadan başlar
+        }}
       />
 
       {filtered.length === 0 ? (
         <Card>
-          <EmptyState
-            title="Öğrenci bulunamadı"
-            text={`"${query}" aramasıyla eşleşen öğrenci yok.`}
-          />
+          {/* İki ayrı durum: hiç öğrenci yok / arama eşleşmedi. Eskiden ikisi
+              aynı metni gösteriyordu ve boş listede `"" aramasıyla eşleşen
+              öğrenci yok` yazıyordu. */}
+          {query.trim() ? (
+            <EmptyState
+              title="Öğrenci bulunamadı"
+              text={`"${query.trim()}" aramasıyla eşleşen öğrenci yok.`}
+            />
+          ) : (
+            <EmptyState
+              title="Henüz öğrenci yok"
+              text="Öğrenciler davet kodunuzla bağlandıkça burada görünür."
+            />
+          )}
         </Card>
       ) : (
-        <div className={s.list}>
-          {filtered.map((st) => (
-            <StudentRow key={st.id} student={st} />
-          ))}
-        </div>
+        <>
+          <div className={s.grid}>
+            {visible.map((st) => (
+              <StudentCard key={st.id} student={st} />
+            ))}
+          </div>
+          <Pagination page={current} total={pageCount} onChange={setPage} />
+        </>
       )}
     </div>
   );
@@ -140,31 +166,33 @@ function InviteCodeCard() {
   );
 }
 
-function StudentRow({ student }) {
+/** Öğrenci kartı: ızgarada kare. Kartın tamamı tıklanabilir, detay sayfasına gider. */
+function StudentCard({ student }) {
   const navigate = useNavigate();
   const t = trendMeta(student.trend);
 
   return (
-    <Card className={s.card}>
+    <Card pad={false} className={s.card}>
       <button
         type="button"
-        className={s.head}
+        className={s.cardBtn}
         onClick={() => navigate(`/ogrenciler/${student.id}`)}
+        aria-label={`${student.name} — öğrenci detayı`}
       >
-        <Avatar name={student.name} color={student.color} size="md" />
-        <span className={s.headText}>
-          <span className={s.name}>{student.name}</span>
-          <p className={s.grade}>{student.grade}</p>
-        </span>
-        {student.nextMeeting && (
-          <span className={s.nextMeeting}>
-            <CalendarDays size={13} /> {student.nextMeeting}
+        <Avatar name={student.name} color={student.color} size="lg" />
+        <span className={s.name}>{student.name}</span>
+        <span className={s.grade}>{student.grade}</span>
+
+        <span className={s.stats}>
+          <span className={s.netPill}>
+            {student.lastNet != null ? `${student.lastNet} net` : 'Deneme yok'}
           </span>
-        )}
-        <span className={s.netPill}>{student.lastNet != null ? `${student.lastNet} net` : '—'}</span>
-        <Badge tone={t.tone}><t.Icon size={12} /></Badge>
-        <span className={s.chevron}>
-          <ChevronRight size={18} />
+          <Badge tone={t.tone}><t.Icon size={12} /></Badge>
+        </span>
+
+        <span className={s.meeting}>
+          <CalendarDays size={13} />
+          {student.nextMeeting ?? 'Planlı toplantı yok'}
         </span>
       </button>
     </Card>

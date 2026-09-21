@@ -36,38 +36,64 @@
   user-select: all;
 }
 
-.list { display: flex; flex-direction: column; gap: var(--space-3); }
+/* ---------- Öğrenci ızgarası ----------
+   Satırda 4 kart, sayfada 8 (iki tam satır — bkz. `PAGE_SIZE`). Kartlar kare:
+   `aspect-ratio` genişliğe göre yüksekliği veriyor, böylece satırlar hizalı ve
+   ızgara bir tablo gibi değil bir galeri gibi okunuyor.
 
-.card { padding: 0; overflow: hidden; }
-
-/* ---------- Collapsed header row ---------- */
-.head {
-  display: flex;
-  align-items: center;
+   Dar ekranda sütun sayısı düşüyor. Tek sütunda kare olmak kartı gereksiz uzun
+   yapardı (telefonda ~350px), orada yükseklik içeriğe bırakılıyor. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-4);
-  width: 100%;
-  padding: var(--space-4) var(--space-5);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  text-align: left;
-  font-family: inherit;
-  transition: background 0.15s;
 }
 
-.head:hover { background: var(--bg-alt); }
+.card {
+  aspect-ratio: 1 / 1;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
 
-.headText { flex: 1; min-width: 0; }
-.name { font-size: var(--fs-md); font-weight: 600; color: var(--text); margin: 0; }
-.grade { font-size: var(--fs-xs); color: var(--text-muted); margin: 2px 0 0; }
+.card:hover { border-color: var(--accent); }
 
-.nextMeeting {
-  display: inline-flex;
+.cardBtn {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 5px;
-  font-size: var(--fs-xs);
-  color: var(--text-muted);
-  white-space: nowrap;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4);
+  background: transparent;
+  border: none;
+  border-radius: inherit;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  color: inherit;
+}
+
+.name {
+  margin-top: var(--space-2);
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text);
+  max-width: 100%;
+  /* Uzun ad-soyad iki satıra kadar sarılır, sonra kısaltılır; kart boyu sabit. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.grade { font-size: var(--fs-xs); color: var(--text-muted); }
+
+.stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .netPill {
@@ -78,163 +104,31 @@
   padding: 4px 11px;
   border-radius: var(--radius-pill);
   white-space: nowrap;
-}
-
-.chevron {
-  color: var(--text-muted);
-  display: flex;
-  transition: transform 0.2s ease;
-  flex-shrink: 0;
-}
-
-.chevronOpen { transform: rotate(90deg); }
-
-/* ---------- Expanded body ---------- */
-.body {
-  padding: var(--space-2) var(--space-5) var(--space-6);
-  border-top: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-5);
-}
-
-.rings {
-  display: flex;
-  gap: var(--space-8);
-  padding: var(--space-5) 0 var(--space-2);
-}
-
-.meetings {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
+  font-variant-numeric: tabular-nums;
 }
 
 .meeting {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-3) var(--space-4);
-}
-
-.meetingIcon { color: var(--text-muted); display: flex; flex-shrink: 0; }
-.meetingLabel { font-size: var(--fs-2xs); color: var(--text-muted); margin: 0; }
-.meetingValue { font-size: var(--fs-md); font-weight: 600; color: var(--text); margin: 2px 0 0; }
-
-.sectionLabel {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text);
-  margin: 0 0 var(--space-3);
-}
-
-/* Son 5 deneme mini bar chart */
-.miniChart {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-around;
-  gap: var(--space-4);
-  height: 120px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-5);
-}
-
-.miniBar {
-  flex: 1;
-  max-width: 46px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.miniFill {
-  width: 100%;
-  background: var(--violet);
-  border-radius: var(--radius-sm);
-  display: flex;
-  justify-content: center;
-  padding-top: 4px;
-  min-height: 18px;
-  transition: height 0.4s ease;
-}
-
-.miniValue { font-size: var(--fs-3xs); font-weight: 600; color: #fff; }
-.miniLabel { font-size: var(--fs-3xs); color: var(--text-muted); }
-
-/* Haftalık program strip */
-.week {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: var(--space-2);
-}
-
-.day {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: var(--space-2);
-  min-height: 84px;
-  display: flex;
-  flex-direction: column;
   gap: 5px;
-}
-
-.dayName {
   font-size: var(--fs-2xs);
-  font-weight: 500;
   color: var(--text-muted);
-  text-align: center;
-  padding-bottom: 4px;
-  border-bottom: 1px solid var(--border);
-}
-
-.block {
-  border-left: 3px solid var(--accent);
-  border-radius: 3px;
-  background: var(--bg-alt);
-  padding: 4px 6px;
-  min-width: 0;
-}
-
-.blockSubject {
-  font-size: var(--fs-3xs);
-  font-weight: 600;
-  color: var(--text);
-  display: block;
+  white-space: nowrap;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.blockTopic {
-  font-size: var(--fs-3xs);
-  color: var(--text-muted);
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+@media (max-width: 1100px) {
+  .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-.dayEmpty {
-  font-size: var(--fs-3xs);
-  color: var(--text-muted);
-  text-align: center;
-  margin: auto 0;
+@media (max-width: 760px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 900px) {
-  .rings { gap: var(--space-6); justify-content: space-around; }
-  .meetings { grid-template-columns: 1fr; }
-  .week { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-}
-
-@media (max-width: 560px) {
-  .week { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .head { padding: var(--space-3) var(--space-4); gap: var(--space-3); }
-  .miniChart { gap: var(--space-2); padding: var(--space-3); }
+@media (max-width: 480px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .card { aspect-ratio: auto; }
+  .toolbar { max-width: none; }
 }
