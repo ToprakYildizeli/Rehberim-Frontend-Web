@@ -10,8 +10,8 @@ import { listAppointments } from '../api/appointments';
 import { useAuth } from '../context/AuthContext';
 import s from './Ogrenciler.module.css';
 
-/** Bir sayfada kaç öğrenci: ızgara 4 sütun, yani iki tam satır. */
-const PAGE_SIZE = 8;
+/** Bir sayfada kaç öğrenci: ızgara 6 sütun × 3 satır. */
+const PAGE_SIZE = 18;
 
 const MONTHS_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -179,7 +179,7 @@ function StudentCard({ student }) {
         onClick={() => navigate(`/ogrenciler/${student.id}`)}
         aria-label={`${student.name} — öğrenci detayı`}
       >
-        <Avatar name={student.name} color={student.color} size="lg" />
+        <Avatar name={student.name} color={student.color} size="md" />
         <span className={s.name}>{student.name}</span>
         <span className={s.grade}>{student.grade}</span>
 

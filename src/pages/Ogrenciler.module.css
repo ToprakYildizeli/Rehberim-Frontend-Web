@@ -37,16 +37,19 @@
 }
 
 /* ---------- Öğrenci ızgarası ----------
-   Satırda 4 kart, sayfada 8 (iki tam satır — bkz. `PAGE_SIZE`). Kartlar kare:
-   `aspect-ratio` genişliğe göre yüksekliği veriyor, böylece satırlar hizalı ve
-   ızgara bir tablo gibi değil bir galeri gibi okunuyor.
+   Satırda 6 kart, sayfada 18 (üç tam satır — bkz. `PAGE_SIZE`). Kartlar kare:
+   `aspect-ratio` genişliğe göre yüksekliği veriyor.
 
-   Dar ekranda sütun sayısı düşüyor. Tek sütunda kare olmak kartı gereksiz uzun
-   yapardı (telefonda ~350px), orada yükseklik içeriğe bırakılıyor. */
+   6 sütunda kart dar (1280px ekranda ~155px, 1440px'te ~180px), bu yüzden kart
+   içi sıkı: orta boy avatar, küçük dolgu, ad tek satır. İçerik kareye sığmazsa
+   `aspect-ratio` onu kesmiyor — kart hafifçe uzuyor ve satır hizası korunuyor.
+
+   Dar ekranda sütun sayısı düşüyor; tek sütunda kare olmak kartı telefonda
+   gereksiz uzatacağı için orada yükseklik içeriğe bırakılıyor. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: var(--space-4);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-3);
 }
 
 .card {
@@ -63,8 +66,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  padding: var(--space-5) var(--space-4);
+  gap: 6px;
+  padding: var(--space-4) var(--space-3);
   background: transparent;
   border: none;
   border-radius: inherit;
@@ -75,33 +78,31 @@
 }
 
 .name {
-  margin-top: var(--space-2);
-  font-size: var(--fs-md);
+  margin-top: var(--space-1);
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text);
   max-width: 100%;
-  /* Uzun ad-soyad iki satıra kadar sarılır, sonra kısaltılır; kart boyu sabit. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.grade { font-size: var(--fs-xs); color: var(--text-muted); }
+.grade { font-size: var(--fs-2xs); color: var(--text-muted); }
 
 .stats {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
+  gap: var(--space-1);
+  margin-top: var(--space-1);
 }
 
 .netPill {
-  font-size: var(--fs-xs);
+  font-size: var(--fs-2xs);
   font-weight: 600;
   color: var(--text-secondary);
   background: var(--bg-alt);
-  padding: 4px 11px;
+  padding: 3px 9px;
   border-radius: var(--radius-pill);
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -110,8 +111,8 @@
 .meeting {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: var(--fs-2xs);
+  gap: 4px;
+  font-size: var(--fs-3xs);
   color: var(--text-muted);
   white-space: nowrap;
   max-width: 100%;
@@ -119,15 +120,19 @@
   text-overflow: ellipsis;
 }
 
-@media (max-width: 1100px) {
+@media (max-width: 1200px) {
+  .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+@media (max-width: 900px) {
   .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-@media (max-width: 760px) {
+@media (max-width: 640px) {
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 420px) {
   .grid { grid-template-columns: minmax(0, 1fr); }
   .card { aspect-ratio: auto; }
   .toolbar { max-width: none; }
