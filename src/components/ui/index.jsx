@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Moon, Sun, X, Search, Inbox, WifiOff } from 'lucide-react';
+import {
+  Moon, Sun, X, Search, Inbox, WifiOff, ChevronLeft, ChevronRight,
+} from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { initialsOf, colorFor } from './avatarUtils';
 import { nextNumberState } from './numberInput';
@@ -350,6 +352,67 @@ export function LoadError({
         }
       />
     </Card>
+  );
+}
+
+/* ---------- Pagination ---------- */
+/** Gösterilecek sayfa numaraları — her zaman en fazla 7 yuva.
+ *
+ *  Yedi sayfaya kadar hepsi. Fazlasında ilk ve son sabit, seçilinin çevresi
+ *  kayıyor; başa/sona yakınken o uçtaki beş sayfa birden açılıyor:
+ *
+ *      1 2 3 4 5 … 8      1 … 3 4 5 … 8      1 … 4 5 6 7 8
+ *
+ *  Yuva sayısı sabit olduğu için şerit sayfadan sayfaya genişleyip daralmıyor —
+ *  imleç "sonraki" düğmesinin üstünde kalıyor. */
+function pageItems(page, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  if (page <= 4) return [1, 2, 3, 4, 5, 'gap-end', total];
+  if (page >= total - 3) {
+    return [1, 'gap-start', total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, 'gap-start', page - 1, page, page + 1, 'gap-end', total];
+}
+
+/** Sayfa şeridi: önceki · numaralar · sonraki. Tek sayfa varsa hiç çizilmez. */
+export function Pagination({ page, total, onChange, className }) {
+  if (total <= 1) return null;
+  return (
+    <nav className={cx(s.pagination, className)} aria-label="Sayfalar">
+      <button
+        type="button"
+        className={s.pageBtn}
+        onClick={() => onChange(page - 1)}
+        disabled={page <= 1}
+        aria-label="Önceki sayfa"
+      >
+        <ChevronLeft size={16} />
+      </button>
+      {pageItems(page, total).map((item) => (
+        typeof item === 'number' ? (
+          <button
+            key={item}
+            type="button"
+            className={cx(s.pageBtn, item === page && s.pageBtnActive)}
+            onClick={() => onChange(item)}
+            aria-current={item === page ? 'page' : undefined}
+          >
+            {item}
+          </button>
+        ) : (
+          <span key={item} className={s.pageGap} aria-hidden>…</span>
+        )
+      ))}
+      <button
+        type="button"
+        className={s.pageBtn}
+        onClick={() => onChange(page + 1)}
+        disabled={page >= total}
+        aria-label="Sonraki sayfa"
+      >
+        <ChevronRight size={16} />
+      </button>
+    </nav>
   );
 }
 
