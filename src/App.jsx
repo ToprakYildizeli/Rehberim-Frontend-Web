@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import SifremiUnuttum from './pages/SifremiUnuttum';
 import SifreSifirla from './pages/SifreSifirla';
+import HesapSilme from './pages/HesapSilme';
 import Panel from './pages/Panel';
 import Ogrenciler from './pages/Ogrenciler';
 import OgrenciDetay from './pages/OgrenciDetay';
@@ -57,6 +58,15 @@ export default function App() {
               <Route path="/sifremi-unuttum" element={<GuestRoute><SifremiUnuttum /></GuestRoute>} />
               {/* E-postadaki bağlantının açtığı sayfa; uid ve token oradan gelir. */}
               <Route path="/sifre-sifirla/:uid/:token" element={<GuestRoute><SifreSifirla /></GuestRoute>} />
+
+              {/* Hesap silme — Google Play'in Data safety formuna yazılan adres.
+                  `GuestRoute` İÇİNDE DEĞİL, bilerek: bu sayfa üç rolün de (rehber,
+                  öğrenci, veli) hesabını siliyor ve kendi girişini kendi yapıyor.
+                  GuestRoute'a alınsaydı tarayıcıda açık bir rehber oturumu olan
+                  kullanıcı panele fırlatılır, adres de mağazaya verilemezdi.
+                  Sıra da önemli: aşağıdaki `path="*"` her bilinmeyen yolu `/`'a
+                  çeviriyor, bu satır ondan sonra gelse sayfa hiç açılmazdı. */}
+              <Route path="/hesap-silme" element={<HesapSilme />} />
 
               <Route
                 element={

@@ -25,6 +25,11 @@ const isLocal = typeof location !== 'undefined'
 
 const baseURL = import.meta.env.VITE_API_BASE_URL || (isLocal ? LOCAL_API : PRODUCTION_API);
 
+/** Adresi kendi axios örneğini kuran modüller için dışa veriyoruz — adres tek
+ *  kaynakta kalsın. Şu an yalnız `accountDeletion.js` kullanıyor; oradaki
+ *  istekler bu dosyanın interceptor'larından bilerek muaf. */
+export { baseURL as API_BASE_URL };
+
 const api = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
