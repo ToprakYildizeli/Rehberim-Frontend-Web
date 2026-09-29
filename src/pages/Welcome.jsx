@@ -651,11 +651,16 @@ export default function Welcome() {
         <div className={styles.footerInner}>
           <div className={styles.footerTop}>
             <Logo height={26} className={styles.footerBrand} />
+            {/* Gizlilik ve hesap silme bağlantıları burada durmak zorunda:
+                mağazalar politikanın herkese açık ve kolay bulunur olmasını
+                istiyor, incelemeci de önce ana sayfanın altına bakıyor. */}
             <div className={styles.footerLinks}>
               <a href="#ozellikler">Özellikler</a>
               <a href="#roller">Kimler kullanır</a>
               <a href="#sss">SSS</a>
               <a href="#iletisim">İletişim</a>
+              <Link to="/gizlilik">Gizlilik ve KVKK</Link>
+              <Link to="/hesap-silme">Hesap silme</Link>
               <Link to="/giris">Giriş Yap</Link>
             </div>
           </div>
