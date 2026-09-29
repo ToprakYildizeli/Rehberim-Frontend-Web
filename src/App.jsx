@@ -10,6 +10,7 @@ import Register from './pages/Register';
 import SifremiUnuttum from './pages/SifremiUnuttum';
 import SifreSifirla from './pages/SifreSifirla';
 import HesapSilme from './pages/HesapSilme';
+import Gizlilik from './pages/Gizlilik';
 import Panel from './pages/Panel';
 import Ogrenciler from './pages/Ogrenciler';
 import OgrenciDetay from './pages/OgrenciDetay';
@@ -67,6 +68,11 @@ export default function App() {
                   Sıra da önemli: aşağıdaki `path="*"` her bilinmeyen yolu `/`'a
                   çeviriyor, bu satır ondan sonra gelse sayfa hiç açılmazdı. */}
               <Route path="/hesap-silme" element={<HesapSilme />} />
+
+              {/* Gizlilik politikası — mağaza kaydına yazılan adres. Silme
+                  sayfasıyla aynı kurallar: `GuestRoute` yok (girişli kullanıcı
+                  da okuyabilmeli) ve `path="*"` yakalayıcısından önce. */}
+              <Route path="/gizlilik" element={<Gizlilik />} />
 
               <Route
                 element={
