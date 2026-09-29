@@ -67,7 +67,13 @@ export default function App() {
                   kullanıcı panele fırlatılır, adres de mağazaya verilemezdi.
                   Sıra da önemli: aşağıdaki `path="*"` her bilinmeyen yolu `/`'a
                   çeviriyor, bu satır ondan sonra gelse sayfa hiç açılmazdı. */}
+              {/* Her uygulamanın kendi adresi var: Play'de silme adresi her
+                  uygulamanın Data safety formuna ayrı yazılıyor ve incelemeci
+                  sayfada o uygulamanın adını görmek istiyor.
+                    /hesap-silme/ogrenci · /hesap-silme/veli
+                  Yalın /hesap-silme uygulama seçtiriyor. */}
               <Route path="/hesap-silme" element={<HesapSilme />} />
+              <Route path="/hesap-silme/:uygulama" element={<HesapSilme />} />
 
               {/* Gizlilik politikası — mağaza kaydına yazılan adres. Silme
                   sayfasıyla aynı kurallar: `GuestRoute` yok (girişli kullanıcı

@@ -43,6 +43,72 @@
   margin: 0 0 24px;
 }
 
+/* ---- Künye: geliştirici + uygulama adı ----
+   Google, silme adresinin hangi uygulamaya ait olduğunu sayfadan okuyabilmek
+   istiyor; bu satır her adımda görünür durumda. */
+
+.kunye {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  font-size: var(--fs-xs);
+  margin-bottom: 10px;
+}
+
+.kunyeGelistirici {
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.kunyeAyrac {
+  margin: 0 6px;
+  color: var(--text-muted);
+}
+
+.kunyeUygulama {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+/* ---- Uygulama seçimi (yalın /hesap-silme) ---- */
+
+.secimler {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.secimKart {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 16px 18px;
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-alt);
+  text-decoration: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.secimKart:hover {
+  border-color: var(--accent);
+  background: var(--bg-card);
+}
+
+.secimAd {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text);
+}
+
+.secimAlt {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
 .rolRozet {
   display: inline-block;
   margin-left: 8px;

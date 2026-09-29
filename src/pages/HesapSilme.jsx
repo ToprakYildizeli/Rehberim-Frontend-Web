@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ThemeToggle } from '../components/ui';
 import { Logo } from '../components/ui/Logo';
 import { useAuth } from '../context/AuthContext';
@@ -8,27 +8,35 @@ import {
   fetchDeleteImpact,
   deleteAccount,
 } from '../api/accountDeletion';
+import {
+  GELISTIRICI,
+  TOPLANMAYAN,
+  UYGULAMALAR,
+  uygulamaBul,
+} from './hesapSilmeUygulamalar';
 import styles from './HesapSilme.module.css';
 
-/* Herkese açık hesap silme sayfası — `/hesap-silme`.
+/* Herkese açık hesap silme sayfası.
  *
- * **Neden var:** Google Play, hesap açtıran bir uygulamanın hesabı yalnız
- * uygulama içinden değil, **uygulamayı silmiş biri için de** bir web
- * adresinden sildirmesini şart koşuyor; adres Play Console'da Data safety
- * formuna yazılıyor. Apple'ın 5.1.1(v) kuralı yalnız uygulama içi silmeyi
- * istiyor, o da üç istemcide mevcut.
+ *   /hesap-silme/ogrenci   → Rehberim Öğrenci
+ *   /hesap-silme/veli      → Rehberim Veli
+ *   /hesap-silme           → uygulama seçtiren giriş sayfası
  *
- * **Neden tek sayfa üç uygulamaya yetiyor:** `/auth/delete-account/` rehber,
- * öğrenci ve veli rollerinin üçünü de tanıyor. Öğrenci ve veli listelerinin
- * Play kaydına da bu aynı adres yazılabiliyor.
+ * **Neden uygulama başına ayrı adres:** Google Play'de silme adresi her
+ * uygulamanın kendi Data safety formuna yazılıyor; incelemeci sayfada o
+ * uygulamanın ve geliştiricinin adını görmek istiyor. Tek genel sayfa "bu
+ * adres hangi uygulamaya ait" sorusunu açık bırakırdı. Uygulamaya göre
+ * değişen metinler `hesapSilmeUygulamalar.js` içinde — yeni uygulama bir
+ * blok eklemekle geliyor.
+ *
+ * Silme ucu tektir ve rolü kendisi anlar; ayrım yalnız anlatımda.
  *
  * ⚠️ **Sayfa oturum AÇMIYOR.** Alınan token bileşenin state'inde kalıyor,
- * localStorage'a yazılmıyor (bkz. `api/accountDeletion.js`). Öğrenci hesabıyla
- * buraya giren biri rehber paneline düşmemeli.
+ * localStorage'a yazılmıyor (bkz. `api/publicClient.js`). Öğrenci hesabıyla
+ * giren biri rehber paneline düşmemeli.
  *
- * ⚠️ Açıklama metni **giriş yapılmadan da** görünür durumda. Mağaza
- * incelemecisinin hesabı olmayacak; sayfa ona da neyin silindiğini anlatmalı,
- * yoksa "bu adres bir şey yapmıyor" diye geri döner.
+ * ⚠️ Ne silindiği **giriş yapılmadan da** okunuyor: incelemecinin hesabı
+ * olmayacak.
  */
 
 const ADIM = { KIMLIK: 'kimlik', ONAY: 'onay', BITTI: 'bitti' };
@@ -65,8 +73,8 @@ function etkiyiAyir(ozet) {
     if (davet > 0) silinecek.push(`${davet} veli daveti`);
     if (ogrenci > 0) {
       korunacak.push(
-        `${ogrenci} öğrencinizin hesabı, programları, denemeleri ve ` +
-          'kitaplığı — yalnızca sizinle olan bağları kopar',
+        `${ogrenci} öğrencinizin hesabı, programları, denemeleri ve `
+          + 'kitaplığı — yalnızca sizinle olan bağları kopar',
       );
     }
   } else if (ozet.role === 'student') {
@@ -85,10 +93,10 @@ function etkiyiAyir(ozet) {
     if (cocuk > 0) {
       korunacak.push(
         cocuk === 1
-          ? 'Bağlı olduğunuz çocuğun hesabı ve tüm verileri — yalnızca ' +
-            'sizinle olan bağı kopar'
-          : `Bağlı olduğunuz ${cocuk} çocuğun hesapları ve tüm verileri — ` +
-            'yalnızca sizinle olan bağları kopar',
+          ? 'Bağlı olduğunuz çocuğun hesabı ve tüm verileri — yalnızca '
+            + 'sizinle olan bağı kopar'
+          : `Bağlı olduğunuz ${cocuk} çocuğun hesapları ve tüm verileri — `
+            + 'yalnızca sizinle olan bağları kopar',
       );
     }
   }
@@ -103,22 +111,75 @@ function hataMesaji(err, varsayilan) {
   if (durum === 429) {
     return 'Çok fazla deneme yaptınız. Bir süre bekleyip tekrar deneyin.';
   }
-  if (durum === 401) {
-    return 'Kullanıcı adı veya şifre hatalı.';
-  }
+  if (durum === 401) return 'Kullanıcı adı veya şifre hatalı.';
   if (!err.response) {
     return 'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.';
   }
   return (
-    veri?.password?.[0] ||
-    veri?.detail ||
-    veri?.non_field_errors?.[0] ||
-    varsayilan
+    veri?.password?.[0]
+    || veri?.detail
+    || veri?.non_field_errors?.[0]
+    || varsayilan
+  );
+}
+
+/** Sayfanın her hâlinde en üstte duran künye.
+ *
+ *  Geliştirici ve uygulama adı burada: Google, silme adresinin hangi
+ *  uygulamaya ait olduğunu sayfadan okuyabilmek istiyor. */
+function Kunye({ uygulama }) {
+  return (
+    <div className={styles.kunye}>
+      <span className={styles.kunyeGelistirici}>{GELISTIRICI}</span>
+      {uygulama && (
+        <>
+          <span className={styles.kunyeAyrac}>·</span>
+          <span className={styles.kunyeUygulama}>{uygulama.ad}</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** `/hesap-silme` — uygulama belirtilmemiş hâl. */
+function UygulamaSec() {
+  return (
+    <>
+      <Kunye />
+      <h1 className={styles.heading}>Hesap silme</h1>
+      <p className={styles.sub}>
+        Hangi uygulamanın hesabını silmek istiyorsunuz?
+      </p>
+      <div className={styles.secimler}>
+        {Object.values(UYGULAMALAR).map((u) => (
+          <Link
+            key={u.slug}
+            to={`/hesap-silme/${u.slug}`}
+            className={styles.secimKart}
+          >
+            <span className={styles.secimAd}>{u.ad}</span>
+            <span className={styles.secimAlt}>{u.kimIcin} · {u.platform}</span>
+          </Link>
+        ))}
+      </div>
+      <p className={styles.footer}>
+        Rehber (web paneli) hesabınızı silmek için panelde
+        {' '}<strong>Ayarlar → Hesabı sil</strong> yolunu kullanın; giriş
+        yapamıyorsanız{' '}
+        <a href="mailto:destek@rehberim.app" className={styles.link}>
+          destek@rehberim.app
+        </a>{' '}
+        adresine yazın.
+      </p>
+    </>
   );
 }
 
 export default function HesapSilme() {
+  const { uygulama: slug } = useParams();
   const { user, isLoggedIn, clearSession } = useAuth();
+
+  const uygulama = uygulamaBul(slug);
 
   const [adim, setAdim] = useState(ADIM.KIMLIK);
   const [form, setForm] = useState({ username: '', password: '' });
@@ -129,10 +190,25 @@ export default function HesapSilme() {
   const [bekliyor, setBekliyor] = useState(false);
 
   useEffect(() => {
-    const onceki = document.title;
-    document.title = 'Hesap silme · Rehberim';
-    return () => { document.title = onceki; };
-  }, []);
+    document.title = uygulama
+      ? `${uygulama.ad} · Hesap silme`
+      : 'Hesap silme · Rehberim';
+  }, [uygulama]);
+
+  // Adres çubuğuna bilinmeyen bir uygulama yazılmışsa seçim ekranına düş.
+  if (!uygulama) {
+    return (
+      <div className={styles.page}>
+        <ThemeToggle floating />
+        <div className={styles.card}>
+          <Link to="/" className={styles.logo} aria-label="Rehberim ana sayfa">
+            <Logo height={29} />
+          </Link>
+          <UygulamaSec />
+        </div>
+      </div>
+    );
+  }
 
   const degistir = (e) => {
     const { name, value } = e.target;
@@ -164,14 +240,13 @@ export default function HesapSilme() {
       await deleteAccount(oturum.access, form.password);
 
       // Aynı tarayıcıda silinen hesabın oturumu açıksa artık ölü; temizle.
-      // Başka bir hesabın oturumuna dokunmuyoruz — buraya girerken kendi
-      // oturumumuzu hiç açmadık.
+      // Başka bir hesabın oturumuna dokunmuyoruz — kendi oturumumuzu hiç
+      // açmadık.
       if (isLoggedIn && user?.username === oturum.user?.username) {
         await clearSession();
       }
 
-      // Şifre state'te duruyordu; işi bitti.
-      setForm({ username: '', password: '' });
+      setForm({ username: '', password: '' }); // şifrenin işi bitti
       setOturum(null);
       setAdim(ADIM.BITTI);
     } catch (err) {
@@ -201,42 +276,50 @@ export default function HesapSilme() {
 
         {adim === ADIM.KIMLIK && (
           <>
+            <Kunye uygulama={uygulama} />
             <h1 className={styles.heading}>Hesabınızı silin</h1>
             <p className={styles.sub}>
-              Rehberim hesabınızı ve ona bağlı verileri kalıcı olarak
-              silebilirsiniz. Rehber, öğrenci ve veli hesaplarının hepsi bu
-              sayfadan silinebilir — uygulamayı telefonunuzdan kaldırmış
-              olsanız bile.
+              <strong>{uygulama.ad}</strong> hesabınızı ve ona bağlı verileri
+              kalıcı olarak silebilirsiniz. Uygulamayı telefonunuzdan kaldırmış
+              olsanız bile bu sayfadan silebilirsiniz.
             </p>
 
-            {/* İncelemecinin hesabı olmayacak: ne silindiği giriş yapılmadan
-                da okunabilmeli. */}
             <div className={styles.notice}>
-              <h2 className={styles.noticeTitle}>Silme neyi kapsar?</h2>
+              <h2 className={styles.noticeTitle}>Kalıcı olarak silinenler</h2>
               <ul className={styles.noticeList}>
-                <li>
-                  Hesabınız, giriş bilgileriniz ve profil bilgileriniz
-                  sunucudan kalıcı olarak kaldırılır.
-                </li>
-                <li>
-                  Hesabınıza bağlı veriler (program, deneme sonuçları, konu
-                  ilerlemesi, kitaplık, hedefler, takvim) rolünüze göre silinir.
-                  Onaydan önce tam listeyi göstereceğiz.
-                </li>
-                <li>
-                  <strong>Veli ve rehber hesaplarında</strong> öğrencinin
-                  hesabına dokunulmaz; yalnızca aranızdaki bağ kopar.
-                </li>
-                <li>
-                  İşlem <strong>geri alınamaz</strong> ve silinen veri geri
-                  getirilemez.
-                </li>
+                {uygulama.silinen.map((s) => <li key={s}>{s}</li>)}
               </ul>
+
+              {uygulama.etkilenmeyen.length > 0 && (
+                <>
+                  <h2 className={styles.noticeTitle}>Etkilenmeyenler</h2>
+                  <ul className={styles.noticeList}>
+                    {uygulama.etkilenmeyen.map((s) => <li key={s}>{s}</li>)}
+                  </ul>
+                </>
+              )}
+
+              <h2 className={styles.noticeTitle}>
+                Silme sonrası kısa süre saklananlar
+              </h2>
+              <ul className={styles.noticeList}>
+                {uygulama.saklanan.map((s) => <li key={s}>{s}</li>)}
+              </ul>
+
+              <h2 className={styles.noticeTitle}>
+                {uygulama.ad} hiçbir zaman toplamaz
+              </h2>
+              <ul className={styles.noticeList}>
+                {TOPLANMAYAN.map((s) => <li key={s}>{s}</li>)}
+              </ul>
+
               <p className={styles.noticeFoot}>
-                Silme isteğiniz anında işlenir. Düzenli alınan sistem
-                yedeklerindeki kopyalar, yedek saklama süresi dolduğunda
-                kendiliğinden düşer. Ayrıntılar KVKK Aydınlatma Metni'nde yer
-                alır.
+                Silme isteğiniz anında işlenir ve <strong>geri alınamaz</strong>.
+                Ayrıntılar için{' '}
+                <Link to="/gizlilik" className={styles.link}>
+                  Gizlilik ve KVKK
+                </Link>{' '}
+                sayfasına bakabilirsiniz.
               </p>
             </div>
 
@@ -294,6 +377,7 @@ export default function HesapSilme() {
 
         {adim === ADIM.ONAY && ozet && (
           <>
+            <Kunye uygulama={uygulama} />
             <h1 className={styles.heading}>Silmeyi onaylayın</h1>
             <p className={styles.sub}>
               <strong>
@@ -315,9 +399,7 @@ export default function HesapSilme() {
                     </h2>
                     <ul className={styles.tehlikeList}>
                       <li>Hesabınız ve giriş bilgileriniz</li>
-                      {silinecek.map((s) => (
-                        <li key={s}>{s}</li>
-                      ))}
+                      {silinecek.map((s) => <li key={s}>{s}</li>)}
                     </ul>
                   </div>
 
@@ -325,9 +407,7 @@ export default function HesapSilme() {
                     <div className={styles.guvende}>
                       <h2 className={styles.guvendeTitle}>Etkilenmeyecek</h2>
                       <ul className={styles.guvendeList}>
-                        {korunacak.map((s) => (
-                          <li key={s}>{s}</li>
-                        ))}
+                        {korunacak.map((s) => <li key={s}>{s}</li>)}
                       </ul>
                     </div>
                   )}
@@ -372,6 +452,7 @@ export default function HesapSilme() {
 
         {adim === ADIM.BITTI && (
           <>
+            <Kunye uygulama={uygulama} />
             <div className={styles.basariIkon} aria-hidden="true">
               <svg
                 width="30"
@@ -389,7 +470,7 @@ export default function HesapSilme() {
             <h1 className={styles.heading}>Hesabınız silindi</h1>
             <p className={styles.sub}>
               Hesabınız ve ona bağlı veriler sunucudan kalıcı olarak kaldırıldı.
-              İşlemin tamamlandığını bildiren bir e-posta gönderdik. Uygulamayı
+              İşlemin tamamlandığını bildiren bir e-posta gönderdik. Uygulama
               telefonunuzda hâlâ kuruluysa artık kaldırabilirsiniz.
             </p>
             <Link to="/" className={styles.btnPrimaryLink}>
