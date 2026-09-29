@@ -166,8 +166,8 @@ function UygulamaSec() {
         Rehber (web paneli) hesabınızı silmek için panelde
         {' '}<strong>Ayarlar → Hesabı sil</strong> yolunu kullanın; giriş
         yapamıyorsanız{' '}
-        <a href="mailto:destek@rehberim.app" className={styles.link}>
-          destek@rehberim.app
+        <a href="mailto:destek@rehberim.xyz" className={styles.link}>
+          destek@rehberim.xyz
         </a>{' '}
         adresine yazın.
       </p>
@@ -366,8 +366,8 @@ export default function HesapSilme() {
                 Sıfırlayın
               </Link>
               . Giriş yapamıyorsanız{' '}
-              <a href="mailto:destek@rehberim.app" className={styles.link}>
-                destek@rehberim.app
+              <a href="mailto:destek@rehberim.xyz" className={styles.link}>
+                destek@rehberim.xyz
               </a>{' '}
               adresine yazın; kimliğinizi doğrulayıp hesabınızı bizim adımıza
               silelim.

@@ -615,23 +615,23 @@ export default function Welcome() {
             Sorunuz, öneriniz ya da bir hata bildiriminiz varsa yazın — okuyup dönüyoruz.
           </p>
           <div className={styles.contactGrid}>
-            <a className={styles.contactCard} href="mailto:iletisim@rehberim.app">
+            <a className={styles.contactCard} href="mailto:iletisim@rehberim.xyz">
               <span className={styles.contactIcon}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 6l-10 7L2 6" />
                 </svg>
               </span>
               <span className={styles.contactLabel}>E-posta</span>
-              <span className={styles.contactValue}>iletisim@rehberim.app</span>
+              <span className={styles.contactValue}>iletisim@rehberim.xyz</span>
             </a>
-            <a className={styles.contactCard} href="mailto:destek@rehberim.app">
+            <a className={styles.contactCard} href="mailto:destek@rehberim.xyz">
               <span className={styles.contactIcon}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <circle cx="12" cy="12" r="10" /><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" /><line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
               </span>
               <span className={styles.contactLabel}>Destek</span>
-              <span className={styles.contactValue}>destek@rehberim.app</span>
+              <span className={styles.contactValue}>destek@rehberim.xyz</span>
             </a>
             <div className={styles.contactCard}>
               <span className={styles.contactIcon}>

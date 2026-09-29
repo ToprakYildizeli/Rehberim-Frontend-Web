@@ -92,8 +92,8 @@ export default function Gizlilik() {
             <p>
               Metinler şu anda yüklenemedi. Lütfen daha sonra tekrar deneyin
               ya da{' '}
-              <a href="mailto:destek@rehberim.app" className={styles.link}>
-                destek@rehberim.app
+              <a href="mailto:destek@rehberim.xyz" className={styles.link}>
+                destek@rehberim.xyz
               </a>{' '}
               adresine yazın; metni size doğrudan iletelim.
             </p>
@@ -135,8 +135,8 @@ export default function Gizlilik() {
             </li>
             <li>
               <strong>Başvuru:</strong>{' '}
-              <a href="mailto:destek@rehberim.app" className={styles.link}>
-                destek@rehberim.app
+              <a href="mailto:destek@rehberim.xyz" className={styles.link}>
+                destek@rehberim.xyz
               </a>
             </li>
           </ul>
@@ -148,7 +148,7 @@ export default function Gizlilik() {
         <span className={styles.ayrac}>·</span>
         <Link to="/hesap-silme" className={styles.link}>Hesap silme</Link>
         <span className={styles.ayrac}>·</span>
-        <a href="mailto:destek@rehberim.app" className={styles.link}>Destek</a>
+        <a href="mailto:destek@rehberim.xyz" className={styles.link}>Destek</a>
       </footer>
     </div>
   );
