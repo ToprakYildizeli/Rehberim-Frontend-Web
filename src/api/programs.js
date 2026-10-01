@@ -42,9 +42,9 @@ export async function programDefaults() {
   return {
     dayCount: prefs.default_day_count || DEFAULT_DAY_COUNT,
     scheduleType: prefs.default_schedule_type || 'timed',
-    boardLayout: prefs.default_board_layout || 'hours',
-    startHour: prefs.board_start_hour ?? 7,
-    endHour: prefs.board_end_hour ?? 23,
+    /* 'hours' düzeni 1 Ekim 2026'da kalktı; kayıtlı eski tercih gelirse
+       yeni varsayılana düşüyor, aksi hâlde tahta hiç çizilmezdi. */
+    boardLayout: prefs.default_board_layout === 'subjects' ? 'subjects' : 'days',
     blockMinutes: prefs.default_block_minutes || 60,
     routinePrefill: prefs.routine_prefill !== false,
   };
@@ -74,13 +74,13 @@ export function windowRangeText(startDate, dayCount) {
   return `${first.dayNum} ${first.monthShort} – ${last.dayNum} ${last.monthShort}`;
 }
 
-/** Süreler ve başlangıçlar tahtada **dakika** cinsinden tutulur: rehber 20 dk gibi
- *  serbest süreler girebildiği için saat cinsinden kesirli sayı tutmak yuvarlama
- *  hatası üretirdi. `startMin` = gece yarısından beri geçen dakika. */
-export const SLOT_MIN = 15;                       // tahtanın çözünürlüğü
-export const minutesOf = (t) =>
-  (t ? parseInt(t.slice(0, 2), 10) * 60 + parseInt(t.slice(3, 5), 10) : 0);
-export const fmtMin = (m) => `${pad2(Math.floor(m / 60))}:${pad2(m % 60)}`;
+/** Süreler tahtada **dakika** cinsinden tutulur: rehber 20 dk gibi serbest
+ *  süreler girebildiği için saat cinsinden kesirli sayı tutmak yuvarlama hatası
+ *  üretirdi.
+ *
+ *  Başlangıç saati diye bir şey YOK (1 Ekim 2026, kontrat v5.0). Görevin günü
+ *  ve süresi var; gün içindeki yeri `order` ile belirleniyor. `startMin`,
+ *  `SLOT_MIN`, `minutesOf`, `fmtMin` bu yüzden kaldırıldı. */
 
 /** Haftalık toplamı saate çevirir: 255 → "4,25 saat".
  *  Tek blokların süresi dakika olarak gösterilir; yalnız toplamlarda saat kullanılır. */
@@ -95,7 +95,7 @@ function mapTaskToBlock(task, startDate) {
     id: `t${task.id}`,
     taskId: task.id,
     dayIndex: daysBetween(startDate, task.date),
-    startMin: minutesOf(task.start_time),
+    order: task.order ?? 0,
     durationMin: task.duration_minutes || 60,
     kind: task.kind || 'study',
     examScope: task.exam_scope || '',
@@ -110,6 +110,10 @@ function mapTaskToBlock(task, startDate) {
     bookLabel: task.book_label || null,
     completion: task.completion || 'none',
     isCompleted: task.completion === 'done',
+    // Onay görev başına (kontrat v5.0). Onaylı görev öğrenciye kilitli ve
+    // veliye görünür; tahtada rozet olarak gösteriliyor.
+    isApproved: Boolean(task.is_approved),
+    approvedAt: task.approved_at || null,
   };
   return { ...b, subjectColor: blockColor(b) };
 }
@@ -128,8 +132,8 @@ export function blockToTaskPayload(b, startDate) {
     // her kaydetmede gönderiyoruz, boşa dönmesi de bir silme isteğidir.
     description: b.note || '',
     date: addDays(startDate, b.dayIndex),
-    start_time: fmtMin(b.startMin),
     duration_minutes: b.durationMin,
+    order: b.order ?? 0,
   };
 }
 
@@ -274,23 +278,63 @@ export async function getComplianceHistory(studentId) {
   const sum = (o) => ({
     percent: o.percent,
     studyHours: o.study_hours,
-    programCount: o.program_count,
+    weekCount: o.week_count,
     totalMinutes: o.total_minutes,
     completedMinutes: o.completed_minutes,
   });
+  /* Birim **takvim haftası** (Pzt-Paz), program değil (kontrat v5.0). Sunucu
+     `weeks` döndürüyor; devam eden hafta da seride ve `isCurrent` ile işaretli.
+     Haftanın kimliği başlangıç tarihidir — program id'si gibi bir anahtarı yok. */
   return {
     pendingApproval: data.pending_approval,
-    programs: (data.programs || []).map((p) => ({
-      id: p.id,
-      startDate: p.start_date,
-      endDate: p.end_date,
-      dayCount: p.day_count,
-      isApproved: p.is_approved,
-      ...mapCompliance(p),
+    weeks: (data.weeks || []).map((w) => ({
+      weekStart: w.week_start,
+      weekEnd: w.week_end,
+      isCurrent: Boolean(w.is_current),
+      approvedTasks: w.approved_tasks ?? 0,
+      pendingTasks: w.pending_tasks ?? 0,
+      ...mapCompliance(w),
     })),
     months: (data.months || []).map((m) => ({ month: m.month, ...sum(m) })),
     overall: sum(data.overall || {}),
   };
+}
+
+/** `GET /api/tasks/pending-approval/` — onay bekleyen görevler (öğrenci+gün gruplu). */
+export async function listPendingApproval(studentId) {
+  const { data } = await api.get('/tasks/pending-approval/', {
+    params: studentId ? { student: studentId } : undefined,
+  });
+  return (data || []).map((g) => ({
+    student: g.student,
+    studentName: g.student_name,
+    date: g.date,
+    tasks: (g.tasks || []).map((t) => ({
+      id: t.id,
+      title: t.title || '',
+      note: t.description || '',
+      subjectLabel: t.subject_label,
+      typeName: t.task_type_name,
+      kind: t.kind || 'study',
+      examScope: t.exam_scope || '',
+      durationMin: t.duration_minutes || 0,
+      completion: t.completion || 'none',
+    })),
+  }));
+}
+
+/** `POST /api/tasks/approve/` — görevleri onaylar.
+ *  `{ tasks: [...] }` tek tek, `{ student, until }` ise "hepsini onayla".
+ *  Dönen: onayı değişen görev sayısı. */
+export async function approveTasks(body) {
+  const { data } = await api.post('/tasks/approve/', body);
+  return data.updated ?? 0;
+}
+
+/** `DELETE /api/tasks/approve/` — onayı geri alır (aynı gövde). */
+export async function unapproveTasks(body) {
+  const { data } = await api.delete('/tasks/approve/', { data: body });
+  return data.updated ?? 0;
 }
 
 /** Görevin tamamlanma durumu: yapılmadı → yarısı → tamamlandı → yapılmadı.
@@ -386,7 +430,7 @@ export async function persistStudentSchedule(studentId, nextBlocks, win) {
   const startDate = entry.startDate;
 
   const changed = (a, b) =>
-    a.dayIndex !== b.dayIndex || a.startMin !== b.startMin || a.durationMin !== b.durationMin ||
+    a.dayIndex !== b.dayIndex || a.order !== b.order || a.durationMin !== b.durationMin ||
     a.subject !== b.subject || a.type !== b.type || a.topic !== b.topic ||
     a.book !== b.book || a.kind !== b.kind || a.examScope !== b.examScope ||
     a.note !== b.note;

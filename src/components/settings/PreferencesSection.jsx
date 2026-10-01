@@ -40,7 +40,6 @@ const PANEL_SECTIONS = [
 
 /** Bölüm değil **süzgeç**: Net Değişimi kartının içeriğini daraltır, kartı
  *  gizlemez. Ekranda diğerleriyle aynı ızgarada duruyor. */
-const hourLabel = (h) => `${String(h).padStart(2, '0')}:00`;
 
 const DROPS_ONLY = {
   key: 'net_change_drops_only',
@@ -147,34 +146,12 @@ export default function PreferencesSection() {
               value={prefs.default_board_layout}
               onChange={(e) => save('default_board_layout', e.target.value)}
             >
-              <option value="hours">Saat satırlı</option>
+              <option value="days">Gün sütunlu</option>
               <option value="subjects">Ders satırlı</option>
             </Select>
           </Field>
-          {/* Saatli tahtanın aralığı (20 Eyl 2026). Seçenekler birbirini
-              kısıtlıyor ki bitiş başlangıçtan önce seçilemesin; sunucu da
-              ayrıca reddediyor. */}
-          <Field label="Tahta başlangıcı">
-            <Select
-              value={prefs.board_start_hour}
-              onChange={(e) => save('board_start_hour', Number(e.target.value))}
-            >
-              {Array.from({ length: prefs.board_end_hour }, (_, h) => (
-                <option key={h} value={h}>{hourLabel(h)}</option>
-              ))}
-            </Select>
-          </Field>
-          <Field label="Tahta bitişi">
-            <Select
-              value={prefs.board_end_hour}
-              onChange={(e) => save('board_end_hour', Number(e.target.value))}
-            >
-              {Array.from({ length: 24 - prefs.board_start_hour }, (_, i) => {
-                const h = prefs.board_start_hour + 1 + i;
-                return <option key={h} value={h}>{hourLabel(h)}</option>;
-              })}
-            </Select>
-          </Field>
+          {/* "Tahta başlangıcı/bitişi" ayarları kaldırıldı (1 Ekim 2026):
+              görevin saati olmadığı için tahtanın bir saat aralığı da yok. */}
         </div>
         <ul className={s.prefToggles}>
           <li>

@@ -18,7 +18,7 @@ import api from './client';
 export const DEFAULT_PREFERENCES = {
   default_day_count: 7,
   default_schedule_type: 'timed',
-  default_board_layout: 'hours',   // tahta saat satırlı mı ders satırlı mı açılsın
+  default_board_layout: 'days',    // tahta gün sütunlu mu ders satırlı mı açılsın
   // Planlayıcı (20 Eyl 2026)
   board_start_hour: 7,             // saatli tahtanın ilk satırı
   board_end_hour: 23,              // son satırın bitişi (7–23 → 07:00–23:00)

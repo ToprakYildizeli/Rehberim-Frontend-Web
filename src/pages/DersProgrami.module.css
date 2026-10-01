@@ -269,44 +269,33 @@
   color: var(--text-muted);
 }
 
-.hourLabel {
-  font-size: var(--fs-2xs);
-  color: var(--text-muted);
-  text-align: right;
-  padding: 0 var(--space-2) 0 0;
-  height: 38px;
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  transform: translateY(-6px);
-}
+.cellOver { background: var(--accent-subtle); }
+.cellBlocked { background: var(--danger-bg); }
 
-.cell {
-  height: 25px;
+/* ---------- Gün sütunlu yığın (1 Ekim 2026) ----------
+   Saat ızgarasının yerini aldı. Sütunun BOYU içeriğine göre uzuyor; bloklar
+   mutlak konumlu değil, akışta. Bu yüzden "bloğun boyu süresini anlatır"
+   kuralı da kalktı — süre bloğun üstünde yazıyor. */
+.dayStack {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 6px;
+  min-height: 160px;
   border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  position: relative;
   transition: background 0.12s;
 }
 
-/* Saat hücresi 15 dk'lık dört bırakma dilimine bölünür: 20 dk'lık bloklar da
-   saat başına oturmak zorunda kalmasın. Dilimler görünmez, yalnız hedeftir. */
-.slot {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 25%;
-  z-index: 1;
+.dayStack:first-of-type { border-left: 1px solid var(--border); }
+.dayStackOver { background: var(--accent-subtle); }
+
+.dayStackEmpty {
+  color: var(--text-muted);
+  font-size: var(--fs-2xs);
+  text-align: center;
+  padding-top: var(--space-3);
 }
-
-.slotOver { background: var(--accent-subtle); }
-
-/* Satırın ilk hücresine sol kenarlık. Sütun sayısı değişken olduğu için
-   nth-child aritmetiği yerine "saat etiketinden hemen sonraki hücre" kuralı. */
-.hourLabel + .cell { border-left: 1px solid var(--border); }
-
-.cellOver { background: var(--accent-subtle); }
-.cellBlocked { background: var(--danger-bg); }
 
 /* ---------- Blocks ---------- */
 .block {
@@ -324,6 +313,24 @@
   touch-action: none;
 }
 
+/* Yığındaki blok: akışta durur, boyu içeriğine göredir. */
+.stackBlock {
+  position: relative;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  padding: 6px 7px;
+  cursor: grab;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  touch-action: none;
+}
+
+.stackBlock:active { cursor: grabbing; }
+
+/* Onaylı görev: rehberin mührü. Kenardaki çizgi, rengi bozmadan ayırt ettiriyor. */
+.blockApproved { box-shadow: inset 3px 0 0 var(--success); }
+
 .block:active { cursor: grabbing; }
 .blockDragging { opacity: 0.35; }
 
@@ -336,6 +343,23 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Yığındaki blokta ad ve süre aynı satırda; süre sağda, küçülmeden. */
+.stackBlock .blockSubject {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  white-space: normal;
+}
+
+.stackBlock .blockTime {
+  margin: 0 0 0 auto;
+  flex: none;
+  opacity: 0.85;
+}
+
+.stackBlock .blockMeta,
+.stackBlock .blockNote { white-space: normal; }
 
 .blockMeta {
   font-size: var(--fs-3xs);

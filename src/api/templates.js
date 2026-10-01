@@ -7,7 +7,7 @@
    düşmeyen şablon günleri backend'de olduğu gibi burada da atlanır. */
 import api from './client';
 import { blockColor } from './catalog';
-import { weekdayOf, addDays, fmtMin, minutesOf, DEFAULT_DAY_COUNT } from './programs';
+import { weekdayOf, addDays, DEFAULT_DAY_COUNT } from './programs';
 
 /** Board bloğu → şablon/atama görevi (gün indeksi → weekday). */
 function blockToTask(b, startDate) {
@@ -21,9 +21,8 @@ function blockToTask(b, startDate) {
     title: b.topic || '',
     description: b.note || '',
     weekday: weekdayOf(addDays(startDate, b.dayIndex)),
-    start_time: fmtMin(b.startMin),
     duration_minutes: b.durationMin,
-    order: 0,
+    order: b.order ?? 0,
   };
 }
 
@@ -42,7 +41,7 @@ export function templateToBlocks(tpl, startDate, dayCount = DEFAULT_DAY_COUNT) {
     const b = {
       id: `tpl${t.id}-${i}`,
       dayIndex,
-      startMin: t.start_time ? minutesOf(t.start_time) : 8 * 60,
+      order: t.order ?? i,
       durationMin: t.duration_minutes || 60,
       kind: t.kind || 'study',
       examScope: t.exam_scope || '',

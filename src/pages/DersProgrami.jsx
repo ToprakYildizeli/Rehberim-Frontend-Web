@@ -15,7 +15,7 @@ import { getSchedule, saveSchedule, setGeneralWindow } from '../api/schedule';
 import {
   getStudentPrograms, updateProgramWindow, listProgramRanges, openStudentProgram,
   forgetStudentProgram, deleteProgram, windowDays, windowRangeText, studyMinutes, externalMinutes,
-  addDays, fmtMin, fmtHours, SLOT_MIN, DEFAULT_DAY_COUNT, programDefaults, today,
+  addDays, fmtHours, DEFAULT_DAY_COUNT, programDefaults, today,
 } from '../api/programs';
 import {
   listTemplates, createTemplate, updateTemplate, deleteTemplate, templateToBlocks,
@@ -28,7 +28,6 @@ import {
 } from '../api/catalog';
 import s from './DersProgrami.module.css';
 
-const ROW_H = 38;
 const MODES = [
   { value: 'genel', label: 'Genel Program' },
   { value: 'ogrenci', label: 'Öğrenciye Özel' },
@@ -40,9 +39,11 @@ const CATEGORIES = [
 /** Program uzunluğu: en az 1, en çok 7 gün. */
 const MIN_DAYS = 1;
 const MAX_DAYS = 7;
-/** Tahta düzeni: satırlar saat ya da ders (yol haritası A2). */
+/** Tahta düzeni. "Saat satırlı" 1 Ekim 2026'da kaldırıldı: görevin saati yok
+ *  artık (kontrat v5.0), ızgara olmayan bir kesinliği çiziyordu. Yerine günün
+ *  görevlerinin alt alta yığıldığı sütun görünümü geldi. */
 const VIEWS = [
-  { value: 'hours', label: 'Saat satırlı' },
+  { value: 'days', label: 'Gün sütunlu' },
   { value: 'subjects', label: 'Ders satırlı' },
 ];
 const cx = (...parts) => parts.filter(Boolean).join(' ');
@@ -81,27 +82,13 @@ function clearRowPrefs(key) {
   }
 }
 
-/** Bir başlangıç tarihinin seçilemez olup olmadığını söyleyen fonksiyon üretir.
+/* Başlangıç tarihi kısıtı KALKTI (kontrat v5.0, 1 Ekim 2026).
  *
- *  Programlar örtüşemediğinden, `dayCount` günlük pencere mevcut bir programın
- *  aralığına değiyorsa o başlangıç kapalıdır. Kapalı günler dağınık aralıklar
- *  hâlinde olduğu için native date girdisinin min/max'ı yetmiyor. */
-function makeStartBlocker(busyRanges, dayCount) {
-  if (!busyRanges.length) return undefined;
-  return (iso) => {
-    const end = addDays(iso, Math.max(1, dayCount) - 1);
-    return busyRanges.some((r) => iso <= r.end && r.start <= end);
-  };
-}
-
-/** `from`dan itibaren `dayCount` günlük pencerenin hiçbir programla çakışmadığı
- *  ilk başlangıç günü. */
-function firstFreeStart(ranges, dayCount, from = today()) {
-  const blocked = makeStartBlocker(ranges, dayCount);
-  let d = from;
-  for (let i = 0; blocked && i < 730 && blocked(d); i += 1) d = addDays(d, 1);
-  return d;
-}
+ *  Program pencereleri artık üst üste binebiliyor: rehber 20 Eylül'de programı
+ *  olan öğrenciye 15-22 Eylül programı girebiliyor ve o günün görevleri
+ *  yığılıyor. `makeStartBlocker`/`firstFreeStart` bu yasağı uyguluyordu, ikisi
+ *  de kaldırıldı. Varsayılan başlangıç artık doğrudan bugün — sunucu da
+ *  tarihsiz atamayı bugüne alıyor. */
 
 /** Backend hata gövdesinden ilk okunabilir mesajı çıkarır. */
 function apiMessage(err, fallback) {
@@ -124,42 +111,26 @@ const FORMAT_TO_TYPE = {
   deneme: 'Deneme',
 };
 
-const fmtHour = (h) => `${String(h).padStart(2, '0')}:00`;
-const timeRange = (b) => `${fmtMin(b.startMin)}-${fmtMin(b.startMin + b.durationMin)}`;
+/** Bloğun süresi, blokta gösterilen kısa metin olarak. */
+const durationText = (b) => (b.durationMin >= 60
+  ? `${Math.floor(b.durationMin / 60)} sa${b.durationMin % 60 ? ` ${b.durationMin % 60} dk` : ''}`
+  : `${b.durationMin} dk`);
 
-/** Tahtanın saat aralığı (dakika). Rehberin tercihinden gelir (20 Eyl 2026);
- *  tercih okunana kadar eski sabit aralık: 07:00–23:00. */
-const DEFAULT_BOUNDS = { start: 7 * 60, end: 23 * 60 };
-
-/** True when [start, start+duration) on `dayIndex` collides with an existing block.
- *  Dış meşguliyet blokları da sayılır — okuldayken çalışma bloğu konulamaz. */
-function overlaps(blocks, dayIndex, startMin, durationMin, ignoreId) {
-  return blocks.some(
-    (b) =>
-      b.id !== ignoreId &&
-      b.dayIndex === dayIndex &&
-      startMin < b.startMin + b.durationMin &&
-      b.startMin < startMin + durationMin
-  );
-}
-
-/** Verilen günde bloğun sığacağı ilk boş başlangıç (yoksa null).
+/** Bir günün bloklarını gösterim sırasına dizer.
  *
- *  Adaylar: 15 dk'lık ızgara **artı mevcut blokların bitiş saatleri**. Bitişler de
- *  aday olmasa 20 dk'lık bloklar ızgaraya oturmak zorunda kalır ve aralarında
- *  gereksiz boşluk kalırdı (09:00, 09:30, 10:00 yerine 09:00, 09:20, 09:40). */
-function firstFreeSlot(blocks, dayIndex, durationMin, ignoreId, bounds = DEFAULT_BOUNDS) {
-  const sameDay = blocks.filter((b) => b.dayIndex === dayIndex && b.id !== ignoreId);
-  const candidates = new Set();
-  for (let t = bounds.start; t + durationMin <= bounds.end; t += SLOT_MIN) {
-    candidates.add(t);
-  }
-  sameDay.forEach((b) => {
-    const end = b.startMin + b.durationMin;
-    if (end >= bounds.start && end + durationMin <= bounds.end) candidates.add(end);
-  });
-  const sorted = [...candidates].sort((a, b) => a - b);
-  return sorted.find((t) => !overlaps(sameDay, dayIndex, t, durationMin)) ?? null;
+ *  Sıra `order`; eşitlikte blok kimliği son çare, böylece aynı `order`la gelen
+ *  iki görev her render'da aynı yerde durur. Eskiden sıra başlangıç saatiydi —
+ *  saat kalkınca (kontrat v5.0) sıralamanın tek kaynağı `order` oldu.
+ */
+const byOrder = (a, b) => (a.order ?? 0) - (b.order ?? 0)
+  || String(a.id).localeCompare(String(b.id));
+
+/** Bir güne eklenecek bloğun alacağı `order`: yığının sonu. */
+function nextOrder(blocks, dayIndex) {
+  const sameDay = blocks.filter((b) => b.dayIndex === dayIndex);
+  return sameDay.length
+    ? Math.max(...sameDay.map((b) => b.order ?? 0)) + 1
+    : 0;
 }
 
 export default function DersProgrami() {
@@ -174,9 +145,9 @@ export default function DersProgrami() {
   const [activeDrag, setActiveDrag] = useState(null);
   // Ders satırlı görünümde sürüklerken üstünde durulan gün sütunu (tümü vurgulanır).
   const [overDay, setOverDay] = useState(null);
-  // Planlayıcı tercihleri (Ayarlar → Tercihler): saat aralığı, blok süresi, rutin.
+  // Planlayıcı tercihleri (Ayarlar → Tercihler): blok süresi, rutin.
   const [boardPrefs, setBoardPrefs] = useState({
-    startHour: 7, endHour: 23, blockMinutes: 60, routinePrefill: true,
+    blockMinutes: 60, routinePrefill: true,
   });
   // Ders satırlı görünümde tıklanan hücre: { dayIndex, rowKey } → düzenleme penceresi.
   const [cellEdit, setCellEdit] = useState(null);
@@ -223,7 +194,7 @@ export default function DersProgrami() {
 
   // Tahta düzeni artık tercihlerden geliyor (13 Eyl 2026): rehber her cihazda
   // yeniden seçmesin. Sayfada değiştirmek yine serbest, o oturumluk kalır.
-  const [view, setView] = useState('hours');
+  const [view, setView] = useState('days');
   const [draft, setDraft] = useState({
     kind: 'study', examScope: 'tyt', externalTitle: '',
     category: 'tyt', subject: '', type: '', topic: '', book: '',
@@ -412,7 +383,7 @@ export default function DersProgrami() {
       .then(([r, defaults, tpls]) => {
         if (!alive) return;
         const dayCount = defaults.dayCount || DEFAULT_DAY_COUNT;
-        const startDate = firstFreeStart(r, dayCount);
+        const startDate = today();
         const routine = defaults.routinePrefill
           ? tpls.find((t) => t.auto_apply && String(t.student) === String(scope))
           : null;
@@ -533,7 +504,7 @@ export default function DersProgrami() {
       setProgramId(null);
       const saved = draftStore.current;
       setBlocks(saved.blocks || []);
-      setWin(saved.win || { startDate: firstFreeStart(ranges, win.dayCount), dayCount: win.dayCount });
+      setWin(saved.win || { startDate: today(), dayCount: win.dayCount });
       return;
     }
     const r = ranges.find((x) => String(x.id) === String(id));
@@ -580,10 +551,10 @@ export default function DersProgrami() {
   useEffect(() => {
     let alive = true;
     programDefaults()
-      .then(({ boardLayout, startHour, endHour, blockMinutes, routinePrefill }) => {
+      .then(({ boardLayout, blockMinutes, routinePrefill }) => {
         if (!alive) return;
         if (boardLayout) setView(boardLayout);
-        setBoardPrefs({ startHour, endHour, blockMinutes, routinePrefill });
+        setBoardPrefs({ blockMinutes, routinePrefill });
       })
       .catch(() => {});
     return () => { alive = false; };
@@ -655,22 +626,17 @@ export default function DersProgrami() {
     await reloadTemplates();
   }
 
-  /* Saatli tahtanın aralığı: tercih, ama mevcut bloklar dışında kalırsa onları
-     kapsayacak kadar genişler — aksi hâlde 06:30'daki bir görev tahtada
-     görünmez olur ve rehber silindi sanır. */
-  const bounds = useMemo(() => {
-    let start = boardPrefs.startHour * 60;
-    let end = boardPrefs.endHour * 60;
+  /* Gün sütunu başına o günün blokları, gösterim sırasında.
+     Tahtanın tek yerleşim bilgisi bu: saat yok, sütun ve sıra var. */
+  const blocksByDay = useMemo(() => {
+    const map = new Map();
     (blocks ?? []).forEach((b) => {
-      start = Math.min(start, Math.floor(b.startMin / 60) * 60);
-      end = Math.max(end, Math.ceil((b.startMin + b.durationMin) / 60) * 60);
+      if (!map.has(b.dayIndex)) map.set(b.dayIndex, []);
+      map.get(b.dayIndex).push(b);
     });
-    return { start: Math.max(0, start), end: Math.min(24 * 60, end) };
-  }, [boardPrefs.startHour, boardPrefs.endHour, blocks]);
-  const boardHours = useMemo(
-    () => Array.from({ length: (bounds.end - bounds.start) / 60 }, (_, i) => bounds.start / 60 + i),
-    [bounds]
-  );
+    map.forEach((list) => list.sort(byOrder));
+    return map;
+  }, [blocks]);
 
   // Çalışma saati dış meşguliyetleri saymaz; onlar ayrı gösterilir.
   const totalMin = useMemo(() => studyMinutes(blocks ?? []), [blocks]);
@@ -678,19 +644,6 @@ export default function DersProgrami() {
   const days = useMemo(
     () => (win.startDate ? windowDays(win.startDate, win.dayCount) : []),
     [win.startDate, win.dayCount]
-  );
-
-  // Öğrencinin dolu tarih aralıkları — düzenlenen programın kendisi hariç.
-  // Programlar örtüşemediği için bu aralıklara denk gelen başlangıçlar seçilemez.
-  const busyRanges = useMemo(
-    () => ranges
-      .filter((r) => r.id !== programId)
-      .map((r) => ({ start: r.start, end: r.end })),
-    [ranges, programId]
-  );
-  const isStartBlocked = useMemo(
-    () => makeStartBlocker(busyRanges, win.dayCount),
-    [busyRanges, win.dayCount]
   );
 
   const sensors = useSensors(
@@ -715,33 +668,27 @@ export default function DersProgrami() {
 
     const payload = active.data.current;
     const durationMin = payload.durationMin ?? 60;
-    // Droppable id iki biçimde gelir:
-    //   saat düzeni  → "gun:dakika"            (15 dk'lık dilim)
-    //   ders düzeni  → "gun:row:<satır anahtarı>" (saat serbest → ilk boş dilim)
+    /* Droppable id iki biçimde gelir:
+       gün sütunlu düzen → "gun"
+       ders satırlı düzen → "gun:row:<satır anahtarı>"
+       İkisinde de bırakma yeri GÜN SÜTUNUDUR: hangi satırın üstüne bırakılırsa
+       bırakılsın blok kendi dersinde kalır, yalnız günü değişir. Yerleştirme
+       için saat hesabı yok — blok o günün yığınının sonuna eklenir. */
     const parts = String(over.id).split(':');
     const dayIndex = Number(parts[0]);
-
-    let startMin;
-    if (parts[1] === 'row') {
-      // Ders düzeninde bırakma yeri GÜN SÜTUNU: hangi satırın üstüne
-      // bırakılırsa bırakılsın blok o günün kendi ders satırına düşer (dersini
-      // değiştirmek istenmiyor). Eskiden yalnız kendi satırı kabul ediliyordu,
-      // yanlış satıra bırakınca hiçbir şey olmuyordu.
-      startMin = firstFreeSlot(blocks, dayIndex, durationMin, payload.blockId, bounds);
-      if (startMin === null) return;                       // o güne sığmıyor
-    } else {
-      startMin = Number(parts[1]);
-    }
-
-    if (startMin < bounds.start || startMin + durationMin > bounds.end) return;
-    if (overlaps(blocks, dayIndex, startMin, durationMin, payload.blockId)) return;
+    if (Number.isNaN(dayIndex)) return;
 
     if (payload.dragKind === 'new') {
       commit([...blocks, {
-        ...blockFromPayload(payload), id: `b${Date.now()}`, dayIndex, startMin, durationMin,
+        ...blockFromPayload(payload), id: `b${Date.now()}`, dayIndex, durationMin,
+        order: nextOrder(blocks, dayIndex),
       }]);
     } else {
-      commit(blocks.map((b) => (b.id === payload.blockId ? { ...b, dayIndex, startMin } : b)));
+      const block = blocks.find((b) => b.id === payload.blockId);
+      if (!block || block.dayIndex === dayIndex) return;   // aynı güne bırakmak işlem değil
+      commit(blocks.map((b) => (b.id === payload.blockId
+        ? { ...b, dayIndex, order: nextOrder(blocks, dayIndex) }
+        : b)));
     }
   }
 
@@ -761,8 +708,11 @@ export default function DersProgrami() {
     commit(blocks.filter((b) => b.id !== id));
   }
 
-  /** Hücre penceresindeki düzenlemeleri uygular. Süre uzayıp o günkü başka bir
-   *  blokla çakışırsa blok günün ilk boş dilimine kayar; sığmazsa hata döner. */
+  /** Hücre penceresindeki düzenlemeleri uygular.
+   *
+   *  Eskiden süre uzayınca çakışma aranıp blok kaydırılıyor, sığmazsa hata
+   *  dönüyordu. Saat kalkınca (kontrat v5.0) çakışma diye bir şey kalmadı:
+   *  süre serbestçe büyür, gün ne kadar dolu olursa olsun kabul edilir. */
   function saveCell(edits) {
     let next = blocks.map((b) => {
       const e = edits[b.id];
@@ -782,15 +732,6 @@ export default function DersProgrami() {
       }
       return { ...b, ...patch };
     });
-    for (const id of Object.keys(edits)) {
-      const b = next.find((x) => x.id === id);
-      if (!b) continue;
-      if (b.startMin + b.durationMin <= bounds.end
-        && !overlaps(next, b.dayIndex, b.startMin, b.durationMin, b.id)) continue;
-      const slot = firstFreeSlot(next, b.dayIndex, b.durationMin, b.id, bounds);
-      if (slot === null) return `${b.durationMin} dakikalık blok bu güne sığmıyor.`;
-      next = next.map((x) => (x.id === id ? { ...x, startMin: slot } : x));
-    }
     commit(next);
     return null;
   }
@@ -828,21 +769,20 @@ export default function DersProgrami() {
     })));
   }
 
-  /** "Bu güne ekle": draft'ı seçili günlere ilk boş dilime bırakır. */
+  /** "Bu güne ekle": draft'ı seçili günlerin yığınına ekler.
+   *  Gün ne kadar doluysa dolsun eklenir — sığmama diye bir durum yok. */
   function addToSelectedDays() {
     if (draft.days.length === 0 || !draftFields) return;
     const base = draftFields;
     let next = [...blocks];
     draft.days.forEach((dayIndex) => {
-      const slot = firstFreeSlot(next, dayIndex, draft.durationMin, undefined, bounds);
-      if (slot === null) return;
       next = [
         ...next,
         {
           ...base,
           id: `b${Date.now()}-${dayIndex}`,
           dayIndex,
-          startMin: slot,
+          order: nextOrder(next, dayIndex),
           durationMin: draft.durationMin,
         },
       ];
@@ -1102,10 +1042,6 @@ export default function DersProgrami() {
                 <DateField
                   value={win.startDate}
                   onChange={(iso) => changeWindow({ startDate: iso })}
-                  isDisabled={isStartBlocked}
-                  disabledHint={busyRanges.length
-                    ? 'Üstü çizili günler öğrencinin mevcut bir programıyla çakışıyor.'
-                    : undefined}
                   ariaLabel="Program başlangıç tarihi"
                 />
               </label>
@@ -1219,7 +1155,10 @@ export default function DersProgrami() {
                   saat sütunundan çok daha geniş olmalı. */}
               <div
                 className={s.grid}
-                style={{ '--cols': days.length, '--labelw': view === 'subjects' ? '156px' : '46px' }}
+                /* Gün sütunlu düzende SOL ETİKET SÜTUNU YOK (kullanıcı kararı,
+                   1 Ekim 2026): yanda saat yazmıyor, yalnız üstte günler var ve
+                   altlarında o günün görevleri yığılıyor. */
+                style={{ '--cols': days.length, '--labelw': view === 'subjects' ? '156px' : '0px' }}
               >
                 <span className={s.corner} />
                 {days.map((d) => (
@@ -1229,11 +1168,16 @@ export default function DersProgrami() {
                   </span>
                 ))}
 
-                {view === 'hours'
-                  ? boardHours.map((hour) => (
-                    <HourRow key={hour} hour={hour} days={days} blocks={blocks}
-                             onRemove={removeBlock} onEditNote={openNote} />
-                  ))
+                {view === 'days'
+                  ? (
+                    <DayStackRow
+                      days={days}
+                      blocksByDay={blocksByDay}
+                      onRemove={removeBlock}
+                      onEditNote={openNote}
+                      overDay={overDay}
+                    />
+                  )
                   : subjectRows.map((row) => (
                     <SubjectRow
                       key={row.key}
@@ -1560,7 +1504,7 @@ export default function DersProgrami() {
       {cellEdit && (() => {
         const items = (blocks || [])
           .filter((b) => b.dayIndex === cellEdit.dayIndex && subjectRowKey(b) === cellEdit.rowKey)
-          .sort((a, b) => a.startMin - b.startMin);
+          .sort(byOrder);
         if (!items.length) return null;
         const day = days.find((d) => d.index === cellEdit.dayIndex);
         return (
@@ -1628,7 +1572,6 @@ export default function DersProgrami() {
           source={assignSource}
           student={activeStudent}
           win={win}
-          busyRanges={busyRanges}
           blocks={blocks || []}
           onAssigned={() => {
             // Yeni program listeye ve dolu günlere hemen yansısın. Taslak
@@ -1637,7 +1580,8 @@ export default function DersProgrami() {
             getStudentPrograms(scope).then(setHistory).catch(() => {});
             listProgramRanges(scope).then((r) => {
               setRanges(r);
-              setWin((w) => ({ ...w, startDate: firstFreeStart(r, w.dayCount, w.startDate) }));
+              // Pencere artık kaydırılmıyor: örtüşme serbest (kontrat v5.0).
+              setRanges(r);
             }).catch(() => {});
           }}
           onClose={() => setAssignSource(null)}
@@ -1759,13 +1703,13 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
  * Pencere yalnız özet gösterip onay ister; burada hiçbir şey değiştirilmez
  * (kullanıcı kararı, 19 Eyl 2026). Her zaman yeni program açar.
  */
-function AssignConfirm({ source, student, win, busyRanges, blocks, onAssigned, onClose }) {
+function AssignConfirm({ source, student, win, blocks, onAssigned, onClose }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
-  const blocked = makeStartBlocker(busyRanges, win.dayCount);
-  const clash = Boolean(win.startDate && blocked && blocked(win.startDate));
+  /* Çakışma uyarısı kalktı: pencereler üst üste binebiliyor (kontrat v5.0),
+     dolu bir aralığa atamak artık normal bir iş. */
   const isTemplate = source.type === 'template';
   const noBoard = !isTemplate && blocks.length === 0;
   const range = win.startDate ? windowRangeText(win.startDate, win.dayCount) : '—';
@@ -1809,16 +1753,11 @@ function AssignConfirm({ source, student, win, busyRanges, blocks, onAssigned, o
               ? <><dt>Şablon</dt><dd>{source.name}</dd></>
               : <><dt>Görev</dt><dd>{blocks.length} blok</dd></>}
           </dl>
-          {clash && (
-            <p className={s.assignError}>
-              Bu tarih aralığı öğrencinin mevcut bir programıyla çakışıyor. Ana ekrandan başka bir başlangıç günü seçin.
-            </p>
-          )}
           {noBoard && <p className={s.assignError}>Tahta boş — önce blok ekleyin.</p>}
           {error && <p className={s.assignError}>{error}</p>}
           <div className={s.assignActions}>
             <Button variant="ghost" onClick={onClose}>Vazgeç</Button>
-            <Button onClick={confirm} disabled={busy || clash || noBoard || !win.startDate}>
+            <Button onClick={confirm} disabled={busy || noBoard || !win.startDate}>
               {busy ? 'Atanıyor…' : 'Ata'}
             </Button>
           </div>
@@ -1858,24 +1797,18 @@ function AssignModal({
         if (!alive) return;
         const rr = r.map((x) => ({ start: x.start, end: x.end }));
         setRanges(rr);
-        // Tahtada seçili gün uygunsa o, değilse ilk boş gün.
-        const blocked = makeStartBlocker(rr, dayCount);
+        // Tahtada seçili gün varsa o, yoksa bugün. Dolu olması engel değil.
         const preferred = source.type === 'board' && boardStart && boardStart >= today()
           ? boardStart : null;
-        setDate(preferred && !(blocked && blocked(preferred))
-          ? preferred
-          : firstFreeStart(rr, dayCount));
+        setDate(preferred ?? today());
       })
       .catch(() => { if (alive) setError('Öğrencinin programları yüklenemedi.'); })
       .finally(() => { if (alive) setLoadingRanges(false); });
     return () => { alive = false; };
   }, [studentId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const isBlocked = useMemo(
-    () => (loadingRanges ? () => true : makeStartBlocker(ranges, dayCount)),
-    [loadingRanges, ranges, dayCount]
-  );
-  const dateBlocked = Boolean(date && isBlocked && isBlocked(date));
+  // Aralıklar yalnız bilgi amaçlı duruyor; hiçbir tarihi kapatmıyorlar.
+  const dateBlocked = false;
 
   async function confirm() {
     if (!studentId || !date || dateBlocked) return;
@@ -2112,54 +2045,46 @@ function blockFromPayload(payload) {
   };
 }
 
-/** Bir saat satırı. Hücre 15 dk'lık dört bırakma dilimine bölünür ki 20 dk'lık
- *  bloklar da saat başına oturmak zorunda kalmasın. */
-function HourRow({ hour, days, blocks, onRemove, onEditNote }) {
-  const from = hour * 60;
+/* ---------------- Gün sütunlu görünüm (1 Ekim 2026) ----------------
+   Saatli ızgaranın yerini aldı. Görevin saati olmadığı için (kontrat v5.0)
+   ızgara rehbere gerçekte olmayan bir kesinlik dayatıyordu: bir güne kaç
+   saatlik iş verildiği rehberin kararı, nerede durduğu değil.
+
+   Düzen: üstte günler, YANDA HİÇBİR ŞEY, altında o günün görevleri alt alta.
+   Sütunun tamamı tek bırakma hedefi — blok bırakıldığı günün yığınının sonuna
+   ekleniyor. */
+
+/** Gün sütunlarının tek satırı: her sütun o günün görev yığını. */
+function DayStackRow({ days, blocksByDay, onRemove, onEditNote, overDay }) {
   return (
     <>
-      <span className={s.hourLabel}>{fmtHour(hour)}</span>
+      <span className={s.corner} />
       {days.map((day) => (
-        <HourCell
-          key={`${day.index}:${hour}`}
+        <DayStack
+          key={day.index}
           day={day.index}
-          from={from}
-          // Blok, başladığı saatin hücresinde çizilir; taşma bir sonraki satıra sarkar.
-          items={blocks.filter(
-            (b) => b.dayIndex === day.index && b.startMin >= from && b.startMin < from + 60
-          )}
+          items={blocksByDay.get(day.index) ?? []}
           onRemove={onRemove}
           onEditNote={onEditNote}
+          isOverDay={overDay === day.index}
         />
       ))}
     </>
   );
 }
 
-const SLOTS_PER_HOUR = Math.round(60 / SLOT_MIN);
-
-function HourCell({ day, from, items, onRemove, onEditNote }) {
-  return (
-    <div className={s.cell} data-cell={`${day}:${from}`}>
-      {Array.from({ length: SLOTS_PER_HOUR }, (_, i) => (
-        <QuarterSlot key={i} day={day} startMin={from + i * SLOT_MIN} index={i} />
-      ))}
-      {items.map((b) => (
-        <PlacedBlock key={b.id} block={b} hourStart={from}
-                     onRemove={onRemove} onEditNote={onEditNote} />
-      ))}
-    </div>
-  );
-}
-
-function QuarterSlot({ day, startMin, index }) {
-  const { setNodeRef, isOver } = useDroppable({ id: `${day}:${startMin}` });
+function DayStack({ day, items, onRemove, onEditNote, isOverDay }) {
+  const { setNodeRef, isOver } = useDroppable({ id: String(day) });
   return (
     <div
       ref={setNodeRef}
-      className={`${s.slot} ${isOver ? s.slotOver : ''}`}
-      style={{ top: `${(index / SLOTS_PER_HOUR) * 100}%` }}
-    />
+      className={cx(s.dayStack, (isOver || isOverDay) && s.dayStackOver)}
+    >
+      {items.map((b) => (
+        <StackedBlock key={b.id} block={b} onRemove={onRemove} onEditNote={onEditNote} />
+      ))}
+      {items.length === 0 && <span className={s.dayStackEmpty}>—</span>}
+    </div>
   );
 }
 
@@ -2246,7 +2171,7 @@ function SubjectRow({ row, days, blocks, editing, onRemoveRow, canRemoveRow,
           isTarget={overDay === day.index && dragRowKey === row.key}
           items={blocks
             .filter((b) => b.dayIndex === day.index && subjectRowKey(b) === row.key)
-            .sort((a, b) => a.startMin - b.startMin)}
+            .sort(byOrder)}
           onOpen={onOpenCell}
         />
       ))}
@@ -2437,7 +2362,13 @@ function blockMetaText(b) {
   return `${b.bookLabel || b.typeName || ''}${b.topic ? ` · ${b.topic}` : ''}`;
 }
 
-function PlacedBlock({ block, hourStart, onRemove, onEditNote }) {
+/** Gün yığınındaki tek görev.
+ *
+ *  Eskiden `PlacedBlock`tı ve saat ızgarasına piksel hesabıyla konumlanıyordu
+ *  (`top`/`height`, 1 saat = 38px). Artık akışta duran normal bir kutu: boyu
+ *  içeriğine göre, yeri yığındaki sırasına göre. Süre, bloğun boyu yerine
+ *  üstünde yazıyor — 20 dakikalık bir görev de okunabilir kalsın. */
+function StackedBlock({ block, onRemove, onEditNote }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
     data: {
@@ -2451,39 +2382,30 @@ function PlacedBlock({ block, hourStart, onRemove, onEditNote }) {
   });
   const label = blockLabel(block);
   const meta = blockMetaText(block);
-  // Saat satırı 1 saat = ROW_H piksel; blok saat içindeki dakikasından başlar.
-  const offset = ((block.startMin - hourStart) / 60) * ROW_H;
-  const height = (block.durationMin / 60) * ROW_H - 4;
-  const isShort = block.durationMin < 45;
 
   return (
     <div
       ref={setNodeRef}
       data-block={block.id}
       className={[
-        s.block,
+        s.stackBlock,
         isDragging ? s.blockDragging : '',
         block.kind === 'external' ? s.blockExternal : '',
-        isShort ? s.blockShort : '',
+        block.isApproved ? s.blockApproved : '',
       ].filter(Boolean).join(' ')}
-      style={{
-        background: block.subjectColor,
-        top: offset + 2,
-        height: Math.max(height, 14),
-      }}
+      style={{ background: block.subjectColor }}
       title={block.note || undefined}
       {...listeners}
       {...attributes}
     >
       <span className={s.blockSubject}>
         {block.kind === 'external' ? '🚫 ' : block.book ? '📖 ' : ''}{label}
+        <span className={s.blockTime}>{durationText(block)}</span>
       </span>
-      {block.durationMin >= 90 && meta && <span className={s.blockMeta}>{meta}</span>}
-      {/* Yönerge bloğun içinde okunabildiği kadar görünsün; tamamı `title`da. */}
-      {block.note && block.durationMin >= 60 && (
-        <span className={s.blockNote}>{block.note}</span>
-      )}
-      {!isShort && <span className={s.blockTime}>{timeRange(block)}</span>}
+      {/* Kutunun boyu artık süreye bağlı değil; meta ve yönerge her blokta
+          görünebilir. Eskiden yalnız yeterince uzun bloklarda yer vardı. */}
+      {meta && <span className={s.blockMeta}>{meta}</span>}
+      {block.note && <span className={s.blockNote}>{block.note}</span>}
       <div className={s.blockActions}>
         <button
           type="button"

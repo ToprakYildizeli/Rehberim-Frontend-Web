@@ -13,7 +13,7 @@ import { listStudentBooks, getBook } from '../api/books';
 import { listStudentExams } from '../api/exams';
 import {
   getComplianceHistory, getProgramCompliance, getStudentPrograms, setProgramApproval,
-  setTaskCompletion, nextCompletion, COMPLETION_LABEL, windowDays, fmtMin,
+  setTaskCompletion, nextCompletion, COMPLETION_LABEL, windowDays,
 } from '../api/programs';
 import { listSubjects, listTopics, blockLabel } from '../api/catalog';
 import { getTopicLevels, setTopicLevel } from '../api/topicProgress';
@@ -769,8 +769,10 @@ function ApprovalBar({ program, onChange }) {
             {program.approvedByName} onayladı{program.approvedAt ? ` · ${fmtDate(program.approvedAt.slice(0, 10))}` : ''}
           </span>
         )}
-        {!program.isApproved && !program.isFinished && (
-          <span className={s.approvalNote}>Onay, program {fmtDate(program.endDate)} tarihinde bittikten sonra verilebilir.</span>
+        {!program.isApproved && (
+          <span className={s.approvalNote}>
+            Onay görev başına verilir; bu düğme bu programın hepsini onaylar.
+          </span>
         )}
       </div>
       <div className={s.approvalActions}>
@@ -780,13 +782,10 @@ function ApprovalBar({ program, onChange }) {
             Onayı geri al
           </Button>
         ) : (
-          <Button
-            size="sm"
-            disabled={busy || !program.isFinished}
-            title={program.isFinished ? undefined : 'Program henüz bitmedi'}
-            onClick={() => toggle(true)}
-          >
-            <Check size={14} /> Haftayı onayla
+          /* Pencere kapanma şartı kalktı (kontrat v5.0): rehber öğrenciyle ne
+              zaman görüşüyorsa o zaman onaylıyor. */
+          <Button size="sm" disabled={busy} onClick={() => toggle(true)}>
+            <Check size={14} /> Hepsini onayla
           </Button>
         )}
       </div>
@@ -824,7 +823,7 @@ function WeekBoard({ program, onToggleTask }) {
       {days.map((day) => {
         const items = program.blocks
           .filter((b) => b.dayIndex === day.index)
-          .sort((a, b) => a.startMin - b.startMin);
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
         return (
           <div className={s.day} key={day.index}>
             <span className={s.dayName}>{day.short} {day.dayNum}</span>
@@ -852,11 +851,13 @@ function WeekBoard({ program, onToggleTask }) {
                       : `Tıkla: ${COMPLETION_LABEL[nextCompletion(b.completion)].toLowerCase()}`,
                   ].filter(Boolean).join('\n')}
                 >
+                  {/* Saat yerine SÜRE (kontrat v5.0): görevin gün içinde
+                      saati yok, ne kadar sürdüğü var. */}
                   <span className={s.blockTime}>
                     {b.completion === 'done' ? <Check size={10} />
                       : b.completion === 'half' ? <CircleDashed size={10} />
                         : (locked ? <Lock size={10} /> : null)}
-                    {fmtMin(b.startMin)}
+                    {b.durationMin} dk
                   </span>
                   <span className={s.blockSubject}>{blockLabel(b)}</span>
                   {b.kind !== 'external' && b.topic && <span className={s.blockTopic}>{b.topic}</span>}
@@ -1005,13 +1006,15 @@ function ComplianceHistory({ studentId, version }) {
   if (!data) {
     return <Card><div className={s.center}><Spinner /></div></Card>;
   }
-  const points = data.programs.filter((p) => p.percent != null);
+  /* Birim takvim haftası (Pzt-Paz), program değil (kontrat v5.0). Devam eden
+     hafta da seride; grafikte içi boş noktayla işaretleniyor. */
+  const points = data.weeks.filter((w) => w.percent != null);
   if (!points.length) {
     return (
       <Card>
         <h3 className={s.sectionTitle}>Uyum Geçmişi</h3>
         <p className={s.approvalNote}>
-          Henüz tamamlanmış bir program yok — hafta bittikçe burada uyum geçmişi birikir.
+          Henüz görev yok — hafta geçtikçe burada uyum geçmişi birikir.
         </p>
       </Card>
     );
@@ -1026,12 +1029,12 @@ function ComplianceHistory({ studentId, version }) {
         <Stat
           label="Genel uyum"
           value={overall.percent != null ? `%${overall.percent}` : '—'}
-          hint={`${overall.programCount} onaylı hafta`}
+          hint={`${overall.weekCount} bitmiş hafta`}
         />
-        <Stat label="Planlanan çalışma" value={`${overall.studyHours} sa`} hint="onaylı haftalarda" />
-        <Stat label="Tamamlanan" value={fmtHours(overall.completedMinutes)} hint="onaylı haftalarda" />
+        <Stat label="Planlanan çalışma" value={`${overall.studyHours} sa`} hint="bitmiş haftalarda" />
+        <Stat label="Tamamlanan" value={fmtHours(overall.completedMinutes)} hint="bitmiş haftalarda" />
         {pendingApproval > 0 && (
-          <Stat label="Onay bekleyen" value={pendingApproval} hint="istatistiğe girmiyor" warn />
+          <Stat label="Onay bekleyen görev" value={pendingApproval} warn />
         )}
       </div>
 
@@ -1040,7 +1043,7 @@ function ComplianceHistory({ studentId, version }) {
 
       {months.length > 0 && (
         <>
-          <h4 className={s.chartTitle}>Ay ay uyum <span className={s.chartNote}>(yalnız onaylı haftalar)</span></h4>
+          <h4 className={s.chartTitle}>Ay ay uyum <span className={s.chartNote}>(yalnız bitmiş haftalar)</span></h4>
           <MonthBars months={months} />
         </>
       )}
@@ -1083,26 +1086,28 @@ function ComplianceLine({ points }) {
         ))}
         <path className={s.line} d={path} />
         {points.map((p, i) => (
-          <g key={p.id}>
+          <g key={p.weekStart}>
             <circle
-              className={p.isApproved ? s.dot : s.dotOpen}
+              className={p.isCurrent ? s.dotOpen : s.dot}
               cx={x(i)} cy={y(p.percent)} r={4.5}
             >
               <title>
-                {`${fmtDate(p.startDate)} – ${fmtDate(p.endDate)}\n`}
+                {`${fmtDate(p.weekStart)} – ${fmtDate(p.weekEnd)}\n`}
                 {`%${p.percent} uyum · ${fmtHours(p.completedMinutes)} / ${fmtHours(p.totalMinutes)}\n`}
-                {p.isApproved ? 'Onaylandı' : 'Onay bekliyor (ortalamaya girmiyor)'}
+                {p.isCurrent
+                  ? 'Devam eden hafta (ortalamaya girmiyor)'
+                  : `${p.approvedTasks} onaylı · ${p.pendingTasks} onay bekliyor`}
               </title>
             </circle>
           </g>
         ))}
         {/* Yalnız ilk ve son etiketlenir; her noktaya sayı yazmak grafiği okunmaz yapar. */}
         <text className={s.axisLabel} x={PAD.left} y={H - 8} textAnchor="start">
-          {fmtDate(points[0].startDate)}
+          {fmtDate(points[0].weekStart)}
         </text>
         {points.length > 1 && (
           <text className={s.axisLabel} x={W - PAD.right} y={H - 8} textAnchor="end">
-            {fmtDate(last.startDate)}
+            {fmtDate(last.weekStart)}
           </text>
         )}
         <text className={s.pointLabel} x={x(points.length - 1)} y={y(last.percent) - 10} textAnchor="end">
@@ -1128,7 +1133,7 @@ function MonthBars({ months }) {
           </span>
           <span className={s.monthValue}>%{m.percent ?? 0}</span>
           <span className={s.monthHint}>
-            {m.programCount} hafta · {m.studyHours} sa
+            {m.weekCount} hafta · {m.studyHours} sa
           </span>
         </li>
       ))}
