@@ -17,18 +17,40 @@ import { Card, EmptyState, Button } from './ui';
  *  ve üst çubuk ayakta kalır, kullanıcı başka bir sayfaya geçerek kurtulabilir.
  *  Kökte olsaydı tek çıkış yolu sayfayı yenilemek olurdu.
  *
- *  **Sıfırlama `key` ile:** çağıran taraf `key={location.pathname}` veriyor, yani
- *  yol değişince React bu bileşeni söküp yeniden kuruyor ve hata durumu
- *  kendiliğinden gidiyor. Sıfırlamayı `componentDidUpdate` içinde `setState` ile
- *  yapmak da mümkündü ama o fazladan bir render turu demek; `key` React'in bu iş
- *  için olan yolu. Aksi hâlde bir kez patlayan sınır, gezinmeye rağmen hata
- *  ekranında kalırdı.
+ *  **Sıfırlamanın iki yolu var, ikisi farklı şeyler için:**
+ *
+ *  - `key={location.pathname}`: React bileşeni söküp yeniden kurar. Sınır
+ *    yalnızca değişen parçayı (`<Outlet />`) sarıyorsa doğru yol — hem hata
+ *    durumu gider hem sayfa taze kurulur.
+ *  - `resetKey={location.pathname}`: sınır **ayakta kalır**, yalnız hata durumu
+ *    temizlenir. Sınır gezinmede değişmemesi gereken bir ağacı sarıyorsa
+ *    (panel katmanı, sağlayıcılar) bunu kullan; `key` verilirse o ağaç her
+ *    gezinmede sökülüp yeniden kurulur ve içindeki tüm state sıfırlanır.
+ *    1 Ekim 2026'daki arıza buydu: `App`teki dış sınır `<Routes>`un tamamını
+ *    `key` ile sarıyordu, KVKK onay kapısı her sayfa geçişinde yeniden
+ *    kuruluyor ve "Sonra" kararı kayboluyordu.
  */
 export default class ErrorBoundary extends Component {
-  state = { hata: null };
+  state = { hata: null, resetKey: undefined };
 
   static getDerivedStateFromError(hata) {
     return { hata };
+  }
+
+  /** `resetKey` değiştiyse hata durumunu bırak — çocukları SÖKMEDEN.
+   *
+   *  Son görülen anahtar state'te tutuluyor; karşılaştırma burada yapılınca
+   *  sıfırlama render sırasında olur. `componentDidUpdate` + `setState` de
+   *  işi görürdü ama fazladan bir render turu açardı.
+   *
+   *  Hata yakalandığı turda da çalışır: `getDerivedStateFromError` state'i
+   *  yazar, sonra burası aynı `resetKey` ile çağrılır ve `null` döner — yani
+   *  yeni yakalanmış hatayı silmez. */
+  static getDerivedStateFromProps(props, state) {
+    if (props.resetKey !== state.resetKey) {
+      return { hata: null, resetKey: props.resetKey };
+    }
+    return null;
   }
 
   componentDidCatch(hata, info) {

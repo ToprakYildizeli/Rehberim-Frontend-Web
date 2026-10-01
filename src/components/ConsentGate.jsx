@@ -21,11 +21,35 @@ import s from './consentGate.module.css';
  * Kapatınca oturum boyunca bir daha açılmıyor, Ayarlar → Hesap'tan
  * tamamlanabiliyor. Kayıtta onay zorunlu hâle geldiğinde
  * (bkz. `docs/kvkk.md` §5) bu kapı yalnız eski kullanıcılar için kalacak.
+ *
+ * "Oturum boyunca" kararı `sessionStorage`da, state'te DEĞİL: bu bileşen
+ * ağacın yeniden kurulmasıyla sıfırlanabiliyor ve o olduğunda kullanıcı aynı
+ * metni her sayfa geçişinde yeniden görüyordu (1 Ekim 2026). Kararın ömrü
+ * sekmenin ömrü olmalı, bileşenin değil.
  */
+const ERTELEME_ANAHTARI = 'consentGateErtelendi';
+
+/** "Sonra" kararını okur/yazar. `sessionStorage` gizli modda ve kota dolduğunda
+ *  fırlatabiliyor; kapı bundan dolayı hiç açılmamalı ya da hiç kapanmamalı
+ *  değil, bu yüzden iki yön de sessizce yutuluyor. */
+function okuErtelendi() {
+  try {
+    return sessionStorage.getItem(ERTELEME_ANAHTARI) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function yazErtelendi() {
+  try {
+    sessionStorage.setItem(ERTELEME_ANAHTARI, '1');
+  } catch { /* gizli mod / kota */ }
+}
+
 export default function ConsentGate() {
   const { user, updateUser } = useAuth();
   const pending = user?.pending_consents ?? [];
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(okuErtelendi);
   const [index, setIndex] = useState(0);
   const [doc, setDoc] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -57,6 +81,13 @@ export default function ConsentGate() {
         const { data } = await getMe(localStorage.getItem('access'));
         updateUser(data);
         setIndex(0);
+        // Sunucu hâlâ eksik diyorsa kapı kapanmaz; onay verilmişken kullanıcıyı
+        // aynı metinde döngüye sokmamak için erteleme yazılıyor. (Tam olarak bu
+        // oldu: `missing_for()` eski sürüm satırı yüzünden onayı görmüyordu.)
+        if ((data?.pending_consents ?? []).length > 0) {
+          yazErtelendi();
+          setDismissed(true);
+        }
       }
     } catch {
       setError('Onay kaydedilemedi.');
@@ -65,10 +96,15 @@ export default function ConsentGate() {
     }
   }
 
+  function ertele() {
+    yazErtelendi();
+    setDismissed(true);
+  }
+
   if (!open) return null;
 
   return (
-    <Modal open onClose={() => setDismissed(true)} width={720}>
+    <Modal open onClose={ertele} width={720}>
       <h3 className={s.title}>
         <ShieldCheck size={18} />
         {current?.label}
@@ -85,7 +121,7 @@ export default function ConsentGate() {
       )}
       {error && <p className={s.error}>{error}</p>}
       <div className={s.actions}>
-        <Button variant="ghost" onClick={() => setDismissed(true)}>
+        <Button variant="ghost" onClick={ertele}>
           Sonra
         </Button>
         <Button onClick={accept} disabled={busy || doc === null}>

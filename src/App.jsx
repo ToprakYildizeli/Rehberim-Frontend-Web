@@ -36,13 +36,21 @@ function GuestRoute({ children }) {
  *  demek ve kullanıcı giriş bile yapamaz. Bu sınır o boşluğu kapatıyor, aynı
  *  zamanda katmanın kendisinin patlaması için son durak.
  *
- *  `key` olarak yol veriliyor: gezinince React sınırı yeniden kurar ve hata
- *  durumu kendiliğinden temizlenir. `useLocation` çağrıldığı için
- *  `BrowserRouter`ın içinde yaşamak zorunda, bu yüzden ayrı bir bileşen.
+ *  Sıfırlama `key` ile DEĞİL `resetKey` ile yapılıyor. `key` verilirse yol
+ *  değişince React bu sınırın altındaki HER ŞEYİ söküp yeniden kurar — burada
+ *  altındaki şey `<Routes>`un tamamı, yani panel katmanı da. 1 Ekim 2026'da
+ *  görülen sonuç: KVKK onay kapısı her sayfa geçişinde sıfırdan kuruluyor,
+ *  "Sonra" denmiş olması unutuluyor ve metin tekrar tekrar açılıyordu.
+ *  `resetKey` sınırı ayakta bırakıp yalnız hata durumunu temizliyor; patlayan
+ *  sayfanın kendisi `DashboardLayout` içindeki sınırda `key` ile zaten
+ *  yenileniyor.
+ *
+ *  `useLocation` çağrıldığı için `BrowserRouter`ın içinde yaşamak zorunda, bu
+ *  yüzden ayrı bir bileşen.
  */
 function RouteBoundary({ children }) {
   const location = useLocation();
-  return <ErrorBoundary key={location.pathname}>{children}</ErrorBoundary>;
+  return <ErrorBoundary resetKey={location.pathname}>{children}</ErrorBoundary>;
 }
 
 export default function App() {
