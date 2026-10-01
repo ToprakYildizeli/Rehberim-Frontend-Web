@@ -214,6 +214,9 @@ export default function DersProgrami() {
   const [subjects, setSubjects] = useState([]);
   const [taskTypes, setTaskTypes] = useState([]);
   const [topics, setTopics] = useState([]);
+  /* Konu listesinin durumu: 'bos' | 'yukleniyor' | 'hazir' | 'hata'.
+     Üçü de boş liste demek ama kullanıcıya söyleyecekleri farklı. */
+  const [topicState, setTopicState] = useState('bos');
   const [catalogError, setCatalogError] = useState(false);
   // Süre hafızası (A4): durationKey(ders, metod, konu) → dakika. Rehber özelinde.
   const [durationMemory, setDurationMemory] = useState(() => new Map());
@@ -265,6 +268,26 @@ export default function DersProgrami() {
     ),
     [subjects, draft.category, draft.kind, aggregateSectionIds]
   );
+  /* Seçili ders, o anda GÖSTERİLEN listede yoksa ilk geçerli derse kay.
+   *
+   * Bu olmadan `draft.subject` listede bulunmayan bir derste takılı kalıyordu
+   * ve belirti kullanıcıya rastgele görünüyordu: Konu alanı "Bu derse konu
+   * tanımlı değil" diyor, başka bir ders seçip geri dönünce düzeliyordu.
+   * Sebebi deneme bloğu: denemede bileşik sınav bölümleri de listeleniyor
+   * ("TYT Fen Bilimleri"), çalışmada listelenmiyor. Denemede o bölüm seçilip
+   * çalışmaya dönülünce seçim listede olmayan bir id'de kalıyor, konu ucu da
+   * boş dönüyordu. Aynı şey "Tür" düğmesinde de oluyordu: ilk ders SÜZÜLMEMİŞ
+   * listeden seçiliyordu (aşağıdaki `onChange` da düzeltildi).
+   *
+   * Düzeltme listeye bakıyor, tek tek sebeplere değil: hangi yoldan gelirse
+   * gelsin geçersiz seçim kendini toparlar. */
+  useEffect(() => {
+    if (isBookMode || !showSubjectFields) return;
+    if (!filteredSubjects.length) return;
+    if (filteredSubjects.some((x) => String(x.id) === String(draft.subject))) return;
+    setDraft((d) => ({ ...d, subject: String(filteredSubjects[0].id) }));
+  }, [filteredSubjects, draft.subject, isBookMode, showSubjectFields]);
+
   // Metod adı → task_type id (kitap formatından varsayılan metodu çözmek için).
   const typeIdByName = useMemo(
     () => Object.fromEntries(taskTypes.map((t) => [t.name, String(t.id)])),
@@ -328,20 +351,27 @@ export default function DersProgrami() {
     );
   }, [win.dayCount]);
 
-  // Seçili derse göre konu kataloğunu çek; ders değişince konuyu sıfırla.
+  /* Seçili derse göre konu kataloğunu çek.
+   *
+   * Temizlik **istek atılmadan önce**, eşzamanlı yapılıyor. Önceden hem liste
+   * hem seçili konu yalnız yanıt geldikten sonra sıfırlanıyordu; o aralıkta
+   * ekranda ÖNCEKİ dersin konuları duruyor ve rehber tam o anda bloğu
+   * sürüklerse yeni dersle eski dersin konusu kaydediliyordu. */
   useEffect(() => {
     let alive = true;
-    if (!draft.subject) { setTopics([]); return undefined; }
-    listTopics(draft.subject).then((t) => {
+    setTopics([]);
+    setDraft((d) => (d.topic ? { ...d, topic: '' } : d));
+    if (!draft.subject) { setTopicState('bos'); return undefined; }
+    setTopicState('yukleniyor');
+    listTopics(draft.subject).then((list) => {
       if (!alive) return;
-      setTopics(t);
-      setDraft((d) => ({ ...d, topic: '' }));
+      setTopics(list);
+      setTopicState(list.length ? 'hazir' : 'bos');
     }).catch(() => {
-      // Boşaltmak şart: aksi hâlde liste ÖNCEKİ dersin konularında kalıyor ve
-      // rehber, seçtiği derse ait sanıp yanlış konuyu bloğa yazabiliyordu.
       if (!alive) return;
-      setTopics([]);
-      setDraft((d) => ({ ...d, topic: '' }));
+      // Hata ile "konu yok" ayrı şeyler: ikisi de boş liste gösteriyordu ve
+      // rehber ucun düştüğünü hiç öğrenmiyordu.
+      setTopicState('hata');
     });
     return () => { alive = false; };
   }, [draft.subject]);
@@ -928,24 +958,45 @@ export default function DersProgrami() {
   // Satır anahtarı → görünen ad/renk. Blok taşıyan satırlar için bloğun kendi
   // alanlarından, boş satırlar için ders kataloğundan çözülür.
   const rowInfo = useCallback((key) => {
+    // Katalog sırası: dersin sınav kitapçığındaki yeri (sunucudan, bkz. catalog.js).
+    const katalogSira = key.startsWith('sub-')
+      ? (subjects.find((x) => `sub-${x.id}` === key)?.order ?? 9999)
+      : 0;
     const withBlock = (blocks ?? []).find((b) => subjectRowKey(b) === key);
     if (withBlock) {
       return { key, label: subjectRowLabel(withBlock), color: withBlock.subjectColor,
-        order: subjectRowOrder(withBlock) };
+        order: subjectRowOrder(withBlock), katalogSira };
     }
     const fields = subjectRowFields(key, subjects);
     return { key, label: subjectRowLabel(fields), color: fields.subjectColor,
-      order: subjectRowOrder(fields) };
+      order: subjectRowOrder(fields), katalogSira };
   }, [blocks, subjects]);
 
+  /* Satır sırası üç kademeli:
+   *
+   *  1. **Görevi olan satırlar üstte.** Rehber görev eklediği dersi aramasın;
+   *     AYT Matematik listenin en altındaki satır olsa bile görev girilince
+   *     boş satırların üstüne çıkar (kullanıcı isteği, 1 Ekim 2026).
+   *  2. Grup: dersler → genel denemeler → dış meşguliyet.
+   *  3. Katalog sırası: TYT (Türkçe · Sosyal · Matematik · Fen), sonra AYT
+   *     (Edebiyat · Sosyal · Matematik · Fen). Bu sıra SUNUCUDA tutuluyor
+   *     (`Subject.display_order`); burada alfabetik sıralanıyordu ve sınav
+   *     kitapçığının dizilimiyle ilgisiz bir sonuç veriyordu.
+   */
   const subjectRows = useMemo(() => {
     const keys = new Set(rowKeys ?? []);
     // Blok taşıyan ve taslağın satırı her hâlükârda görünür.
     (blocks ?? []).forEach((b) => keys.add(subjectRowKey(b)));
     if (draftFields) keys.add(subjectRowKey(draftFields));
-    return [...keys].map(rowInfo).sort(
-      (a, b) => a.order - b.order || a.label.localeCompare(b.label, 'tr')
-    );
+    const doluAnahtarlar = new Set((blocks ?? []).map(subjectRowKey));
+    return [...keys]
+      .map((key) => ({ ...rowInfo(key), dolu: doluAnahtarlar.has(key) }))
+      .sort((a, b) => (
+        (a.dolu === b.dolu ? 0 : a.dolu ? -1 : 1)
+        || a.order - b.order
+        || a.katalogSira - b.katalogSira
+        || a.label.localeCompare(b.label, 'tr')
+      ));
   }, [rowKeys, blocks, draftFields, rowInfo]);
 
   // Henüz satırı olmayan, eklenebilir seçenekler.
@@ -1318,8 +1369,17 @@ export default function DersProgrami() {
                               subject: String(firstSub?.id ?? ''), book: String(firstBook?.id ?? ''),
                             }));
                           } else {
-                            const first = subjects.find((x) => x.category === val);
-                            setDraft((d) => ({ ...d, category: val, subject: String(first?.id ?? ''), book: '' }));
+                            /* Süzme ÖNEMLİ: ham listeden seçilirse çalışma
+                               bloğunda gösterilmeyen bir sınav bölümü
+                               ("TYT Fen Bilimleri") seçili kalabiliyordu. */
+                            const gorunur = subjects.filter(
+                              (x) => x.category === val
+                                && (draft.kind === 'exam' || !aggregateSectionIds.has(x.id))
+                            );
+                            setDraft((d) => ({
+                              ...d, category: val,
+                              subject: String(gorunur[0]?.id ?? ''), book: '',
+                            }));
                           }
                         }}
                       />
@@ -1377,7 +1437,12 @@ export default function DersProgrami() {
                             onChange={(e) => setDraft((d) => ({ ...d, topic: e.target.value }))}
                           >
                             <option value="">
-                              {topics.length ? 'Konu seçin (opsiyonel)' : 'Bu derse konu tanımlı değil'}
+                              {{
+                            yukleniyor: 'Konular yükleniyor…',
+                            hata: 'Konular yüklenemedi',
+                            bos: 'Bu derse konu tanımlı değil',
+                            hazir: 'Konu seçin (opsiyonel)',
+                          }[topicState]}
                             </option>
                             {topics.map((t) => (
                               <option value={t.name} key={t.id}>{t.name}</option>

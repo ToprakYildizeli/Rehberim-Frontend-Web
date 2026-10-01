@@ -46,7 +46,14 @@ export function subjectColor(name = '') {
 /** GET /api/subjects/ → [{ id, name, label, category, color }] (33 gerçek ders). */
 export async function listSubjects(params) {
   const { data } = await api.get('/subjects/', params ? { params } : undefined);
-  return data.map((x) => ({
+  return data.map((x, sira) => ({
+    /* Sunucunun döndürdüğü SIRA anlamlıdır: `Subject.display_order` ile
+       TYT (Türkçe · Sosyal · Matematik · Fen) sonra AYT (Edebiyat · Sosyal ·
+       Matematik · Fen) dizilimi orada tutuluyor ve üç istemci de aynı
+       dizilimi görsün diye istemciler listeyi yeniden SIRALAMAMALI.
+       Dizinin kendisi her yere taşınmadığı için sırayı burada bir alana
+       sabitliyoruz; sıralama gereken yerler `order` ile karşılaştırır. */
+    order: sira,
     id: x.id,
     name: x.name,
     label: x.label,        // "TYT Matematik" gibi gösterim etiketi
