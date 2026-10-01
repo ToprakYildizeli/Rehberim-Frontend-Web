@@ -323,6 +323,40 @@ export async function listPendingApproval(studentId) {
   }));
 }
 
+/** `GET /api/tasks/?student=&from=&to=` — tarih aralığındaki görevler.
+ *
+ *  Bir haftanın görevleri birden çok programdan gelebiliyor (pencereler üst
+ *  üste binebiliyor, kontrat v5.0), bu yüzden "programı aç, görevlerini al"
+ *  yolu doğru cevabı vermiyor. Tarih verilmezse sunucu içinde bulunulan
+ *  takvim haftasını (Pzt-Paz) döndürüyor.
+ */
+export async function listTasksInRange(studentId, { from, to } = {}) {
+  const { data } = await api.get('/tasks/', {
+    params: { student: studentId, ...(from ? { from } : {}), ...(to ? { to } : {}) },
+  });
+  return {
+    student: data.student,
+    studentName: data.student_name,
+    from: data.from,
+    to: data.to,
+    tasks: (data.tasks || []).map((t) => ({
+      id: t.id,
+      date: t.date,
+      order: t.order ?? 0,
+      title: t.title || '',
+      note: t.description || '',
+      subjectLabel: t.subject_label,
+      typeName: t.task_type_name,
+      bookLabel: t.book_label,
+      kind: t.kind || 'study',
+      examScope: t.exam_scope || '',
+      durationMin: t.duration_minutes || 0,
+      completion: t.completion || 'none',
+      isApproved: Boolean(t.is_approved),
+    })),
+  };
+}
+
 /** `POST /api/tasks/approve/` — görevleri onaylar.
  *  `{ tasks: [...] }` tek tek, `{ student, until }` ise "hepsini onayla".
  *  Dönen: onayı değişen görev sayısı. */
