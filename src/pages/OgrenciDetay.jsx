@@ -1115,7 +1115,8 @@ function ComplianceLine({ points }) {
         </text>
       </svg>
       <p className={s.chartNote}>
-        İçi dolu nokta onaylanmış haftayı, içi boş nokta onay bekleyeni gösterir.
+        Her nokta bir takvim haftası (Pzt-Paz). İçi boş nokta devam eden haftadır;
+        yarısı yaşanmadığı için ay ve genel ortalamaya girmez.
       </p>
     </div>
   );

@@ -239,26 +239,6 @@ export default function DersProgrami() {
     ),
     [subjects, draft.category, draft.kind, aggregateSectionIds]
   );
-  /* Seçili ders, o anda GÖSTERİLEN listede yoksa ilk geçerli derse kay.
-   *
-   * Bu olmadan `draft.subject` listede bulunmayan bir derste takılı kalıyordu
-   * ve belirti kullanıcıya rastgele görünüyordu: Konu alanı "Bu derse konu
-   * tanımlı değil" diyor, başka bir ders seçip geri dönünce düzeliyordu.
-   * Sebebi deneme bloğu: denemede bileşik sınav bölümleri de listeleniyor
-   * ("TYT Fen Bilimleri"), çalışmada listelenmiyor. Denemede o bölüm seçilip
-   * çalışmaya dönülünce seçim listede olmayan bir id'de kalıyor, konu ucu da
-   * boş dönüyordu. Aynı şey "Tür" düğmesinde de oluyordu: ilk ders SÜZÜLMEMİŞ
-   * listeden seçiliyordu (aşağıdaki `onChange` da düzeltildi).
-   *
-   * Düzeltme listeye bakıyor, tek tek sebeplere değil: hangi yoldan gelirse
-   * gelsin geçersiz seçim kendini toparlar. */
-  useEffect(() => {
-    if (isBookMode || !showSubjectFields) return;
-    if (!filteredSubjects.length) return;
-    if (filteredSubjects.some((x) => String(x.id) === String(draft.subject))) return;
-    setDraft((d) => ({ ...d, subject: String(filteredSubjects[0].id) }));
-  }, [filteredSubjects, draft.subject, isBookMode, showSubjectFields]);
-
   // Metod adı → task_type id (kitap formatından varsayılan metodu çözmek için).
   const typeIdByName = useMemo(
     () => Object.fromEntries(taskTypes.map((t) => [t.name, String(t.id)])),
@@ -830,6 +810,26 @@ export default function DersProgrami() {
   /* Çalışma türü ve konu **denemede sorulmaz**: deneme kendi başına bir çalışma
      türüdür ve tek bir konusu yoktur, sınavın kapsadığı her şeyi içerir. */
   const showMethodFields = showSubjectFields && !isExam;
+
+  /* Seçili ders, o anda GÖSTERİLEN listede yoksa ilk geçerli derse kay.
+   *
+   * Bu olmadan `draft.subject` listede bulunmayan bir derste takılı kalıyordu
+   * ve belirti kullanıcıya rastgele görünüyordu: Konu alanı "Bu derse konu
+   * tanımlı değil" diyor, başka bir ders seçip geri dönünce düzeliyordu.
+   * Sebebi deneme bloğu: denemede bileşik sınav bölümleri de listeleniyor
+   * ("TYT Fen Bilimleri"), çalışmada listelenmiyor. Denemede o bölüm seçilip
+   * çalışmaya dönülünce seçim listede olmayan bir id'de kalıyor, konu ucu da
+   * boş dönüyordu. Aynı şey "Tür" düğmesinde de oluyordu: ilk ders SÜZÜLMEMİŞ
+   * listeden seçiliyordu (aşağıdaki `onChange` da düzeltildi).
+   *
+   * Düzeltme listeye bakıyor, tek tek sebeplere değil: hangi yoldan gelirse
+   * gelsin geçersiz seçim kendini toparlar. */
+  useEffect(() => {
+    if (isBookMode || !showSubjectFields) return;
+    if (!filteredSubjects.length) return;
+    if (filteredSubjects.some((x) => String(x.id) === String(draft.subject))) return;
+    setDraft((d) => ({ ...d, subject: String(filteredSubjects[0].id) }));
+  }, [filteredSubjects, draft.subject, isBookMode, showSubjectFields]);
 
   /* Süre hafızası (A4): ders/metod/konu üçlüsü değişince, rehberin bu kombinasyonda
      en son kullandığı süre varsayılan olarak gelir — hafıza rehber özelinde olduğu
