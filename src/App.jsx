@@ -17,6 +17,7 @@ import OgrenciDetay from './pages/OgrenciDetay';
 import Takvim from './pages/Takvim';
 import DersProgrami from './pages/DersProgrami';
 import Ayarlar from './pages/Ayarlar';
+import Onaylar from './pages/Onaylar';
 
 function ProtectedRoute({ children }) {
   const { isLoggedIn } = useAuth();
@@ -100,6 +101,7 @@ export default function App() {
                 <Route path="/ogrenciler/:id" element={<OgrenciDetay />} />
                 <Route path="/takvim" element={<Takvim />} />
                 <Route path="/ders-programi" element={<DersProgrami />} />
+                <Route path="/onaylar" element={<Onaylar />} />
                 <Route path="/ayarlar" element={<Ayarlar />} />
               </Route>
 

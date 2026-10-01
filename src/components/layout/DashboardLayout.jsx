@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Users, Calendar, CalendarDays, Settings,
+  LayoutDashboard, Users, Calendar, CalendarDays, ShieldCheck, Settings,
   PanelLeftClose, PanelLeftOpen, Menu, Moon, Sun, LogOut,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -17,6 +17,7 @@ const NAV = [
   { to: '/ogrenciler', label: 'Öğrenciler', icon: Users },
   { to: '/takvim', label: 'Takvim', icon: Calendar },
   { to: '/ders-programi', label: 'Ders Programı', icon: CalendarDays },
+  { to: '/onaylar', label: 'Onaylar', icon: ShieldCheck },
   { to: '/ayarlar', label: 'Ayarlar', icon: Settings },
 ];
 
@@ -25,6 +26,7 @@ const TITLES = {
   '/ogrenciler': 'Öğrenciler',
   '/takvim': 'Takvim',
   '/ders-programi': 'Ders Programı Planlayıcı',
+  '/onaylar': 'Onay Bekleyen Görevler',
   '/ayarlar': 'Ayarlar',
 };
 

@@ -1,0 +1,183 @@
+/* Onay ekranı.
+   Kullanıcı isteği: **geniş ve seyrek olsun, sıkışık olmasın.** Bu yüzden
+   tablo yok; öğrenci başına kart var ve kartlar geniş ekranda yan yana
+   akıyor. Dolgular da bilerek bol. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) 0;
+}
+
+/* ---------- Üst şerit ---------- */
+
+.topBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.summary {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.summaryCount {
+  font-size: var(--fs-2xl);
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.summaryLabel {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.error {
+  font-size: var(--fs-xs);
+  color: var(--danger);
+}
+
+/* ---------- Öğrenci sütunları ----------
+   `auto-fill` + `minmax`: geniş ekranda üç-dört sütun, dar ekranda tek.
+   Sabit sütun sayısı vermiyoruz; kenar çubuğu daralıp genişleyebiliyor. */
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.studentCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.studentHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.studentName {
+  display: block;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  text-decoration: none;
+}
+
+.studentName:hover { text-decoration: underline; }
+
+.studentMeta {
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* ---------- Gün ve görevler ---------- */
+
+.day {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dayTitle {
+  margin: 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: none;
+}
+
+.taskList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Satırın tamamı etiket: kutucuğu tutturmaya çalışmak yerine herhangi bir
+   yerine tıklamak seçiyor. */
+.task {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.task:hover {
+  border-color: var(--accent);
+  background: var(--bg-alt);
+}
+
+.check {
+  margin-top: 2px;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.taskBody {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.taskHead {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.taskLabel {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.taskTopic {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+.taskMeta {
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+
+.taskNote {
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+  font-style: italic;
+}
