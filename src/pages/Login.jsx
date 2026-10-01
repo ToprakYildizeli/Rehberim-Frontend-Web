@@ -95,8 +95,11 @@ export default function Login() {
 
         {!verify && (
         <form onSubmit={handleSubmit} className={styles.form} noValidate>
+          {/* Alan sunucuya `username` olarak gidiyor ama e-postayı da kabul
+              ediyor (auth-contract v3.5): kullanıcı adını unutmak en sık
+              takılma noktasıydı, e-postasını herkes biliyor. */}
           <label className={styles.label}>
-            Kullanıcı adı
+            Kullanıcı adı veya e-posta
             <input
               className={styles.input}
               type="text"
