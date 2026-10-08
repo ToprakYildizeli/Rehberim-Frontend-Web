@@ -424,12 +424,11 @@ const FAQ = [
         yok; onların yerine sınıf bazlı ödev ve deneme analizi var.`,
   },
   {
-    q: 'LGS · Dershanem nasıl hesap açıyor?',
-    a: `Kurum hesabı paket seçimiyle açılıyor: hangi özelliklerin açık olacağı
-        (ödev, deneme, ders programı, veli toplantısı) kuruma göre
-        belirleniyor. Bu yüzden kendi kendine kayıt yok — bize yazın, kurumu
-        tanımlayıp ilk öğretmen hesabını birlikte açıyoruz. Sonrasında
-        öğretmen kendi hesabını yönetiyor.`,
+    q: 'LGS · Nasıl hesap açıyorum?',
+    a: `Öğretmen kendi hesabını kendisi açıyor; dershane adı ya da kurum kodu
+        istenmiyor. Hesap YKS'deki rehber hesabı gibi kendi başına yetiyor:
+        sınıflarınızı siz açıyor, öğrencilerinizi siz ekliyorsunuz ve yalnız
+        kendi verinizi görüyorsunuz. Kayıt ücretsiz, kredi kartı istenmiyor.`,
   },
   {
     q: 'Verilerim ne oluyor?',
@@ -565,8 +564,8 @@ export default function Welcome() {
               anchor="#lgs"
               soon={!LGS_READY}
               action={LGS_READY ? (
-                <a href={LGS_URL} className={styles.btnPrimary}>
-                  Dershane Paneli <ArrowIcon />
+                <a href={`${LGS_URL}/kayit`} className={styles.btnPrimary}>
+                  Ücretsiz Başlayın <ArrowIcon />
                 </a>
               ) : (
                 <span className={styles.btnDisabled}>Panel yakında</span>
@@ -791,18 +790,18 @@ export default function Welcome() {
             </ul>
             <div className={styles.heroCta}>
               {LGS_READY ? (
-                <a href={LGS_URL} className={styles.btnPrimary}>
-                  Dershane Paneline Git <ArrowIcon />
-                </a>
+                <>
+                  <a href={`${LGS_URL}/kayit`} className={styles.btnPrimary}>
+                    Öğretmen Hesabı Açın <ArrowIcon />
+                  </a>
+                  <a href={`${LGS_URL}/giris`} className={styles.btnGhost}>Giriş Yap</a>
+                </>
               ) : (
                 <span className={styles.btnDisabled}>Panel yakında</span>
               )}
-              <a href="mailto:iletisim@rehberim.xyz?subject=LGS%20dershane%20paneli" className={styles.btnGhost}>
-                Kurum olarak başvur
-              </a>
             </div>
             <p className={styles.heroNote}>
-              Kurum hesapları paket seçimiyle açılıyor — önce bize yazın.
+              Kurulum yok, tarayıcıdan çalışır · Kredi kartı istenmez
             </p>
           </div>
         </div>
