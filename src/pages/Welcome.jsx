@@ -4,12 +4,21 @@ import { ThemeToggle } from '../components/ui';
 import { Logo } from '../components/ui/Logo';
 import { registerCounselor } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
+import { LGS_URL, LGS_READY } from '../config/products';
 import styles from './Welcome.module.css';
 
 /* Tanıtım sayfası. Uygulamanın içinde açıklama metni yok (kullanıcı kararı);
    ürünü anlatan her şey burada toplanıyor. Kayıt formu da bu sayfada: rehber
    ayrı bir sayfaya gitmeden hesabını açabilsin diye. `/kayit` rotası da duruyor,
-   ikisi de aynı ucu (`POST /api/auth/register/counselor/`) kullanıyor. */
+   ikisi de aynı ucu (`POST /api/auth/register/counselor/`) kullanıyor.
+
+   İKİ ÜRÜN (8 Ekim 2026): Rehberim artık YKS ve LGS olarak ikiye ayrıldı.
+   Sayfanın girişi ürün seçtiriyor; altındaki bölümler iki dala ayrılıyor:
+   `#yks` (lise/YKS — rehber paneli + öğrenci/veli mobil) ve `#lgs`
+   (ortaokul/LGS — dershane paneli). Kayıt formu YKS dalında kalıyor; LGS'nin
+   kaydı kendi uygulamasında. LGS paneli AYRI bir uygulama ve ayrı bir
+   backend — buradan yalnız bağlantı veriliyor, adresi `config/products.js`
+   belirliyor. */
 
 function ArrowIcon() {
   return (
@@ -120,6 +129,104 @@ function DashboardPreview() {
             <span className={styles.previewExamNet}>{e.net}</span>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** Dershane panelinin küçük önizlemesi — YKS önizlemesiyle aynı kabuk
+ *  sınıflarını kullanıyor, yalnız gövdesi LGS işine ait (sınıf, haftalık soru
+ *  ödevi, deneme neti). */
+function DershanePreview() {
+  const classes = [
+    { name: '8-A', students: 24, done: 86, color: '#2563eb' },
+    { name: '8-B', students: 22, done: 61, color: '#7c3aed' },
+    { name: '7-A', students: 26, done: 74, color: '#059669' },
+  ];
+  const nets = [
+    { subject: 'Matematik', net: 17.5, pct: 88 },
+    { subject: 'Türkçe', net: 15.0, pct: 75 },
+    { subject: 'Fen Bilimleri', net: 16.25, pct: 81 },
+  ];
+
+  return (
+    <div className={styles.preview}>
+      <div className={styles.previewBar}>
+        <div className={styles.previewDots}>
+          <span style={{ background: '#ff5f57' }} />
+          <span style={{ background: '#ffbd2e' }} />
+          <span style={{ background: '#28c840' }} />
+        </div>
+        <span className={styles.previewBarTitle}>Rehberim · Dershane</span>
+      </div>
+
+      <div className={styles.previewBody}>
+        <div className={styles.previewGreet}>
+          <div>
+            <p className={styles.previewGreetName}>Simetri Dershanesi</p>
+            <p className={styles.previewGreetSub}>9 sınıf · Bu hafta 8 ödev açık</p>
+          </div>
+          <div className={styles.previewMonth}>Hafta 6</div>
+        </div>
+
+        <p className={styles.previewSectionLabel}>Sınıflar · ödev tamamlama</p>
+
+        {classes.map((c) => (
+          <div key={c.name} className={styles.previewStudent}>
+            <div className={styles.previewAvatar} style={{ background: c.color }}>
+              {c.name.split('-')[1]}
+            </div>
+            <div className={styles.previewStudentInfo}>
+              <div className={styles.previewStudentHeader}>
+                <span className={styles.previewStudentName}>{c.name}</span>
+                <span className={styles.previewStudentPct} style={{ color: c.color }}>{c.done}%</span>
+              </div>
+              <div className={styles.previewProgressBg}>
+                <div className={styles.previewProgressFill} style={{ width: `${c.done}%`, background: c.color }} />
+              </div>
+              <span className={styles.previewStudentGrade}>{c.students} öğrenci</span>
+            </div>
+          </div>
+        ))}
+
+        <div className={styles.previewDivider} />
+
+        <p className={styles.previewSectionLabel}>Son Deneme · sınıf ortalaması</p>
+
+        {nets.map((n) => (
+          <div key={n.subject} className={styles.previewExam}>
+            <span className={styles.previewExamSubject}>{n.subject}</span>
+            <div className={styles.previewExamBarBg}>
+              <div className={styles.previewExamBarFill} style={{ width: `${n.pct}%`, background: '#2563eb' }} />
+            </div>
+            <span className={styles.previewExamNet}>{n.net}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Girişteki ürün kartı. `href` dış adres (LGS paneli), `to` iç rota, `anchor`
+ * aynı sayfadaki bölüm. `soon` verilirse kart bağlantısız çıkar — LGS daha
+ * dağıtılmadığı için gereken durum.
+ */
+function ProductCard({ tag, title, desc, items, accent, anchor, action, soon }) {
+  return (
+    <div className={styles.productCard} style={{ '--card-accent': accent }}>
+      <div className={styles.productHead}>
+        <span className={styles.productTag}>{tag}</span>
+        {soon && <span className={styles.productSoon}>Yakında</span>}
+      </div>
+      <h3 className={styles.productTitle}>{title}</h3>
+      <p className={styles.productDesc}>{desc}</p>
+      <ul className={styles.productList}>
+        {items.map((it) => <li key={it}>{it}</li>)}
+      </ul>
+      <div className={styles.productCta}>
+        {action}
+        <a href={anchor} className={styles.productMore}>Ayrıntılar</a>
       </div>
     </div>
   );
@@ -267,10 +374,14 @@ function SignupForm() {
 const FAQ = [
   {
     q: 'Rehberim tam olarak ne yapıyor?',
-    a: `Bir rehber öğretmenin öğrenci takibi için kullandığı her şeyi tek yerde
-        topluyor: haftalık ders programı, deneme sonuçları ve netler, konu bazlı
-        kazanım takibi, kitaplık, hedefler ve görüşme takvimi. Rehber web'den
-        yönetiyor; öğrenci ve veli mobil uygulamadan kendi tarafını görüyor.`,
+    a: `İki ürün var. YKS tarafı, bir rehber öğretmenin öğrenci takibi için
+        kullandığı her şeyi topluyor: haftalık ders programı, deneme sonuçları
+        ve netler, konu bazlı kazanım takibi, kitaplık, hedefler ve görüşme
+        takvimi. Rehber web'den yönetiyor; öğrenci ve veli mobil uygulamadan
+        kendi tarafını görüyor. LGS tarafı ise dershaneler için: sınıf/şube,
+        haftalık soru bazlı ödev, deneme sonuçları, ders programı ve veli
+        toplantısı. Aşağıdaki soruların çoğu YKS tarafını anlatıyor; LGS'ye
+        özel olanlar ayrıca işaretli.`,
   },
   {
     q: 'Öğrencim bana nasıl bağlanıyor?',
@@ -302,6 +413,23 @@ const FAQ = [
     q: 'Ücretli mi?',
     a: `Şu an bir ücretlendirme yok; hesap açmak ve kullanmak ücretsiz.
         Kredi kartı istemiyoruz.`,
+  },
+  {
+    q: 'LGS · Dershane tarafı YKS\'den nasıl farklı?',
+    a: `Çalışma birimi öğrenci değil sınıf. Öğretmen sınıflarını açıyor,
+        öğrencilerini elle ekliyor (öğrencinin hesabı yok), haftalık soru
+        hedefini sınıfa veriyor ve deneme sonuçlarını ızgaradan giriyor.
+        Veli, öğretmenin verdiği davet koduyla kendi hesabını açıp yalnızca
+        izliyor. YKS'deki program tahtası, kitaplık ve kazanım takibi LGS'de
+        yok; onların yerine sınıf bazlı ödev ve deneme analizi var.`,
+  },
+  {
+    q: 'LGS · Dershanem nasıl hesap açıyor?',
+    a: `Kurum hesabı paket seçimiyle açılıyor: hangi özelliklerin açık olacağı
+        (ödev, deneme, ders programı, veli toplantısı) kuruma göre
+        belirleniyor. Bu yüzden kendi kendine kayıt yok — bize yazın, kurumu
+        tanımlayıp ilk öğretmen hesabını birlikte açıyoruz. Sonrasında
+        öğretmen kendi hesabını yönetiyor.`,
   },
   {
     q: 'Verilerim ne oluyor?',
@@ -375,8 +503,8 @@ export default function Welcome() {
         <div className={styles.navInner}>
           <Logo height={31} className={styles.brand} />
           <div className={styles.navLinks}>
-            <a href="#ozellikler" className={styles.navSection}>Özellikler</a>
-            <a href="#roller" className={styles.navSection}>Kimler kullanır</a>
+            <a href="#yks" className={styles.navSection}>YKS</a>
+            <a href="#lgs" className={styles.navSection}>LGS</a>
             <a href="#sss" className={styles.navSection}>SSS</a>
             <a href="#iletisim" className={styles.navSection}>İletişim</a>
           </div>
@@ -388,19 +516,74 @@ export default function Welcome() {
         </div>
       </nav>
 
-      {/* ── Hero ── */}
+      {/* ── Hero — hangi ürün? ──
+           Ziyaretçi ilk burada seçiyor; iki kart da sayfanın kendi dalına
+           (`#yks` / `#lgs`) ya da doğrudan ilgili uygulamaya gidiyor. */}
       <section className={styles.hero}>
+        <div className={styles.heroPick}>
+          <div className={styles.badge}>
+            <span className={styles.badgePulse} />
+            İki sınav · tek platform
+          </div>
+          <h1 className={styles.heroTitle}>
+            Öğrenci takibi,<br />
+            <span className={styles.heroHighlight}>tek ekrandan</span>.
+          </h1>
+          <p className={styles.heroSubtitle}>
+            Rehberim iki ürün: liseler ve YKS için rehber paneli, ortaokullar ve
+            LGS için dershane paneli. Aynı mantık, aynı arayüz — ayrı veri.
+          </p>
+
+          <div className={styles.productGrid}>
+            <ProductCard
+              tag="YKS · Lise"
+              accent="#2563eb"
+              title="Rehber Paneli"
+              desc="Tek tek öğrenci takibi yapan rehber öğretmenler için. Öğrenci ve veli kendi mobil uygulamasından bağlanır."
+              items={[
+                'Sürükle-bırak haftalık program',
+                'TYT/AYT deneme netleri ve trend',
+                'Konu kazanımları, kitaplık, takvim',
+              ]}
+              anchor="#yks"
+              action={
+                <a href="#kayit" className={styles.btnPrimary}>
+                  Ücretsiz Başlayın <ArrowIcon />
+                </a>
+              }
+            />
+            <ProductCard
+              tag="LGS · Ortaokul"
+              accent="#7c3aed"
+              title="Dershane Paneli"
+              desc="Sınıf mevcuduyla çalışan dershaneler için. Öğretmen sınıfını, ödevini ve denemesini buradan yönetir."
+              items={[
+                'Sınıf/şube ve haftalık soru bazlı ödev',
+                'Deneme sonuçları, karne PDF içe aktarma',
+                'Ders programı ve veli toplantısı',
+              ]}
+              anchor="#lgs"
+              soon={!LGS_READY}
+              action={LGS_READY ? (
+                <a href={LGS_URL} className={styles.btnPrimary}>
+                  Dershane Paneli <ArrowIcon />
+                </a>
+              ) : (
+                <span className={styles.btnDisabled}>Panel yakında</span>
+              )}
+            />
+          </div>
+
+          <p className={styles.heroNote}>Kredi kartı gerekmez · Kurulum yok, tarayıcıdan çalışır</p>
+        </div>
+      </section>
+
+      {/* ── YKS dalı ── */}
+      <section className={styles.branch} id="yks">
         <div className={styles.heroInner}>
           <div className={styles.heroText}>
-            <div className={styles.badge}>
-              <span className={styles.badgePulse} />
-              Rehber öğretmenler için takip platformu
-            </div>
-            <h1 className={styles.heroTitle}>
-              Öğrencilerinizi<br />
-              <span className={styles.heroHighlight}>tek ekrandan</span><br />
-              takip edin.
-            </h1>
+            <div className={styles.sectionTag}>YKS · Lise</div>
+            <h2 className={styles.branchTitle}>Öğrencilerinizi tek ekrandan takip edin.</h2>
             <p className={styles.heroSubtitle}>
               Haftalık program hazırlayın, deneme netlerini ve konu kazanımlarını
               girin, kimin ne kadar uyduğunu görün. Öğrenci ve veli kendi
@@ -412,7 +595,6 @@ export default function Welcome() {
               </a>
               <Link to="/giris" className={styles.btnGhost}>Giriş Yap</Link>
             </div>
-            <p className={styles.heroNote}>Kredi kartı gerekmez · Kurulum yok, tarayıcıdan çalışır</p>
           </div>
           <div className={styles.heroVisual}>
             <div className={styles.previewGlow} />
@@ -424,7 +606,7 @@ export default function Welcome() {
       {/* ── Özellikler ── */}
       <section className={styles.features} id="ozellikler">
         <div className={styles.sectionInner}>
-          <div className={styles.sectionTag}>Özellikler</div>
+          <div className={styles.sectionTag}>YKS · Özellikler</div>
           <h2 className={styles.sectionTitle}>Rehberin işini yapan altı ekran</h2>
           <p className={styles.sectionSub}>
             Program, deneme, kazanım, kitaplık, takvim ve başarım — hepsi birbirine bağlı.
@@ -497,7 +679,7 @@ export default function Welcome() {
       {/* ── Nasıl çalışır ── */}
       <section className={styles.howItWorks}>
         <div className={styles.sectionInner}>
-          <div className={styles.sectionTag}>Nasıl Çalışır</div>
+          <div className={styles.sectionTag}>YKS · Nasıl Çalışır</div>
           <h2 className={styles.sectionTitle}>3 adımda başlayın</h2>
           <div className={styles.steps}>
             <Step
@@ -524,7 +706,7 @@ export default function Welcome() {
       {/* ── Kimler kullanır ── */}
       <section className={styles.roles} id="roller">
         <div className={styles.sectionInner}>
-          <div className={styles.sectionTag}>Kimler Kullanır</div>
+          <div className={styles.sectionTag}>YKS · Kimler Kullanır</div>
           <h2 className={styles.sectionTitle}>Üç taraf, tek veri</h2>
           <p className={styles.sectionSub}>
             Rehber web tarayıcısından, öğrenci ve veli mobil uygulamadan bağlanır.
@@ -561,7 +743,7 @@ export default function Welcome() {
         <div className={styles.sectionInner}>
           <div className={styles.signupGrid}>
             <div className={styles.signupIntro}>
-              <div className={styles.sectionTag}>Kayıt</div>
+              <div className={styles.sectionTag}>YKS · Kayıt</div>
               <h2 className={styles.sectionTitle}>Rehber hesabınızı açın</h2>
               <p className={styles.sectionSub}>
                 Hesap yalnızca rehber öğretmenler içindir. Öğrenci ve veli kendi
@@ -577,6 +759,51 @@ export default function Welcome() {
             <div className={styles.signupCard}>
               <SignupForm />
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── LGS dalı ──
+           Dershane ürünü AYRI bir uygulama ve ayrı bir backend; burada yalnız
+           anlatılıyor ve bağlantı veriliyor. Rol modeli YKS'den farklı:
+           öğrencinin hesabı YOK, öğrencileri öğretmen elle ekliyor, veli
+           öğretmenin davet koduyla kendi hesabını açıp salt-okur bakıyor. */}
+      <section className={styles.branch} id="lgs">
+        <div className={styles.heroInner}>
+          <div className={styles.heroVisual}>
+            <div className={styles.previewGlow} />
+            <DershanePreview />
+          </div>
+          <div className={styles.heroText}>
+            <div className={styles.sectionTag}>LGS · Ortaokul</div>
+            <h2 className={styles.branchTitle}>Dershanenin sınıfını, ödevini, denemesini tek yerden yönetin.</h2>
+            <p className={styles.heroSubtitle}>
+              Sınıf mevcuduyla çalışan kurumlar için. Öğretmen sınıflarını açar,
+              öğrencilerini elle ekler, haftalık soru hedefini verir ve deneme
+              sonuçlarını girer. Veli kendi hesabından yalnızca izler.
+            </p>
+            <ul className={styles.checkList}>
+              <li>Sınıf/şube yönetimi, öğrenciyi öğretmen ekler</li>
+              <li>Haftalık soru bazlı ödev, üç durumlu tamamlama</li>
+              <li>Deneme sonucu ızgarası ve karne PDF'i içe aktarma</li>
+              <li>Ders programı, veli toplantısı, sınıf analizleri</li>
+              <li>Öğrencinin hesabı yok — veli davet koduyla bağlanır</li>
+            </ul>
+            <div className={styles.heroCta}>
+              {LGS_READY ? (
+                <a href={LGS_URL} className={styles.btnPrimary}>
+                  Dershane Paneline Git <ArrowIcon />
+                </a>
+              ) : (
+                <span className={styles.btnDisabled}>Panel yakında</span>
+              )}
+              <a href="mailto:iletisim@rehberim.xyz?subject=LGS%20dershane%20paneli" className={styles.btnGhost}>
+                Kurum olarak başvur
+              </a>
+            </div>
+            <p className={styles.heroNote}>
+              Kurum hesapları paket seçimiyle açılıyor — önce bize yazın.
+            </p>
           </div>
         </div>
       </section>
@@ -655,8 +882,8 @@ export default function Welcome() {
                 mağazalar politikanın herkese açık ve kolay bulunur olmasını
                 istiyor, incelemeci de önce ana sayfanın altına bakıyor. */}
             <div className={styles.footerLinks}>
-              <a href="#ozellikler">Özellikler</a>
-              <a href="#roller">Kimler kullanır</a>
+              <a href="#yks">YKS</a>
+              <a href="#lgs">LGS</a>
               <a href="#sss">SSS</a>
               <a href="#iletisim">İletişim</a>
               <Link to="/gizlilik">Gizlilik ve KVKK</Link>

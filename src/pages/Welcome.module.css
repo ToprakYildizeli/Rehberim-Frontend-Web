@@ -190,6 +190,191 @@
   margin: 0;
 }
 
+/* ─── Ürün seçimi (hero) ───
+   Hero artık iki ürünü tanıtıyor, o yüzden iki sütunlu `.heroInner` yerine
+   ortalanmış tek sütun. Kartlar altta yan yana duruyor. */
+.heroPick {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 0 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.heroPick .heroTitle { margin-bottom: 18px; }
+
+/* Hero'nun kendi alt başlığı sola dayalı ve 460px: ortalanmış düzende
+   genişletilip ortalanıyor. */
+.heroPick .heroSubtitle {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 44px;
+}
+
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  width: 100%;
+  margin-bottom: 28px;
+  text-align: left;
+}
+
+/* Kartın vurgu rengi satır içinden (`--card-accent`) geliyor: iki ürün iki
+   renk taşıyor ama ikisi de paletin kendi `--accent`'ine düşmesin diye
+   sabit değer veriliyor. Geri kalan her şey tema değişkenlerinden. */
+.productCard {
+  display: flex;
+  flex-direction: column;
+  padding: 28px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--card-accent, var(--accent));
+  border-radius: 16px;
+  box-shadow: var(--shadow);
+  transition: box-shadow 0.2s, transform 0.2s, border-color 0.15s;
+}
+
+.productCard:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-3px);
+}
+
+.productHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.productTag {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--card-accent, var(--accent));
+}
+
+.productSoon {
+  font-size: var(--fs-3xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+
+.productTitle {
+  font-size: var(--fs-4xl);
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 10px;
+  letter-spacing: -0.02em;
+}
+
+.productDesc {
+  font-size: var(--fs-md);
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0 0 18px;
+}
+
+.productList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.productList li {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  padding-left: 20px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.productList li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 7px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--card-accent, var(--accent));
+}
+
+/* Kartın alt sırası: birincil eylem + "Ayrıntılar". `margin-top: auto` iki
+   kartın düğmelerini aynı hizaya getiriyor (listeler farklı uzunlukta). */
+.productCta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: auto;
+}
+
+.productMore {
+  font-size: var(--fs-md);
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.productMore:hover { color: var(--accent); }
+
+/* LGS henüz dağıtılmadığı için bağlantı yerine duran, tıklanamaz etiket.
+   `btnPrimary` ile aynı ölçüde ama renksiz — yanıltıcı bir düğme olmasın. */
+.btnDisabled {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 24px;
+  border-radius: 10px;
+  font-size: var(--fs-lg);
+  font-weight: 600;
+  color: var(--text-muted);
+  background: var(--bg-alt);
+  border: 1.5px solid var(--border);
+  cursor: default;
+}
+
+/* ─── Ürün dalları (#yks / #lgs) ───
+   İkisi de hero'nun iki sütunlu düzenini ödünç alıyor; aradaki tek fark
+   zemin ve üst kenarlık. */
+.branch {
+  padding: 76px 0;
+  /* İki dal da aynı zemini taşıyor; komşu bölüm de `--bg-alt` olduğunda
+     (LGS dalı kayıt bölümünün hemen altında) ayrımı alt/üst kenarlık
+     veriyor, yoksa iki bant tek bloğa dönüşüyor. */
+  background: var(--bg-alt);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+}
+
+.branchTitle {
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin: 0 0 18px;
+}
+
+.branch .heroSubtitle { margin-bottom: 24px; }
+
+.branch .checkList { margin-bottom: 28px; }
+
 /* ─── Dashboard Preview ─── */
 .heroVisual {
   position: relative;
@@ -933,6 +1118,7 @@ a.contactCard:hover {
    açılan sayfa; ızgaralar sabit sütun sayısıyla bırakılamaz. */
 @media (max-width: 1040px) {
   .featureGrid { grid-template-columns: repeat(2, 1fr); }
+  .productGrid { grid-template-columns: 1fr; }
   .rolesGrid { grid-template-columns: 1fr; }
   .contactGrid { grid-template-columns: 1fr; }
   .signupGrid { grid-template-columns: 1fr; gap: 32px; }
@@ -941,6 +1127,10 @@ a.contactCard:hover {
 
 @media (max-width: 900px) {
   .heroInner { grid-template-columns: 1fr; gap: 48px; }
+  /* Tek sütuna inince LGS dalındaki önizleme metinden ÖNCE geliyor (DOM'da
+     ilk o var). Metin önce okunsun diye sırası çevriliyor. */
+  .branch .heroInner { display: flex; flex-direction: column-reverse; }
+  .branch { padding: 56px 0; }
   .steps { flex-direction: column; gap: 28px; }
   .stepConnector { display: none; }
   .step { padding: 0 !important; }
@@ -956,6 +1146,8 @@ a.contactCard:hover {
   .signupRow { grid-template-columns: 1fr; }
   .signupCard { padding: 24px 20px; }
   .hero { padding: 56px 0 48px; }
+  .heroPick { padding-left: 20px; padding-right: 20px; }
+  .productCard { padding: 22px; }
   .features, .howItWorks, .roles, .signup, .faq, .contact { padding: 56px 0; }
   .navLink { display: none; }
   .footerTop { flex-direction: column; align-items: flex-start; gap: 14px; }
