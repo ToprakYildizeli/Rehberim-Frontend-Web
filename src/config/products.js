@@ -4,18 +4,17 @@
  *  `.env*` dosyalarını derlemeye dahil etmiyor** ve panelinde `VITE_` önekli
  *  değişkeni kaydettirmiyor. Adres bu yüzden kodda duruyor.
  *
- *  Üretim adresi BİLEREK boş. LGS tarafı henüz hiçbir yere dağıtılmadı
- *  (yol haritası Faz 8); adres boşken karşılama sayfasındaki LGS kartı
- *  bağlantısız, "Yakında" rozetiyle çıkıyor. Böylece bu sayfa canlıya
- *  gittiğinde ziyaretçiye kırık bir bağlantı sunulmuyor — LGS yayına
- *  girince tek satır burada değişir.
+ *  LGS 14 Ekim 2026'da yayına girdi; adres o gün yazıldı. Daha önce bilerek
+ *  boştu ve karşılama sayfasındaki LGS kartı bağlantısız, "Yakında"
+ *  rozetiyle çıkıyordu (`LGS_READY` bu değerin dolu olmasına bakıyor) —
+ *  ziyaretçiye kırık bağlantı sunulmasın diye.
  *
  *  Yerelde `localhost`, `127.0.0.1` DEĞİL: LGS'nin Vite sunucusu yalnız
  *  `localhost`'a bağlanıyor, `127.0.0.1:5183` bağlantı reddediyor
  *  (8 Ekim 2026'da ölçüldü).
  */
 const LOCAL_LGS = 'http://localhost:5183';
-const PRODUCTION_LGS = '';
+const PRODUCTION_LGS = 'https://lgs.rehberim.xyz';
 
 const isLocal = typeof location !== 'undefined'
   && ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
