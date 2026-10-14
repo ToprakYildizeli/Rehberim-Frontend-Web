@@ -73,6 +73,15 @@
 
 .navCta:hover { background: var(--accent-hover); }
 
+/* `navCta` ve hero'daki birincil düğme artık `<button>`: kayıt formu YKS
+   dalının içinde olduğu için önce ürünü değiştirip sonra kaydırıyorlar. */
+.navCta,
+.btnPrimary {
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
 /* ─── Hero ─── */
 .hero {
   background: var(--hero-gradient);
@@ -322,12 +331,19 @@
   margin-top: auto;
 }
 
+/* 14 Ekim 2026'dan beri `<button>` (çapa değil): ürün sekmesini değiştiriyor,
+   sayfa içinde bir yere kaydırmıyor. Tarayıcı varsayılanları sıfırlanıyor. */
 .productMore {
   font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text-secondary);
   text-decoration: none;
   transition: color 0.15s;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .productMore:hover { color: var(--accent); }
@@ -864,6 +880,60 @@
 }
 
 .navSection:hover { color: var(--text); background: var(--bg-alt); }
+
+/* Menüdeki YKS/LGS de artık düğme — seçili ürünü değiştiriyor. */
+.navSection {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.navSectionActive { color: var(--accent); background: var(--accent-subtle); }
+
+/* ─── Ürün sekmesi ───
+   İki ürün alt alta akmak yerine buradan seçiliyor. Segment görünümü:
+   dış kapsayıcı çerçeveyi ve zemini taşıyor, seçili düğme yüzeye çıkıyor. */
+.switchBar {
+  display: flex;
+  justify-content: center;
+  padding: 28px 20px 0;
+}
+
+.switch {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.switchBtn {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 9px;
+  background: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--fs-md);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.switchBtn:hover { color: var(--text); }
+
+.switchBtnActive {
+  background: var(--bg-card);
+  color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+@media (max-width: 480px) {
+  .switchBtn { padding: 10px 14px; font-size: var(--fs-sm); }
+}
 
 /* ─── Görsel yer tutucu (ekran görüntüleri sonra gelecek) ─── */
 .mediaRow {

@@ -212,7 +212,7 @@ function DershanePreview() {
  * aynı sayfadaki bölüm. `soon` verilirse kart bağlantısız çıkar — LGS daha
  * dağıtılmadığı için gereken durum.
  */
-function ProductCard({ tag, title, desc, items, accent, anchor, action, soon }) {
+function ProductCard({ tag, title, desc, items, accent, onMore, action, soon }) {
   return (
     <div className={styles.productCard} style={{ '--card-accent': accent }}>
       <div className={styles.productHead}>
@@ -226,7 +226,9 @@ function ProductCard({ tag, title, desc, items, accent, anchor, action, soon }) 
       </ul>
       <div className={styles.productCta}>
         {action}
-        <a href={anchor} className={styles.productMore}>Ayrıntılar</a>
+        <button type="button" onClick={onMore} className={styles.productMore}>
+          Ayrıntılar
+        </button>
       </div>
     </div>
   );
@@ -494,6 +496,32 @@ const ROLES = [
 ];
 
 export default function Welcome() {
+  /* İki ürün SEKMEYLE ayrılıyor, alt alta değil (kullanıcı kararı,
+     14 Ekim 2026). Önceden YKS dalı + özellikler + nasıl çalışır + roller +
+     kayıt, ardından LGS dalı arka arkaya akıyordu: ziyaretçi kendi ürünüyle
+     ilgisi olmayan beş bölümü geçmeden LGS'ye ulaşamıyordu. Artık yalnız
+     seçili ürünün bölümleri basılıyor; SSS ve iletişim ikisinde de ortak. */
+  const [urun, setUrun] = useState('yks');
+
+  /** Kayıt formu YKS dalının İÇİNDE duruyor. LGS seçiliyken `#kayit` çapası
+   *  basılmamış bir öğeyi gösteriyor, yani düğme hiçbir şey yapmıyordu.
+   *  Önce ürünü değiştirip sonra kaydırmak gerekiyor; kaydırma bir sonraki
+   *  boyamaya bırakılıyor, aksi hâlde hedef henüz DOM'da olmuyor. */
+  function kayitAc() {
+    setUrun('yks');
+    requestAnimationFrame(() => {
+      document.getElementById('kayit')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+
+  function urunSec(secilen) {
+    setUrun(secilen);
+    /* Seçim hero'daki karttan ya da üst menüden de yapılabiliyor; sekme
+       çubuğu ekrandan çıkmış olabilir. İçerik değişti ama ekran aynı kaldı
+       izlenimi vermesin diye çubuğa kaydırılıyor. */
+    document.getElementById('urunler')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   return (
     <div className={styles.page}>
 
@@ -502,15 +530,29 @@ export default function Welcome() {
         <div className={styles.navInner}>
           <Logo height={31} className={styles.brand} />
           <div className={styles.navLinks}>
-            <a href="#yks" className={styles.navSection}>YKS</a>
-            <a href="#lgs" className={styles.navSection}>LGS</a>
+            <button
+              type="button"
+              onClick={() => urunSec('yks')}
+              className={`${styles.navSection} ${urun === 'yks' ? styles.navSectionActive : ''}`}
+            >
+              YKS
+            </button>
+            <button
+              type="button"
+              onClick={() => urunSec('lgs')}
+              className={`${styles.navSection} ${urun === 'lgs' ? styles.navSectionActive : ''}`}
+            >
+              LGS
+            </button>
             <a href="#sss" className={styles.navSection}>SSS</a>
             <a href="#iletisim" className={styles.navSection}>İletişim</a>
           </div>
           <div className={styles.navRight}>
             <ThemeToggle />
             <Link to="/giris" className={styles.navLink}>Giriş Yap</Link>
-            <a href="#kayit" className={styles.navCta}>Ücretsiz Başlayın</a>
+            <button type="button" onClick={kayitAc} className={styles.navCta}>
+              Ücretsiz Başlayın
+            </button>
           </div>
         </div>
       </nav>
@@ -544,11 +586,11 @@ export default function Welcome() {
                 'TYT/AYT deneme netleri ve trend',
                 'Konu kazanımları, kitaplık, takvim',
               ]}
-              anchor="#yks"
+              onMore={() => urunSec('yks')}
               action={
-                <a href="#kayit" className={styles.btnPrimary}>
+                <button type="button" onClick={kayitAc} className={styles.btnPrimary}>
                   Ücretsiz Başlayın <ArrowIcon />
-                </a>
+                </button>
               }
             />
             <ProductCard
@@ -561,7 +603,7 @@ export default function Welcome() {
                 'Deneme sonuçları, karne PDF içe aktarma',
                 'Ders programı ve veli toplantısı',
               ]}
-              anchor="#lgs"
+              onMore={() => urunSec('lgs')}
               soon={!LGS_READY}
               action={LGS_READY ? (
                 <a href={`${LGS_URL}/kayit`} className={styles.btnPrimary}>
@@ -577,6 +619,38 @@ export default function Welcome() {
         </div>
       </section>
 
+      {/* ── Ürün sekmesi ──
+           Seçilen ürünün bölümleri aşağıda basılıyor; çubuk yapışkan değil,
+           sayfa başlığının altında duruyor. */}
+      <div className={styles.switchBar} id="urunler">
+        <div
+          className={styles.switch}
+          role="tablist"
+          aria-label="Ürün seçimi"
+        >
+          <button
+            type="button"
+            role="tab"
+            aria-selected={urun === 'yks'}
+            onClick={() => setUrun('yks')}
+            className={`${styles.switchBtn} ${urun === 'yks' ? styles.switchBtnActive : ''}`}
+          >
+            YKS · Lise
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={urun === 'lgs'}
+            onClick={() => setUrun('lgs')}
+            className={`${styles.switchBtn} ${urun === 'lgs' ? styles.switchBtnActive : ''}`}
+          >
+            LGS · Ortaokul
+          </button>
+        </div>
+      </div>
+
+      {urun === 'yks' && (
+      <>
       {/* ── YKS dalı ── */}
       <section className={styles.branch} id="yks">
         <div className={styles.heroInner}>
@@ -761,7 +835,11 @@ export default function Welcome() {
           </div>
         </div>
       </section>
+      </>
+      )}
 
+      {urun === 'lgs' && (
+      <>
       {/* ── LGS dalı ──
            Dershane ürünü AYRI bir uygulama ve ayrı bir backend; burada yalnız
            anlatılıyor ve bağlantı veriliyor. Rol modeli YKS'den farklı:
@@ -807,7 +885,10 @@ export default function Welcome() {
         </div>
       </section>
 
-      {/* ── SSS ── */}
+      </>
+      )}
+
+      {/* ── SSS — iki üründe de ortak ── */}
       <section className={styles.faq} id="sss">
         <div className={styles.sectionInner}>
           <div className={styles.sectionTag}>SSS</div>
