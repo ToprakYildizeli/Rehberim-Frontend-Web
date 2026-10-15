@@ -18,7 +18,13 @@ import styles from './Welcome.module.css';
    (ortaokul/LGS — dershane paneli). Kayıt formu YKS dalında kalıyor; LGS'nin
    kaydı kendi uygulamasında. LGS paneli AYRI bir uygulama ve ayrı bir
    backend — buradan yalnız bağlantı veriliyor, adresi `config/products.js`
-   belirliyor. */
+   belirliyor.
+
+   LGS bağlantıları YENİ SEKMEDE açılıyor (15 Ekim 2026): ayrı bir uygulama ve
+   ayrı bir adres olduğu için aynı sekmede gidildiğinde tanıtım sayfası
+   kapanıyor, geri tuşu da kullanıcıyı LGS'nin içine değil buraya geri
+   atıyordu. `rel="noopener"` zorunlu: hedef sekme `window.opener` ile bu
+   sayfayı yönlendirebilir. */
 
 function ArrowIcon() {
   return (
@@ -587,7 +593,13 @@ export default function Welcome() {
                       <span>YKS · lise, bireysel öğrenci takibi</span>
                     </Link>
                     {LGS_READY ? (
-                      <a href={`${LGS_URL}/giris`} role="menuitem" className={styles.loginOption}>
+                      <a
+                        href={`${LGS_URL}/giris`}
+                        role="menuitem"
+                        className={styles.loginOption}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
                         <strong>Dershane Paneli</strong>
                         <span>LGS · ortaokul, sınıf takibi</span>
                       </a>
@@ -657,7 +669,12 @@ export default function Welcome() {
               onMore={() => urunSec('lgs')}
               soon={!LGS_READY}
               action={LGS_READY ? (
-                <a href={`${LGS_URL}/kayit`} className={styles.btnPrimary}>
+                <a
+                  href={`${LGS_URL}/kayit`}
+                  className={styles.btnPrimary}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   Ücretsiz Başlayın <ArrowIcon />
                 </a>
               ) : (
@@ -928,10 +945,22 @@ export default function Welcome() {
             <div className={styles.heroCta}>
               {LGS_READY ? (
                 <>
-                  <a href={`${LGS_URL}/kayit`} className={styles.btnPrimary}>
+                  <a
+                    href={`${LGS_URL}/kayit`}
+                    className={styles.btnPrimary}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
                     Öğretmen Hesabı Açın <ArrowIcon />
                   </a>
-                  <a href={`${LGS_URL}/giris`} className={styles.btnGhost}>Giriş Yap</a>
+                  <a
+                    href={`${LGS_URL}/giris`}
+                    className={styles.btnGhost}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Giriş Yap
+                  </a>
                 </>
               ) : (
                 <span className={styles.btnDisabled}>Panel yakında</span>

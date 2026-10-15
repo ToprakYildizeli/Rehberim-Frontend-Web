@@ -121,14 +121,18 @@ export default function Ayarlar() {
 
   async function handleLogout() {
     await clearSession();
-    navigate('/giris', { replace: true });
+    /* Giriş formuna değil karşılama sayfasına: çıkış yapan kullanıcı ürünün
+       dışına çıkıyor, yeniden giriş yapmak isteyip istemediği belli değil.
+       `replace` ile geçmişe yazılmıyor, geri tuşu panele döndürmüyor. */
+    navigate('/', { replace: true });
   }
 
   /** Hesap silindikten sonra: JWT durumsuz olduğu için token hâlâ elimizde
    *  duruyor; oturumu istemci temizlemek zorunda (auth-contract §5.4d). */
   async function handleAccountDeleted() {
     await clearSession();
-    navigate('/giris', { replace: true });
+    /* Hesap artık yok; giriş formu anlamsız bir son olurdu. */
+    navigate('/', { replace: true });
   }
 
   const active = tabs.find((x) => x.value === tab) ?? tabs[0];

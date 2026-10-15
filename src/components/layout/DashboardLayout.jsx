@@ -48,7 +48,10 @@ function ProfileMenu({ displayName, avatar }) {
   async function handleLogout() {
     setOpen(false);
     await clearSession();
-    navigate('/giris', { replace: true });
+    /* Giriş formuna değil karşılama sayfasına: çıkış yapan kullanıcı ürünün
+       dışına çıkıyor, yeniden giriş yapmak isteyip istemediği belli değil.
+       `replace` ile geçmişe yazılmıyor, geri tuşu panele döndürmüyor. */
+    navigate('/', { replace: true });
   }
 
   return (
