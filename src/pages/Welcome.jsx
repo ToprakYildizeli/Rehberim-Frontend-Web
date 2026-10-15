@@ -50,17 +50,18 @@ function Step({ n, title, desc }) {
   );
 }
 
-/** Ekran görüntüsü gelene kadar duran yer tutucu. `label` neyin geleceğini söyler. */
-function MediaSlot({ label, tall = false }) {
+/** Mobil uygulamanın ekran görüntüsü.
+ *
+ *  Görseller mağaza teslimatından geliyor (`belgeler/magaza/ekran-goruntuleri`),
+ *  demo hesabıyla alındı — gerçek öğrenci adı ya da verisi içermiyor. Burada
+ *  1120px'e küçültülmüş `.webp` kopyaları duruyor (`public/`), kaynaktaki
+ *  1320×2868 PNG'ler sayfa için gereğinden ağırdı. */
+function AppShot({ src, alt, caption }) {
   return (
-    <div className={`${styles.mediaSlot} ${tall ? styles.mediaSlotTall : ''}`} aria-hidden="true">
-      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <circle cx="8.5" cy="8.5" r="1.5" />
-        <path d="M21 15l-5-5L5 21" />
-      </svg>
-      <span>{label}</span>
-    </div>
+    <figure className={styles.appShot}>
+      <img src={src} alt={alt} loading="lazy" width="515" height="1120" />
+      <figcaption>{caption}</figcaption>
+    </figure>
   );
 }
 
@@ -393,23 +394,27 @@ const FAQ = [
   },
   {
     q: 'Veli de görebiliyor mu?',
-    a: `Evet, ama sınırlı ve salt-okunur. Veli; denemeleri (ders kırılımıyla),
-        onayladığınız programları ve uyum yüzdesini, konu takibini, haftalık
-        çalışma saatini ve takvimi görüyor. Kitaplık ve hedefler veliye kapalı.
-        Veliyi siz davet ediyorsunuz; davet kodu tek kullanımlık ve tek öğrenciye ait.`,
+    a: `Evet — ama veli yalnızca izler, hiçbir şeyi değiştiremez veya silemez.
+        Deneme sonuçlarını ders ders, onayladığınız haftalık programları ve
+        çocuğunun programa ne kadar uyduğunu, konu takibini, haftada kaç saat
+        çalıştığını ve görüşme takvimini görür. Kitaplık ve kişisel hedefler
+        veliye kapalıdır. Veliyi siz davet edersiniz; gönderdiğiniz kod tek
+        seferlik ve yalnız o öğrenci için geçerlidir.`,
   },
   {
     q: 'Programı öğrenci değiştirebiliyor mu?',
-    a: `Hafta açıkken evet — öğrenci görevlerini tamamlayabilir ve düzenleyebilir.
-        Hafta bitip siz programı onayladıktan sonra program mühürleniyor:
-        öğrenci artık yazamıyor, siz yazabiliyorsunuz. Onaylanmamış bir program
-        veliye hiç gösterilmiyor.`,
+    a: `Hafta devam ederken evet: öğrenci görevlerini tamamlayabilir, kendi
+        ekleme ve düzenlemelerini yapabilir. Haftayı onayladığınız anda o hafta
+        kapanır — öğrenci artık değiştiremez, yalnız siz düzenleyebilirsiniz.
+        Siz onaylamadan hiçbir program veliye görünmez.`,
   },
   {
-    q: 'Program uyumu nasıl hesaplanıyor?',
-    a: `Görev sayısı değil süre üzerinden: tamamlanan dakika / planlanan dakika.
-        Okul, antrenman gibi dış meşguliyetler paydaya girmiyor; denemeler
-        giriyor. Saati olmayan programlarda görev sayısına düşülüyor.`,
+    q: '"Programa uyum" yüzdesi ne anlama geliyor?',
+    a: `Öğrencinin o hafta planladığınız çalışmanın ne kadarını yaptığını
+        gösterir: tamamladığı dakikaların, planladığınız dakikalara oranı.
+        Okul ve antrenman gibi çalışma dışı meşguliyetler hesaba katılmaz,
+        denemeler katılır. Süre girilmemiş bir programda yüzde, tamamlanan
+        görev sayısından hesaplanır.`,
   },
   {
     q: 'Ücretli mi?',
@@ -418,12 +423,14 @@ const FAQ = [
   },
   {
     q: 'LGS · Dershane tarafı YKS\'den nasıl farklı?',
-    a: `Çalışma birimi öğrenci değil sınıf. Öğretmen sınıflarını açıyor,
-        öğrencilerini elle ekliyor (öğrencinin hesabı yok), haftalık soru
-        hedefini sınıfa veriyor ve deneme sonuçlarını ızgaradan giriyor.
-        Veli, öğretmenin verdiği davet koduyla kendi hesabını açıp yalnızca
-        izliyor. YKS'deki program tahtası, kitaplık ve kazanım takibi LGS'de
-        yok; onların yerine sınıf bazlı ödev ve deneme analizi var.`,
+    a: `LGS tarafı tek tek öğrenciyle değil, sınıfla çalışır. Öğretmen
+        şubelerini açar, öğrencilerini kendisi ekler (öğrencinin ayrı bir
+        hesabı olmaz), haftalık soru hedefini sınıfa verir ve deneme
+        sonuçlarını tablodan tek seferde girer — dijital karne PDF'i varsa
+        sonuçlar oradan da aktarılabilir. Veli, öğretmenin verdiği kodla kendi
+        hesabını açıp çocuğunun durumunu izler. YKS'deki haftalık program
+        tahtası, kitaplık ve konu kazanımları LGS'de yoktur; yerlerine sınıf
+        bazlı ödev takibi, devamsızlık ve deneme analizi vardır.`,
   },
   {
     q: 'LGS · Nasıl hesap açıyorum?',
@@ -433,11 +440,12 @@ const FAQ = [
         kendi verinizi görüyorsunuz. Kayıt ücretsiz, kredi kartı istenmiyor.`,
   },
   {
-    q: 'Verilerim ne oluyor?',
-    a: `Öğrenci verisi öğrenciye ait. Hesabınızı silerseniz öğrencileriniz
-        silinmiyor, yalnızca sizinle bağları kopuyor; programları, denemeleri ve
-        kitaplıkları kendilerinde kalıyor. Silmeden önce neyin gideceğinin
-        özetini gösteriyoruz.`,
+    q: 'Verilerim ne oluyor, hesabımı silersem ne olur?',
+    a: `Öğrencinin verisi öğrenciye aittir. Hesabınızı kapatırsanız
+        öğrencileriniz silinmez; yalnızca sizinle bağlantıları kesilir,
+        programları ve deneme geçmişi kendilerinde kalır. Silme işleminden
+        önce neyin kalıcı olarak gideceğini sayısıyla gösteririz. Hangi verinin
+        neden tutulduğu Kişisel Verilerin Korunması sayfasında yazıyor.`,
   },
 ];
 
@@ -490,7 +498,7 @@ const ROLES = [
       'Onaylanmış haftalık programlar ve uyum yüzdesi',
       'Haftalık çalışma saati',
       'Konu takip listesi ve görüşme takvimi',
-      'Salt-okunur — hiçbir şeyi değiştiremez',
+      'Yalnızca izler; hiçbir şeyi değiştiremez',
     ],
   },
 ];
@@ -805,8 +813,16 @@ export default function Welcome() {
           </div>
 
           <div className={styles.mediaRow}>
-            <MediaSlot label="Öğrenci uygulaması ekran görüntüsü" />
-            <MediaSlot label="Veli uygulaması ekran görüntüsü" />
+            <AppShot
+              src="/app-ogrenci.webp"
+              alt="Öğrenci uygulamasında günlük program ekranı: tamamlanan görevler listesi"
+              caption="Öğrenci uygulaması — günün görevleri"
+            />
+            <AppShot
+              src="/app-veli.webp"
+              alt="Veli uygulamasında özet ekranı: programa uyum yüzdesi, çalışma süresi ve son deneme neti"
+              caption="Veli uygulaması — haftanın özeti"
+            />
           </div>
         </div>
       </section>
