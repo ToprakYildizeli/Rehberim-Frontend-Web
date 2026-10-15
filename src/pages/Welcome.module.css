@@ -60,6 +60,71 @@
   background: var(--bg-alt);
 }
 
+/* `navLink` artık menü açan bir `<button>`; tarayıcı varsayılanları sıfırlanıyor. */
+.navLink {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* ─── Giriş menüsü ───
+   İki ürünün paneli ayrı adreste; hangisine girileceği soruluyor. */
+.loginWrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.loginBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+}
+
+.loginMenu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+}
+
+.loginMenuHead {
+  padding: 8px 12px 6px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.loginOption {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  color: var(--text);
+  transition: background 0.15s;
+}
+
+.loginOption strong { font-size: var(--fs-md); font-weight: 600; }
+.loginOption span { font-size: var(--fs-sm); color: var(--text-secondary); }
+
+.loginOption:hover { background: var(--bg-alt); }
+
+/* LGS yayına girmeden önceki hâl: tıklanamaz. */
+.loginOptionOff { opacity: 0.55; cursor: default; }
+.loginOptionOff:hover { background: none; }
+
 .navCta {
   font-size: var(--fs-md);
   font-weight: 600;

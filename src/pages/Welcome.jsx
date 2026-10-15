@@ -510,6 +510,10 @@ export default function Welcome() {
      ilgisi olmayan beş bölümü geçmeden LGS'ye ulaşamıyordu. Artık yalnız
      seçili ürünün bölümleri basılıyor; SSS ve iletişim ikisinde de ortak. */
   const [urun, setUrun] = useState('yks');
+  /* "Giriş Yap" doğrudan YKS paneline gidiyordu; iki ürün olduğundan beri bu
+     bir varsayım. Menü hangisine girileceğini soruyor — LGS ayrı bir
+     uygulama ve ayrı bir adres, oraya yönlendirme site dışına çıkıyor. */
+  const [girisAcik, setGirisAcik] = useState(false);
 
   /** Kayıt formu YKS dalının İÇİNDE duruyor. LGS seçiliyken `#kayit` çapası
    *  basılmamış bir öğeyi gösteriyor, yani düğme hiçbir şey yapmıyordu.
@@ -557,7 +561,46 @@ export default function Welcome() {
           </div>
           <div className={styles.navRight}>
             <ThemeToggle />
-            <Link to="/giris" className={styles.navLink}>Giriş Yap</Link>
+            <div className={styles.loginWrap}>
+              <button
+                type="button"
+                className={styles.navLink}
+                onClick={() => setGirisAcik((a) => !a)}
+                aria-haspopup="menu"
+                aria-expanded={girisAcik}
+              >
+                Giriş Yap
+              </button>
+              {girisAcik && (
+                <>
+                  {/* Dışarı tıklayınca kapansın. Görünmez katman, menünün
+                      altında ama sayfanın üstünde duruyor. */}
+                  <div
+                    className={styles.loginBackdrop}
+                    onClick={() => setGirisAcik(false)}
+                    aria-hidden="true"
+                  />
+                  <div className={styles.loginMenu} role="menu">
+                    <span className={styles.loginMenuHead}>Hangi panele?</span>
+                    <Link to="/giris" role="menuitem" className={styles.loginOption}>
+                      <strong>Rehber Paneli</strong>
+                      <span>YKS · lise, bireysel öğrenci takibi</span>
+                    </Link>
+                    {LGS_READY ? (
+                      <a href={`${LGS_URL}/giris`} role="menuitem" className={styles.loginOption}>
+                        <strong>Dershane Paneli</strong>
+                        <span>LGS · ortaokul, sınıf takibi</span>
+                      </a>
+                    ) : (
+                      <span className={`${styles.loginOption} ${styles.loginOptionOff}`}>
+                        <strong>Dershane Paneli</strong>
+                        <span>LGS · yakında</span>
+                      </span>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
             <button type="button" onClick={kayitAc} className={styles.navCta}>
               Ücretsiz Başlayın
             </button>
