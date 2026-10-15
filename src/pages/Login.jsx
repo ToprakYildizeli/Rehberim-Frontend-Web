@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from '../components/ui';
 import VerifyEmailStep from '../components/VerifyEmailStep';
 import { Logo } from '../components/ui/Logo';
+import { ArrowLeft } from 'lucide-react';
 import styles from './Auth.module.css';
 
 /* Sunucu hatayı serializer üzerinden yükseltirse DRF her alanı listeye sarıyor
@@ -71,6 +72,9 @@ export default function Login() {
 
   return (
     <div className={styles.page}>
+      <Link to="/" className={styles.backFloating}>
+        <ArrowLeft size={16} /> Karşılama
+      </Link>
       <ThemeToggle floating />
 
       <div className={styles.card}>

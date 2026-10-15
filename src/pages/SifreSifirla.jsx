@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { confirmPasswordReset } from '../api/auth';
 import { ThemeToggle } from '../components/ui';
 import { Logo } from '../components/ui/Logo';
+import { ArrowLeft } from 'lucide-react';
 import styles from './Auth.module.css';
 
 /** E-postadaki bağlantının açtığı sayfa: /sifre-sifirla/:uid/:token
@@ -58,6 +59,9 @@ export default function SifreSifirla() {
 
   return (
     <div className={styles.page}>
+      <Link to="/" className={styles.backFloating}>
+        <ArrowLeft size={16} /> Karşılama
+      </Link>
       <ThemeToggle floating />
 
       <div className={styles.card}>

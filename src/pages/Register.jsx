@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button, Modal, Spinner, ThemeToggle } from '../components/ui';
 import LegalText from '../components/LegalText';
 import { Logo } from '../components/ui/Logo';
+import { ArrowLeft } from 'lucide-react';
 import styles from './Auth.module.css';
 
 const INITIAL = {
@@ -105,6 +106,9 @@ export default function Register() {
 
   return (
     <div className={styles.page}>
+      <Link to="/" className={styles.backFloating}>
+        <ArrowLeft size={16} /> Karşılama
+      </Link>
       <ThemeToggle floating />
 
       <div className={styles.card}>

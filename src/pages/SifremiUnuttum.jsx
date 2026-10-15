@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { requestPasswordReset } from '../api/auth';
 import { ThemeToggle } from '../components/ui';
 import { Logo } from '../components/ui/Logo';
+import { ArrowLeft } from 'lucide-react';
 import styles from './Auth.module.css';
 
 export default function SifremiUnuttum() {
@@ -32,6 +33,9 @@ export default function SifremiUnuttum() {
 
   return (
     <div className={styles.page}>
+      <Link to="/" className={styles.backFloating}>
+        <ArrowLeft size={16} /> Karşılama
+      </Link>
       <ThemeToggle floating />
 
       <div className={styles.card}>
