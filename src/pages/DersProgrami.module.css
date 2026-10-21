@@ -1,10 +1,16 @@
 /* `min-height: 0` zinciri: tuval → sayfa → layout. Biri atlanırsa flex öğesinin
    varsayılan `auto` min-height'ı taşmayı yukarı geçirir ve sabitleme çalışmaz. */
+/* Kaydırma kabı BURASI (tuval değil). Sayfa tuvalin görünen yüksekliğine sabit;
+   şerit + tahta tam bir ekran tuttuğu için özet çubuğu her zaman bu kabın
+   dışına taşar ve kaydırılarak görülür. Kap `overflow` vermezse özet çubuğu
+   flex tarafından min-content'e sıkıştırılıyor, içindeki üç kutu kendi
+   kutusundan taşıp tahtanın üzerine biniyordu. */
 .page {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   height: 100%;               /* tuvalin görünen yüksekliği — `.screen`'in dayanağı */
+  overflow-y: auto;
 }
 
 /* Şerit + tahta: tam olarak BİR ekran. Özet çubuğu bunun dışında kaldığı için
@@ -19,6 +25,9 @@
   flex-direction: column;
   gap: var(--space-4);
   min-height: 100%;
+  /* Sıkışmaya kapalı: `min-height: 100%` yalnız alt sınırı tutar, flex-shrink
+     serbest kalırsa negatif boş alan kardeşi olan özet çubuğuna yıkılıyor. */
+  flex: 0 0 auto;
 }
 
 /* ---------- Şerit (tek satır: mod · pencere · tahta düzeni · eylemler) ----------
@@ -639,7 +648,8 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-4);
-  margin-top: var(--space-4);
+  /* Doğal boyunda kalır; aradaki boşluk `.page`'in kendi gap'inden geliyor. */
+  flex: 0 0 auto;
 }
 .sumCol {
   background: var(--bg-card);
