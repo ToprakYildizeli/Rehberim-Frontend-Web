@@ -15,7 +15,7 @@ import {
   getComplianceHistory, getProgramCompliance, getStudentPrograms, setProgramApproval,
   setTaskCompletion, nextCompletion, COMPLETION_LABEL, windowDays,
 } from '../api/programs';
-import { listSubjects, listTopics, blockLabel } from '../api/catalog';
+import { listSubjects, listTopics, blockLabel, flattenTopics } from '../api/catalog';
 import { getTopicLevels, setTopicLevel } from '../api/topicProgress';
 import { getStudentAchievements } from '../api/achievements';
 import s from './OgrenciDetay.module.css';
@@ -1149,7 +1149,17 @@ const LEVEL_LABELS = { 1: 'Çok zayıf', 2: 'Zayıf', 3: 'Orta', 4: 'İyi', 5: '
 const colorForAvg = (avg) => LEVEL_COLORS[Math.min(5, Math.max(1, Math.round(avg)))];
 
 /** Bir dersin konuları + seviyelerinden özet metrikler üretir. */
-function subjectStats(topics, levels) {
+/** Seviyelenebilir konular = YAPRAKLAR: çocuğu olmayan şemsiyeler + alt konular.
+ *
+ *  Çocuğu olan şemsiye sayıma girmez; girerse aynı şey iki kez sayılır
+ *  ("Problemler" + dokuz alt konusu on birim olurdu) ve ders ortalaması
+ *  şemsiyenin seviyesiyle sulanırdı. */
+function levelableTopics(topics = []) {
+  return topics.filter((t) => t.depth === 1 || !(t.children || []).length);
+}
+
+function subjectStats(flatTopics, levels) {
+  const topics = levelableTopics(flatTopics);
   const n = topics.length;
   if (!n) return { n: 0, avg: 0, done: 0, weak: 0, dist: {}, lowest: null };
   const dist = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
@@ -1213,7 +1223,10 @@ function KonuTakibiTab({ student }) {
       const cats = student.isExam ? ['tyt', 'ayt'] : ['okul'];
       const avail = all.filter((x) => cats.includes(x.category));
       return Promise.all([
-        Promise.all(avail.map((sub) => listTopics(sub.id, params).then((tp) => [sub.id, tp]))),
+        /* Katalog iki düzeyli; ekran düz liste istiyor. Şemsiye başlık
+           satırı oluyor, seviye alt konularda tutuluyor. */
+        Promise.all(avail.map((sub) => listTopics(sub.id, params)
+          .then((tp) => [sub.id, flattenTopics(tp)]))),
         getTopicLevels(student.id),
         Promise.resolve(avail),
       ]);
@@ -1388,9 +1401,18 @@ function KonuDetay({ entry, topics, levels, saving, onChange, onBack }) {
         <Card className={s.konuCard}>
           <ul className={s.konuList}>
             {topics.map((t) => {
+              /* Çocuğu olan şemsiye seviyelenmiyor: seviye alt konularda.
+                 Başlık satırı olarak duruyor ki kırılım okunabilsin. */
+              if (t.depth === 0 && (t.children || []).length) {
+                return (
+                  <li key={t.id} className={s.konuGroup}>
+                    <span className={s.konuGroupName}>{t.name}</span>
+                  </li>
+                );
+              }
               const lvl = levels[t.id] ?? 1;
               return (
-                <li key={t.id} className={s.konuRow}>
+                <li key={t.id} className={`${s.konuRow} ${t.depth ? s.konuChild : ''}`}>
                   <span className={s.konuName}>{t.name}</span>
                   <div
                     className={s.dots}

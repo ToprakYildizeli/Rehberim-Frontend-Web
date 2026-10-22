@@ -125,14 +125,55 @@ export async function deletePublisher(id) {
 
 /** GET /api/topics/?subject=<id>[&grade=&curriculum=] → dersin konu kataloğu.
  *  Ders Programı yalnızca `subjectId` verir ({ id, name } yeterli). Konu Takibi
- *  ayrıca grade/curriculum geçip sıralı tam objeyi kullanır. */
+ *  ayrıca grade/curriculum geçip sıralı tam objeyi kullanır.
+ *
+ *  **Katalog iki düzeyli** (topics-contract v1.3): uç yalnız üst düzey konuları
+ *  satır olarak döndürür, alt konular her satırın `children` alanında gelir.
+ *  Burada ağaç olduğu gibi korunuyor; listeye çevirmek isteyen
+ *  `flattenTopics` kullanır. */
 export async function listTopics(subjectId, { grade, curriculum } = {}) {
   if (!subjectId) return [];
   const params = { subject: subjectId };
   if (grade) params.grade = grade;
   if (curriculum) params.curriculum = curriculum;
   const { data } = await api.get('/topics/', { params });
-  return data.map((x) => ({ id: x.id, name: x.name, grade: x.grade, order: x.order }));
+  return data.map((x) => ({
+    id: x.id,
+    name: x.name,
+    grade: x.grade,
+    order: x.order,
+    children: (x.children || []).map((c) => ({
+      id: c.id,
+      name: c.name,
+      order: c.order,
+      /* Alt konu dersi/sınıfı taşımıyor (uç göndermiyor, gerekmiyor):
+         sunucu alt konuyu üstüyle aynı ders/sınıf/müfredatta olmaya
+         zorluyor, yani şemsiyeninkiyle aynı. */
+      grade: x.grade,
+    })),
+  }));
+}
+
+/** İki düzeyli kataloğu tek listeye indirir; `depth` 0 = şemsiye, 1 = alt konu.
+ *
+ *  Şemsiye listede KALIR — rehber "bütün problemler" diyebilmeli; alt konu da
+ *  ayrı seçilebilmeli. Rehberin isteği tam olarak buydu ("hem problemler olsun
+ *  hem ayrı olsun"), o yüzden `<optgroup>` kullanılmıyor: optgroup etiketi
+ *  seçilemez ve şemsiye seçeneği kaybolurdu. */
+export function flattenTopics(topics = []) {
+  const out = [];
+  for (const t of topics) {
+    out.push({ ...t, depth: 0 });
+    for (const c of t.children || []) {
+      out.push({ ...c, depth: 1, parentId: t.id, parentName: t.name });
+    }
+  }
+  return out;
+}
+
+/** Düz listedeki bir konunun açılır menüde görünecek etiketi (girintili). */
+export function topicOptionLabel(t) {
+  return t.depth ? `\u00A0\u00A0\u00A0${t.name}` : t.name;
 }
 
 /** GET /api/block-durations/ → rehberin süre hafızası.

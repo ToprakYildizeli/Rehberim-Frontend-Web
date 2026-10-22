@@ -23,6 +23,7 @@ import {
 } from '../api/templates';
 import {
   listSubjects, listFieldSubjects, listTaskTypes, listTopics, listBooks,
+  flattenTopics, topicOptionLabel,
   loadDurationMemory, durationKey,
   BLOCK_KINDS, EXAM_SCOPES, blockLabel, blockColor,
 } from '../api/catalog';
@@ -1388,8 +1389,10 @@ export default function DersProgrami() {
                             hazir: 'Konu seçin (opsiyonel)',
                           }[topicState]}
                             </option>
-                            {topics.map((t) => (
-                              <option value={t.name} key={t.id}>{t.name}</option>
+                            {/* İki düzeyli katalog: şemsiye de alt konu da
+                                seçilebilir, alt konu girintili görünür. */}
+                            {flattenTopics(topics).map((t) => (
+                              <option value={t.name} key={t.id}>{topicOptionLabel(t)}</option>
                             ))}
                           </Select>
                         </Field>
@@ -2304,10 +2307,12 @@ function CellEditor({ items, dayText, taskTypes, library, onSave, onRemove, onCl
                   <Field label="Konu">
                     <Select value={e.topic} onChange={(ev) => set(b.id, { topic: ev.target.value })}>
                       <option value="">Konu yok</option>
-                      {e.topic && !topics.some((t) => t.name === e.topic) && (
+                      {e.topic && !flattenTopics(topics).some((t) => t.name === e.topic) && (
                         <option value={e.topic}>{e.topic}</option>
                       )}
-                      {topics.map((t) => <option value={t.name} key={t.id}>{t.name}</option>)}
+                      {flattenTopics(topics).map((t) => (
+                        <option value={t.name} key={t.id}>{topicOptionLabel(t)}</option>
+                      ))}
                     </Select>
                   </Field>
                   {(books.length > 0 || e.book) && (

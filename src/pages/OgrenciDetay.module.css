@@ -532,6 +532,20 @@
 .konuRow:last-child { border-bottom: none; }
 .konuName { font-size: var(--fs-md); color: var(--text); min-width: 0; }
 
+/* İki düzeyli katalog: şemsiye konu başlık satırı (seviyesi yok — seviye
+   alt konularda tutuluyor), alt konu satırları girintili. */
+.konuGroup {
+  padding: var(--space-3) var(--space-5) var(--space-2);
+  border-bottom: 1px solid var(--border);
+}
+.konuGroupName {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+}
+.konuChild { padding-left: var(--space-7); }
+
 .dots { display: flex; gap: 6px; flex-shrink: 0; transition: opacity 0.15s; }
 .dots[data-saving] { opacity: 0.5; pointer-events: none; }
 .dot {
