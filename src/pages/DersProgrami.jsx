@@ -948,8 +948,9 @@ export default function DersProgrami() {
   // Önizleme ve "güne ekle"nin kullandığı blok alanları — moda göre üretilir.
   const draftFields = useMemo(() => {
     if (isBookMode) return activeBook ? bookBlockFields(activeBook) : null;
-    return draftBlockFields(draft, subjectMap, taskTypeMap);
-  }, [isBookMode, activeBook, bookBlockFields, draft, subjectMap, taskTypeMap]);
+    return draftBlockFields(draft, subjectMap, taskTypeMap, examTypes);
+  }, [isBookMode, activeBook, bookBlockFields, draft, subjectMap, taskTypeMap,
+    examTypes]);
 
   // Ders satırlı görünümün satırları. Kullanıcının yönettiği bir liste: varsayılanı
   // öğrencinin alanına düşen dersler (backend'den), üstüne ekleyip çıkarabiliyor.
@@ -1999,7 +2000,11 @@ function AssignModal({
               <DateField
                 value={date}
                 onChange={setDate}
-                isDisabled={studentId ? isBlocked : undefined}
+                /* `isDisabled` YOK: aralıklar yalnız bilgi amaçlı, hiçbir
+                   tarihi kapatmıyorlar (bkz. `dateBlocked = false`). Burada
+                   1 Ekim'den beri tanımsız bir `isBlocked` okunuyordu —
+                   tarih kapatma kaldırılırken bu çağrı unutulmuş; öğrenci
+                   seçiliyken pencere ReferenceError ile çöküyordu. */
                 disabledHint={loadingRanges
                   ? 'Öğrencinin programları yükleniyor…'
                   : ranges.length
@@ -2137,7 +2142,7 @@ function SummaryBar({ current, history, subjectMap, inStudent }) {
 
 /** Draft alanlarından bir bloğun denormalize gösterim alanlarını üretir.
  *  Blok türüne göre şekil değişir: dış blokta yalnız ad, genel denemede kapsam. */
-function draftBlockFields(draft, subjectMap, taskTypeMap) {
+function draftBlockFields(draft, subjectMap, taskTypeMap, examTypes = []) {
   if (draft.kind === 'external') {
     const title = draft.externalTitle.trim();
     if (!title) return null;                       // dış blokta ad zorunlu
