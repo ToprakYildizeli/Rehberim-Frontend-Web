@@ -171,10 +171,6 @@ export function flattenTopics(topics = []) {
   return out;
 }
 
-/** Düz listedeki bir konunun açılır menüde görünecek etiketi (girintili). */
-export function topicOptionLabel(t) {
-  return t.depth ? `\u00A0\u00A0\u00A0${t.name}` : t.name;
-}
 
 /** GET /api/block-durations/ → rehberin süre hafızası.
  *

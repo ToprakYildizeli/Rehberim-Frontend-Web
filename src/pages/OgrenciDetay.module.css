@@ -533,16 +533,26 @@
 .konuName { font-size: var(--fs-md); color: var(--text); min-width: 0; }
 
 /* İki düzeyli katalog: şemsiye konu başlık satırı (seviyesi yok — seviye
-   alt konularda tutuluyor), alt konu satırları girintili. */
+   alt konularda tutuluyor), alt konu satırları girintili.
+
+   Şemsiye **ana konu**dur, alt konularından daha görünür olmalı: daha büyük,
+   tam kontrast ve solunda bir vurgu çizgisi. İlk sürümde küçük ve soluk
+   (`--text-muted`) yazılmıştı; alt konular ondan daha baskın görünüyordu ve
+   hiyerarşi tersine okunuyordu. */
 .konuGroup {
-  padding: var(--space-3) var(--space-5) var(--space-2);
+  padding: var(--space-5) var(--space-5) var(--space-2);
   border-bottom: 1px solid var(--border);
 }
+/* Üstteki ilk başlık listenin kenarına yapışmasın diye fazladan boşluk almaz. */
+.konuGroup:first-child { padding-top: var(--space-3); }
 .konuGroupName {
-  font-size: var(--fs-sm);
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
+  display: inline-block;
+  padding-left: var(--space-3);
+  border-left: 3px solid var(--accent);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
 }
 .konuChild { padding-left: var(--space-7); }
 

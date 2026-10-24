@@ -10,6 +10,7 @@ import {
 } from '../components/ui';
 import DateField from '../components/ui/DateField';
 import StudentPicker from '../components/ui/StudentPicker';
+import TopicPicker from '../components/ui/TopicPicker';
 import { listStudents } from '../api/students';
 import { getSchedule, saveSchedule, setGeneralWindow } from '../api/schedule';
 import {
@@ -23,7 +24,6 @@ import {
 } from '../api/templates';
 import {
   listSubjects, listFieldSubjects, listTaskTypes, listTopics, listBooks,
-  flattenTopics, topicOptionLabel,
   loadDurationMemory, durationKey,
   BLOCK_KINDS, EXAM_SCOPES, blockLabel, blockColor,
 } from '../api/catalog';
@@ -1377,24 +1377,21 @@ export default function DersProgrami() {
                         </Field>
 
                         <Field label="Konu">
-                          <Select
+                          {/* İki düzeyli katalog: şemsiye konunun üzerine
+                              gelince alt konuları solda açılır. Şemsiye de
+                              seçilebilir kalır. */}
+                          <TopicPicker
+                            topics={topics}
                             value={draft.topic}
-                            onChange={(e) => setDraft((d) => ({ ...d, topic: e.target.value }))}
-                          >
-                            <option value="">
-                              {{
-                            yukleniyor: 'Konular yükleniyor…',
-                            hata: 'Konular yüklenemedi',
-                            bos: 'Bu derse konu tanımlı değil',
-                            hazir: 'Konu seçin (opsiyonel)',
-                          }[topicState]}
-                            </option>
-                            {/* İki düzeyli katalog: şemsiye de alt konu da
-                                seçilebilir, alt konu girintili görünür. */}
-                            {flattenTopics(topics).map((t) => (
-                              <option value={t.name} key={t.id}>{topicOptionLabel(t)}</option>
-                            ))}
-                          </Select>
+                            onChange={(ad) => setDraft((d) => ({ ...d, topic: ad }))}
+                            disabled={topicState !== 'hazir'}
+                            placeholder={{
+                              yukleniyor: 'Konular yükleniyor…',
+                              hata: 'Konular yüklenemedi',
+                              bos: 'Bu derse konu tanımlı değil',
+                              hazir: 'Konu seçin (opsiyonel)',
+                            }[topicState]}
+                          />
                         </Field>
                       </>
                     ) : null}
@@ -2305,15 +2302,15 @@ function CellEditor({ items, dayText, taskTypes, library, onSave, onRemove, onCl
                     </Select>
                   </Field>
                   <Field label="Konu">
-                    <Select value={e.topic} onChange={(ev) => set(b.id, { topic: ev.target.value })}>
-                      <option value="">Konu yok</option>
-                      {e.topic && !flattenTopics(topics).some((t) => t.name === e.topic) && (
-                        <option value={e.topic}>{e.topic}</option>
-                      )}
-                      {flattenTopics(topics).map((t) => (
-                        <option value={t.name} key={t.id}>{topicOptionLabel(t)}</option>
-                      ))}
-                    </Select>
+                    {/* Katalogda olmayan bir konu (eski serbest metin) ayrı
+                        seçenek gerektirmiyor: tetikleyici mevcut değeri her
+                        hâlükârda yazıyor. */}
+                    <TopicPicker
+                      topics={topics}
+                      value={e.topic}
+                      onChange={(ad) => set(b.id, { topic: ad })}
+                      placeholder="Konu yok"
+                    />
                   </Field>
                   {(books.length > 0 || e.book) && (
                     <Field label="Kitap">
