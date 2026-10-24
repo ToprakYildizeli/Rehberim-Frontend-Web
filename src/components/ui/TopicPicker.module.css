@@ -115,13 +115,12 @@
 }
 
 /* Alt menü `fixed`: panelin kaydırılabilir listesi içinde `absolute` olsaydı
-   `overflow-y: auto` onu kırpardı. Konum satırın kendi dikdörtgeninden
-   hesaplanıyor. */
+   `overflow-y: auto` onu kırpardı. Dikeyde satıra, yatayda PANELE hizalanıyor —
+   iki liste bitişik dursun diye. */
 .submenu {
   position: fixed;
   z-index: 60;
-  min-width: 200px;
-  max-width: 280px;
+  /* Genişlik JS'te (`SUBMENU_W`): konum hesabı ona dayanıyor. */
   max-height: 280px;
   overflow-y: auto;
   margin: 0;
@@ -131,6 +130,16 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.18));
+}
+
+/* Panele bakan köşeler düz: bitişik duran iki liste tek yüzey gibi okunsun. */
+.submenu[data-side='sol'] {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.submenu[data-side='sag'] {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
 
 .empty {

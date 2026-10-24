@@ -16,8 +16,9 @@ import s from './TopicPicker.module.css';
  * Seçilen değer konunun **adı**dır, id'si değil: `Task.title` düz metin.
  */
 
-/** Alt menünün satıra göre konumu; panelin kaydırmasıyla kopmasın diye
- *  satırın canlı dikdörtgeninden hesaplanır. */
+/** Alt menünün genişliği. Konum hesabı buna dayandığı için genişlik CSS'te
+ *  DEĞİL burada: ikisi ayrışırsa sola açılan menü panele bitişik durmaz,
+ *  aradaki fark kadar boşluk ya da örtüşme oluşur. */
 const SUBMENU_W = 220;
 
 export default function TopicPicker({
@@ -38,6 +39,7 @@ export default function TopicPicker({
   const [filter, setFilter] = useState('');
   const [submenu, setSubmenu] = useState(null);  // { id, top, left }
   const wrapRef = useRef(null);
+  const panelRef = useRef(null);
   const listRef = useRef(null);
   const kapatmaZamani = useRef(null);
 
@@ -102,13 +104,20 @@ export default function TopicPicker({
   function altMenuyuAc(satirEl, konuId) {
     if (!satirEl) return;
     const r = satirEl.getBoundingClientRect();
+    /* Yatayda SATIRA değil PANELE göre hizalanıyor: iki liste bitişik dursun,
+       aralarında panelin iç boşluğu kadar bir açıklık kalmasın. 1px örtüşme
+       iki kenarlığı tek çizgide birleştiriyor. */
+    const panel = panelRef.current?.getBoundingClientRect();
+    const sol = (panel?.left ?? r.left) - SUBMENU_W + 1;
+    const sag = (panel?.right ?? r.right) - 1;
     // Varsayılan SOL; solda yer yoksa sağa düşer.
-    const solda = r.left - SUBMENU_W - 6;
+    const sagda = sol < 8;
     setSubmenu({
       id: konuId,
+      // Dikeyde satıra hizalı kalıyor ki hangi şemsiyeye ait olduğu okunsun.
       top: Math.max(8, Math.min(r.top, window.innerHeight - 290)),
-      left: solda >= 8 ? solda : r.right + 6,
-      sagda: solda < 8,
+      left: sagda ? sag : sol,
+      sagda,
     });
   }
 
@@ -140,7 +149,7 @@ export default function TopicPicker({
       </button>
 
       {open && (
-        <div className={s.panel} onKeyDown={tusa}>
+        <div className={s.panel} ref={panelRef} onKeyDown={tusa}>
           <div className={s.search}>
             {/* Yerleşik `<select>`in yazarak bulma davranışı kayboluyordu;
                 bir dersin kataloğu kolayca elli satırı geçiyor. */}
@@ -231,7 +240,9 @@ export default function TopicPicker({
       {open && submenu && acikKonu && (
         <ul
           className={s.submenu}
-          style={{ top: submenu.top, left: submenu.left }}
+          /* Panele bakan köşeler düzleşsin: iki liste tek yüzey gibi okunsun. */
+          data-side={submenu.sagda ? 'sag' : 'sol'}
+          style={{ top: submenu.top, left: submenu.left, width: SUBMENU_W }}
           onMouseEnter={() => clearTimeout(kapatmaZamani.current)}
           onMouseLeave={() => setSubmenu(null)}
         >
