@@ -122,6 +122,14 @@ const EXAM_DEFAULT_MINUTES = { tyt: 165, ayt: 180 };
 /* Deneme seçiminin üç sekmesi. TYT/AYT o sınavın dersleri ve bölümleri
    ("TYT Türkçe", "TYT Sosyal Bilimler"), Özel ise rehberin kendi kataloğu
    ("Paragraf Denemesi"). Rehberin istediği ayrım bu. */
+/* Düzenlerken karşılaştırılan alanlar: biri değiştiyse blok kaydedilir.
+   Tamamını karşılaştırmak yerine bunlar, çünkü `id`/`dayIndex`/`order` gibi
+   alanlar formdan gelmiyor ve her turda eşit kalıyor. */
+const EDITABLE_BLOCK_FIELDS = [
+  'kind', 'examScope', 'examType', 'examTypeName', 'subject', 'subjectLabel',
+  'type', 'typeName', 'topic', 'note', 'book', 'bookLabel', 'durationMin',
+];
+
 const EXAM_TABS = [
   { value: 'tyt', label: 'TYT' },
   { value: 'ayt', label: 'AYT' },
@@ -210,6 +218,10 @@ export default function DersProgrami() {
      değişince süreyi varsayılana çekiyor; bloğu yüklerken de tetiklenir ve
      bloğun GERÇEK süresini ezerdi. */
   const skipDurationSync = useRef(false);
+  /* Gecikmeli kayıt beklerken düzenlemeden çıkılırsa son değişiklik
+     kaybolurdu (temizlik zamanlayıcıyı iptal ediyor). Bekleyen kayıt burada
+     duruyor ve çıkışta boşaltılıyor. */
+  const pendingSave = useRef(null);
   const [topics, setTopics] = useState([]);
   /* Konu listesinin durumu: 'bos' | 'yukleniyor' | 'hazir' | 'hata'.
      Üçü de boş liste demek ama kullanıcıya söyleyecekleri farklı. */
@@ -785,7 +797,15 @@ export default function DersProgrami() {
    *  Blok tahtada sürüklenebilir olduğu için tıklama ile sürükleme ayrışmalı;
    *  ayrım `StackedBlock` içinde (sürükleme bittiyse tıklama sayılmaz).
    */
+  /** Bekleyen gecikmeli kaydı hemen uygular. */
+  const flushEditing = useCallback(() => {
+    const kaydet = pendingSave.current;
+    pendingSave.current = null;
+    if (kaydet) kaydet();
+  }, []);
+
   const startEditing = useCallback((b) => {
+    flushEditing();            // önceki bloğun bekleyen kaydı kaybolmasın
     const sub = b.subject ? subjectMap[String(b.subject)] : null;
     skipDurationSync.current = true;     // bloğun gerçek süresi korunsun
     setEditingId(b.id);
@@ -810,9 +830,12 @@ export default function DersProgrami() {
       durationMin: b.durationMin,
       days: [],                          // blok zaten bir günde
     }));
-  }, [subjectMap]);
+  }, [subjectMap, flushEditing]);
 
-  const cancelEditing = useCallback(() => setEditingId(null), []);
+  const cancelEditing = useCallback(() => {
+    flushEditing();
+    setEditingId(null);
+  }, [flushEditing]);
 
   /* Düzenlenen blok ortadan kalkarsa mod kapanır: başka öğrenciye/haftaya
      geçildiğinde ya da blok silindiğinde form yoksa bir bloğu düzenliyor
@@ -823,15 +846,31 @@ export default function DersProgrami() {
     }
   }, [editingId, blocks]);
 
-  /** Düzenlenen bloğu formdaki değerlerle günceller. Günü ve sırası değişmez —
-   *  taşımak sürükleyerek yapılıyor. */
-  function saveEditing() {
-    if (!editingId || !draftFields) return;
-    commit(blocks.map((b) => (b.id === editingId
-      ? { ...b, ...draftFields, durationMin: draft.durationMin }
-      : b)));
-    setEditingId(null);
-  }
+  /* Düzenlenen blok formdaki değişiklikleri KENDİLİĞİNDEN alır; ayrı bir
+     "kaydet" adımı yok. Günü ve sırası değişmez — taşımak sürükleyerek.
+
+     Yazma gecikmeli: `commit` her çağrıda sunucuya yazıyor ve açıklama
+     kutusunda her tuş bir istek doğururdu. Tahtadaki blok yine anında
+     güncelleniyor, çünkü `commit` önce iyimser güncelleme yapıyor. */
+  useEffect(() => {
+    if (!editingId || !draftFields || !blocks) return undefined;
+    const mevcut = blocks.find((b) => b.id === editingId);
+    if (!mevcut) return undefined;
+    const yeni = { ...mevcut, ...draftFields, durationMin: draft.durationMin };
+    // Değişiklik yoksa sunucuya gitme: blok forma yüklendiğinde de bu etki
+    // çalışıyor ve her açılış bir kayıt isteği doğururdu.
+    if (EDITABLE_BLOCK_FIELDS.every((k) => yeni[k] === mevcut[k])) {
+      pendingSave.current = null;
+      return undefined;
+    }
+    const uygula = () => commit(blocks.map((b) => (b.id === editingId ? yeni : b)));
+    pendingSave.current = uygula;
+    const zaman = setTimeout(() => {
+      pendingSave.current = null;
+      uygula();
+    }, 500);
+    return () => clearTimeout(zaman);
+  }, [editingId, draftFields, draft.durationMin, blocks, commit]);
 
   /** "Bu güne ekle": draft'ı seçili günlerin yığınına ekler.
    *  Gün ne kadar doluysa dolsun eklenir — sığmama diye bir durum yok. */
@@ -1310,7 +1349,10 @@ export default function DersProgrami() {
                 <span className={s.corner} />
                 {days.map((d) => (
                   <span className={s.dayHead} key={d.index}>
-                    {d.short}
+                    {/* Tam ad: sütun başlığında yer var, kısaltma okunurluğu
+                        düşürüyordu. Gün seçici hapları dar olduğu için orada
+                        kısa ad kalıyor. */}
+                    {d.full}
                     <span className={s.dayHeadDate}>{d.dayNum} {d.monthShort}</span>
                   </span>
                 ))}
@@ -1666,23 +1708,12 @@ export default function DersProgrami() {
 
               {/* Düzenleme modu: blok zaten bir günde olduğu için gün seçici
                   ve "ekle" düğmesi gizli, yerlerine kaydet/vazgeç geliyor. */}
+              {/* Tek düğme: değişiklikler zaten kendiliğinden kaydediliyor,
+                  "vazgeç" diye bir şey yok. */}
               {editingId && (
                 <div className={s.editActions}>
-                  <Button
-                    block
-                    size="sm"
-                    disabled={!draftFields}
-                    onClick={saveEditing}
-                  >
-                    Değişikliği kaydet
-                  </Button>
-                  <Button
-                    block
-                    size="sm"
-                    variant="subtle"
-                    onClick={cancelEditing}
-                  >
-                    Vazgeç
+                  <Button block size="sm" variant="subtle" onClick={cancelEditing}>
+                    Düzenlemeyi bitir
                   </Button>
                 </div>
               )}

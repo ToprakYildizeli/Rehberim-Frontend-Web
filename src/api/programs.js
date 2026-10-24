@@ -29,6 +29,10 @@ export const weekdayOf = (str) => (parseDate(str).getDay() + 6) % 7;
 export const mondayOf = (str) => addDays(str, -weekdayOf(str));
 
 const DAY_SHORT = ['Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt', 'Paz'];
+/* Tam adlar tahtanın sütun başlıkları için: orada yer var ve kısaltma
+   okunurluğu düşürüyordu. Gün seçici hapları dar olduğu için kısayı kullanıyor. */
+const DAY_FULL = ['Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma',
+  'Cumartesi', 'Pazar'];
 const MONTH_SHORT = ['Oca', 'Şub', 'Mar', 'Nis', 'May', 'Haz', 'Tem', 'Ağu', 'Eyl', 'Eki', 'Kas', 'Ara'];
 
 /** Tercih okunamadığında kullanılan gün sayısı. Rehberin Ayarlar'daki
@@ -50,7 +54,7 @@ export async function programDefaults() {
   };
 }
 
-/** Pencerenin sütunları: [{ index, date, weekday, short, dayNum, monthShort }] */
+/** Pencerenin sütunları: [{ index, date, weekday, short, full, dayNum, monthShort }] */
 export function windowDays(startDate, dayCount) {
   return Array.from({ length: Math.max(1, dayCount) }, (_, index) => {
     const date = addDays(startDate, index);
@@ -60,6 +64,7 @@ export function windowDays(startDate, dayCount) {
       date,
       weekday: weekdayOf(date),
       short: DAY_SHORT[weekdayOf(date)],
+      full: DAY_FULL[weekdayOf(date)],
       dayNum: d.getDate(),
       monthShort: MONTH_SHORT[d.getMonth()],
     };
