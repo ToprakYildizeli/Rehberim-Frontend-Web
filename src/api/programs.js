@@ -99,6 +99,8 @@ function mapTaskToBlock(task, startDate) {
     durationMin: task.duration_minutes || 60,
     kind: task.kind || 'study',
     examScope: task.exam_scope || '',
+    examType: task.exam_type != null ? String(task.exam_type) : '',
+    examTypeName: task.exam_type_name || null,
     countsAsStudy: task.counts_as_study !== false,
     subject: task.subject != null ? String(task.subject) : '',
     subjectLabel: task.subject_label,
@@ -124,6 +126,9 @@ export function blockToTaskPayload(b, startDate) {
   return {
     kind: b.kind || 'study',
     exam_scope: b.examScope || '',
+    /* Branş denemesi (22 Eki 2026). Boş gönderimi de bir silme isteğidir:
+       rehber türü kaldırdığında sunucuda da düşmeli. */
+    exam_type: b.examType ? Number(b.examType) : null,
     subject: !isExternal && b.subject ? Number(b.subject) : null,
     task_type: !isExternal && b.type ? Number(b.type) : null,
     book: !isExternal && b.book ? Number(b.book) : null,

@@ -16,8 +16,10 @@ import PreferencesSection from '../components/settings/PreferencesSection';
 import ParentInvitesSection from '../components/settings/ParentInvitesSection';
 import StudentsSection from '../components/settings/StudentsSection';
 import {
-  createPublisher, createTaskType, deletePublisher, deleteTaskType,
-  listPublishers, listTaskTypes, renamePublisher, renameTaskType,
+  createExamType, createPublisher, createTaskType,
+  deleteExamType, deletePublisher, deleteTaskType,
+  listExamTypes, listPublishers, listTaskTypes,
+  renameExamType, renamePublisher, renameTaskType,
 } from '../api/catalog';
 import { changePassword, updateMe } from '../api/auth';
 import { useAuth } from '../context/AuthContext';
@@ -66,6 +68,7 @@ export default function Ayarlar() {
   // her render'da yeni referans üretip sonsuz yeniden yüklemeye yol açardı.
   const loadTaskTypes = useCallback(listTaskTypes, []);
   const loadPublishers = useCallback(listPublishers, []);
+  const loadExamTypes = useCallback(listExamTypes, []);
 
   const saved = useMemo(
     () => ({
@@ -258,6 +261,17 @@ export default function Ayarlar() {
             rename={renameTaskType}
             remove={deleteTaskType}
             addLabel="Yeni çalışma türü"
+          />
+          {/* Branş denemeleri (22 Eki 2026): deneme bloğunun türü.
+              "Sosyal-1" gibi BÖLÜM denemeleri buraya girmez — onlar ders
+              listesinde sınav bölümü satırı olarak zaten var. */}
+          <CatalogSection
+            title="Deneme türleri"
+            load={loadExamTypes}
+            create={createExamType}
+            rename={renameExamType}
+            remove={deleteExamType}
+            addLabel="Yeni deneme türü"
           />
           <CatalogSection
             title="Yayınevleri"

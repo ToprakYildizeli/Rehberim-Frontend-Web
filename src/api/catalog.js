@@ -20,6 +20,10 @@ const EXAM_SCOPE_LABEL = Object.fromEntries(EXAM_SCOPES.map((x) => [x.value, x.l
 /** Blokta gösterilecek ad: dış blokta başlık, genel denemede kapsam, yoksa ders. */
 export function blockLabel(b) {
   if (b.kind === 'external') return b.topic || 'Dış meşguliyet';
+  /* Branş denemesi dersin önünde: "Paragraf Denemesi" rehberin bloğa verdiği
+     addır ve "TYT Türkçe"den daha çok şey söyler. Sunucudaki `Task.label`
+     sıralaması da böyle. */
+  if (b.examTypeName) return b.examTypeName;
   if (b.examScope) return EXAM_SCOPE_LABEL[b.examScope] || 'Genel Deneme';
   return b.subjectLabel || '—';
 }
@@ -80,6 +84,16 @@ export async function listTaskTypes() {
   return data.map((x) => ({ id: x.id, name: x.name }));
 }
 
+/** GET /api/exam-types/ → [{ id, name }] (branş denemeleri).
+ *
+ *  Deneme bloğunun TÜRÜ: "Paragraf Denemesi", "Üçgenler Denemesi". Bölüm
+ *  denemeleri ("Sosyal-1", "Fen Bilimleri") buraya girmez — onlar `Subject`
+ *  satırı (`isSection`) ve deneme bloğunun DERS listesinde çıkar. */
+export async function listExamTypes() {
+  const { data } = await api.get('/exam-types/');
+  return data.map((x) => ({ id: x.id, name: x.name }));
+}
+
 /** GET /api/publishers/ → [{ id, name }] (kitap eklerken dropdown). */
 export async function listPublishers() {
   const { data } = await api.get('/publishers/');
@@ -97,6 +111,11 @@ export async function createTaskType(name) {
   return { id: data.id, name: data.name };
 }
 
+export async function createExamType(name) {
+  const { data } = await api.post('/exam-types/', { name });
+  return { id: data.id, name: data.name };
+}
+
 export async function createPublisher(name) {
   const { data } = await api.post('/publishers/', { name });
   return { id: data.id, name: data.name };
@@ -104,6 +123,11 @@ export async function createPublisher(name) {
 
 export async function renameTaskType(id, name) {
   const { data } = await api.patch(`/task-types/${id}/`, { name });
+  return { id: data.id, name: data.name };
+}
+
+export async function renameExamType(id, name) {
+  const { data } = await api.patch(`/exam-types/${id}/`, { name });
   return { id: data.id, name: data.name };
 }
 
@@ -121,6 +145,12 @@ export async function deleteTaskType(id) {
 
 export async function deletePublisher(id) {
   await api.delete(`/publishers/${id}/`);
+}
+
+/** Silmek deneme bloklarını bozmaz: `Task.exam_type` SET_NULL, blok branş
+ *  bilgisini yitirir ama silinmez. */
+export async function deleteExamType(id) {
+  await api.delete(`/exam-types/${id}/`);
 }
 
 /** GET /api/topics/?subject=<id>[&grade=&curriculum=] → dersin konu kataloğu.

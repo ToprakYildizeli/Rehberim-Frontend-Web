@@ -23,7 +23,7 @@ import {
   assignBoard, assignTemplate, setRoutine, clearRoutine,
 } from '../api/templates';
 import {
-  listSubjects, listFieldSubjects, listTaskTypes, listTopics, listBooks,
+  listSubjects, listFieldSubjects, listTaskTypes, listExamTypes, listTopics, listBooks,
   loadDurationMemory, durationKey,
   BLOCK_KINDS, EXAM_SCOPES, blockLabel, blockColor,
 } from '../api/catalog';
@@ -185,6 +185,9 @@ export default function DersProgrami() {
   // Gerçek backend katalogları
   const [subjects, setSubjects] = useState([]);
   const [taskTypes, setTaskTypes] = useState([]);
+  /* Branş denemeleri (22 Eki 2026): deneme bloğunun TÜRÜ. Bölüm
+     denemeleri burada değil — onlar ders listesinde `isSection` satırı. */
+  const [examTypes, setExamTypes] = useState([]);
   const [topics, setTopics] = useState([]);
   /* Konu listesinin durumu: 'bos' | 'yukleniyor' | 'hazir' | 'hata'.
      Üçü de boş liste demek ama kullanıcıya söyleyecekleri farklı. */
@@ -197,7 +200,7 @@ export default function DersProgrami() {
   // yeniden seçmesin. Sayfada değiştirmek yine serbest, o oturumluk kalır.
   const [view, setView] = useState('days');
   const [draft, setDraft] = useState({
-    kind: 'study', examScope: 'tyt', externalTitle: '',
+    kind: 'study', examScope: 'tyt', externalTitle: '', examType: '',
     category: 'tyt', subject: '', type: '', topic: '', book: '',
     note: '', durationMin: 60, days: [],
   });
@@ -273,11 +276,15 @@ export default function DersProgrami() {
       listSubjects(), listTaskTypes(), listStudents(),
       // Hafıza olmaması normal (ilk kullanım) — katalog yüklemesini düşürmesin.
       loadDurationMemory().catch(() => new Map()),
+      // Branş denemesi listesi boş olabilir (rehber hepsini silmiş olabilir);
+      // yüklenemezse deneme bloğu türsüz kalır, sayfa açılmayı sürdürür.
+      listExamTypes().catch(() => []),
     ]).then(
-      ([subs, types, sts, memory]) => {
+      ([subs, types, sts, memory, denemeTurleri]) => {
         if (!alive) return;
         setSubjects(subs);
         setTaskTypes(types);
+        setExamTypes(denemeTurleri);
         setStudents(sts);
         setDurationMemory(memory);
         setStudentId((id) => id || String(sts[0]?.id ?? ''));
@@ -1264,6 +1271,8 @@ export default function DersProgrami() {
                             kind: val,
                             // Denemeye geçince varsayılan genel TYT; çalışmaya dönünce kapsam düşer.
                             examScope: val === 'exam' ? (d.examScope || 'tyt') : '',
+                            // Branş denemesi yalnız deneme bloğunda yaşar.
+                            examType: val === 'exam' ? d.examType : '',
                             // Dış/deneme bloğunda kitap kaynağı yok.
                             category: val === 'study' ? d.category : 'tyt',
                             book: val === 'study' ? d.book : '',
@@ -1292,6 +1301,23 @@ export default function DersProgrami() {
                             <option value={x.value} key={x.value}>{x.label}</option>
                           ))}
                           <option value="">Ders bazlı deneme…</option>
+                        </Select>
+                      </Field>
+                    )}
+
+                    {/* Branş denemesi: "Paragraf Denemesi", "Üçgenler
+                        Denemesi". Genel TYT/AYT kapsamında sorulmuyor —
+                        orada blok zaten bütün sınavı kapsıyor. */}
+                    {draft.kind === 'exam' && !draft.examScope && examTypes.length > 0 && (
+                      <Field label="Deneme Türü">
+                        <Select
+                          value={draft.examType}
+                          onChange={(e) => setDraft((d) => ({ ...d, examType: e.target.value }))}
+                        >
+                          <option value="">Tür yok</option>
+                          {examTypes.map((x) => (
+                            <option value={x.id} key={x.id}>{x.name}</option>
+                          ))}
                         </Select>
                       </Field>
                     )}
@@ -2014,6 +2040,14 @@ function draftBlockFields(draft, subjectMap, taskTypeMap) {
   const b = {
     kind: draft.kind,
     examScope: isGeneralExam ? draft.examScope : '',
+    /* Branş denemesi yalnız DERS BAZLI denemede anlamlı: genel TYT bloğu
+       zaten bütün sınavı kapsıyor, içine "paragraf denemesi" koymak çelişki
+       olurdu. Sunucu da deneme dışı blokta reddediyor. */
+    examType: isExam && !isGeneralExam ? draft.examType : '',
+    // Etiket sunucuyu beklemeden doğru yazılsın (iyimser güncelleme).
+    examTypeName: isExam && !isGeneralExam
+      ? (examTypes.find((x) => String(x.id) === String(draft.examType))?.name ?? null)
+      : null,
     subject: isGeneralExam ? '' : draft.subject,
     subjectLabel: sub?.label,
     type: isExam ? '' : draft.type,
@@ -2033,6 +2067,8 @@ function blockFromPayload(payload) {
   return {
     kind: payload.kind || 'study',
     examScope: payload.examScope || '',
+    examType: payload.examType || '',
+    examTypeName: payload.examTypeName || null,
     subject: payload.subject,
     subjectLabel: payload.subjectLabel,
     subjectColor: payload.subjectColor,
