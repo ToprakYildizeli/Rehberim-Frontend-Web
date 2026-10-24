@@ -25,7 +25,7 @@ import {
 import {
   listSubjects, listFieldSubjects, listTaskTypes, listExamTypes, listTopics, listBooks,
   loadDurationMemory, durationKey,
-  BLOCK_KINDS, EXAM_SCOPES, blockLabel, blockColor,
+  BLOCK_KINDS, blockLabel, blockColor,
 } from '../api/catalog';
 import s from './DersProgrami.module.css';
 
@@ -118,6 +118,15 @@ const FORMAT_TO_TYPE = {
    "varsayılan blok süresi" geçerli (kendi varsayılanı 60 dk) — burada 60'ı
    sabitlemek o ayarı sessizce işlevsiz bırakırdı. */
 const EXAM_DEFAULT_MINUTES = { tyt: 165, ayt: 180 };
+
+/* Deneme seçiminin üç sekmesi. TYT/AYT o sınavın dersleri ve bölümleri
+   ("TYT Türkçe", "TYT Sosyal Bilimler"), Özel ise rehberin kendi kataloğu
+   ("Paragraf Denemesi"). Rehberin istediği ayrım bu. */
+const EXAM_TABS = [
+  { value: 'tyt', label: 'TYT' },
+  { value: 'ayt', label: 'AYT' },
+  { value: 'ozel', label: 'Özel' },
+];
 
 const durationText = (b) => (b.durationMin >= 60
   ? `${Math.floor(b.durationMin / 60)} sa${b.durationMin % 60 ? ` ${b.durationMin % 60} dk` : ''}`
@@ -214,6 +223,7 @@ export default function DersProgrami() {
   const [view, setView] = useState('days');
   const [draft, setDraft] = useState({
     kind: 'study', examScope: 'tyt', externalTitle: '', examType: '',
+    examTab: 'tyt',
     category: 'tyt', subject: '', type: '', topic: '', book: '',
     note: '', durationMin: 60, days: [],
   });
@@ -784,6 +794,11 @@ export default function DersProgrami() {
       kind: b.kind || 'study',
       examScope: b.examScope || '',
       examType: b.examType || '',
+      /* Sekme bloğun kendisinden türetiliyor: branş türü varsa Özel, genel
+         kapsam varsa o sınav, ders bazlıysa dersin kategorisi. */
+      examTab: b.examType
+        ? 'ozel'
+        : b.examScope || sub?.category || d.examTab,
       externalTitle: b.kind === 'external' ? (b.topic || '') : '',
       // Dış blokta ve genel denemede ders yok; kategoriyi olduğu gibi bırak.
       category: sub?.category || d.category,
@@ -863,7 +878,6 @@ export default function DersProgrami() {
   const isBookMode = draft.kind === 'study' && draft.category === 'kitap';
   const isExternal = draft.kind === 'external';
   const isExam = draft.kind === 'exam';
-  const isGeneralExam = isExam && Boolean(draft.examScope);
 
   // Tür toggle: TYT/AYT her zaman; Kitap yalnız öğrenci modunda (kitap
   // öğrenciye bağlı) ve yalnız çalışma bloğunda — denemenin kaynak kitabı olmaz.
@@ -875,7 +889,57 @@ export default function DersProgrami() {
   );
 
   // Ders alanı: dış blokta ve genel denemede gösterilmez.
-  const showSubjectFields = !isExternal && !isGeneralExam;
+  /* Denemede ders/tür alanları YOK: seçim artık deneme sekmesinin kendi
+     listesinden yapılıyor. İkisi birden durduğunda çelişkili seçimler
+     üretilebiliyordu. */
+  const showSubjectFields = !isExternal && !isExam;
+
+  /* Seçili sekmenin seçenekleri. TYT/AYT'de "Genel" + o sınavın dersleri
+     (bölüm satırları dahil: "TYT Sosyal Bilimler" ayrı bir seçenek);
+     Özel'de rehberin branş denemesi kataloğu. */
+  const examChoices = useMemo(() => {
+    if (draft.examTab === 'ozel') {
+      return examTypes.map((x) => ({ value: `t${x.id}`, label: x.name }));
+    }
+    const genel = draft.examTab === 'tyt' ? 'Genel TYT Denemesi' : 'Genel AYT Denemesi';
+    return [
+      { value: `g${draft.examTab}`, label: genel },
+      ...subjects
+        .filter((x) => x.category === draft.examTab)
+        .map((x) => ({ value: `s${x.id}`, label: x.label })),
+    ];
+  }, [draft.examTab, examTypes, subjects]);
+
+  /* Seçimin tek gösterimi: hangi alan doluysa ondan türetiliyor. Ayrı bir
+     state tutulsaydı blok düzenlemeye açıldığında ikisi ayrışabilirdi. */
+  const examChoiceValue = draft.examType
+    ? `t${draft.examType}`
+    : draft.examScope
+      ? `g${draft.examScope}`
+      : draft.subject
+        ? `s${draft.subject}`
+        : '';
+
+  /** Sekme değişince seçim sıfırlanır: önceki sekmenin seçeneği burada
+   *  geçerli değil ve taşınırsa çelişki doğar. */
+  const setExamTab = useCallback((tab) => {
+    setDraft((d) => ({
+      ...d, examTab: tab, examScope: '', subject: '', examType: '',
+    }));
+  }, []);
+
+  /** Üç alandan YALNIZ birini doldurur; ötekiler temizlenir. */
+  const setExamChoice = useCallback((val) => {
+    setDraft((d) => {
+      const temiz = { ...d, examScope: '', subject: '', examType: '' };
+      if (!val) return temiz;
+      const tur = val[0];
+      const id = val.slice(1);
+      if (tur === 'g') return { ...temiz, examScope: id };
+      if (tur === 's') return { ...temiz, subject: id };
+      return { ...temiz, examType: id };
+    });
+  }, []);
   /* Çalışma türü ve konu **denemede sorulmaz**: deneme kendi başına bir çalışma
      türüdür ve tek bir konusu yoktur, sınavın kapsadığı her şeyi içerir. */
   const showMethodFields = showSubjectFields && !isExam;
@@ -914,9 +978,9 @@ export default function DersProgrami() {
     /* Denemede sınav süresi: kapsam seçiliyse ondan, ders bazlı denemede
        dersin kategorisinden. Hafıza önce gelir — "ilk seçildiğinde" 165/180
        demek, rehberin daha önce elle verdiği süreyi ezmek değil. */
-    const examDefault = isExam
-      ? EXAM_DEFAULT_MINUTES[draft.examScope || draft.category]
-      : null;
+    // Sekmeden okunuyor: "Özel"de sınav süresi diye bir şey yok, oradaki
+    // bloklar rehberin varsayılan blok süresiyle açılır.
+    const examDefault = isExam ? EXAM_DEFAULT_MINUTES[draft.examTab] : null;
     if (skipDurationSync.current) {
       skipDurationSync.current = false;
       return;
@@ -926,7 +990,7 @@ export default function DersProgrami() {
       durationMin: remembered || examDefault || boardPrefs.blockMinutes,
     }));
   }, [showSubjectFields, draft.subject, draft.type, draft.topic, durationMemory,
-    boardPrefs.blockMinutes, isExam, draft.examScope, draft.category]);
+    boardPrefs.blockMinutes, isExam, draft.examTab]);
 
   // Kitap modu: öğrencinin ders-kitaplarındaki dersler + seçilen derse göre kitaplar.
   const bookSubjects = useMemo(() => {
@@ -1351,9 +1415,11 @@ export default function DersProgrami() {
                           setDraft((d) => ({
                             ...d,
                             kind: val,
-                            // Denemeye geçince varsayılan genel TYT; çalışmaya dönünce kapsam düşer.
+                            /* Denemeye geçince TYT sekmesi ve "Genel TYT"
+                               seçili başlar; çalışmaya dönünce denemeye ait
+                               üç alan da düşer. */
+                            examTab: val === 'exam' ? (d.examTab || 'tyt') : d.examTab,
                             examScope: val === 'exam' ? (d.examScope || 'tyt') : '',
-                            // Branş denemesi yalnız deneme bloğunda yaşar.
                             examType: val === 'exam' ? d.examType : '',
                             // Dış/deneme bloğunda kitap kaynağı yok.
                             category: val === 'study' ? d.category : 'tyt',
@@ -1373,35 +1439,36 @@ export default function DersProgrami() {
                       </Field>
                     )}
 
+                    {/* Deneme seçimi TEK yerde: sekme + liste.
+                        Önce üç ayrı alan vardı (kapsam · ders · branş türü) ve
+                        birbirini tutmayan seçimler üretiyordu — "Logaritma ve
+                        Diziler" seçiliyken altta ders "Türkçe" kalabiliyordu.
+                        Artık sekme neyin seçileceğini belirliyor; biri
+                        seçilince diğer ikisi temizleniyor. */}
                     {draft.kind === 'exam' && (
-                      <Field label="Deneme Kapsamı">
-                        <Select
-                          value={draft.examScope}
-                          onChange={(e) => setDraft((d) => ({ ...d, examScope: e.target.value }))}
-                        >
-                          {EXAM_SCOPES.map((x) => (
-                            <option value={x.value} key={x.value}>{x.label}</option>
-                          ))}
-                          <option value="">Ders bazlı deneme…</option>
-                        </Select>
-                      </Field>
-                    )}
-
-                    {/* Branş denemesi: "Paragraf Denemesi", "Üçgenler
-                        Denemesi". Genel TYT/AYT kapsamında sorulmuyor —
-                        orada blok zaten bütün sınavı kapsıyor. */}
-                    {draft.kind === 'exam' && !draft.examScope && examTypes.length > 0 && (
-                      <Field label="Deneme Türü">
-                        <Select
-                          value={draft.examType}
-                          onChange={(e) => setDraft((d) => ({ ...d, examType: e.target.value }))}
-                        >
-                          <option value="">Tür yok</option>
-                          {examTypes.map((x) => (
-                            <option value={x.id} key={x.id}>{x.name}</option>
-                          ))}
-                        </Select>
-                      </Field>
+                      <>
+                        <Field label="Deneme">
+                          <PillGroup
+                            value={draft.examTab}
+                            onChange={setExamTab}
+                            options={EXAM_TABS}
+                            ariaLabel="Deneme kapsamı"
+                          />
+                        </Field>
+                        <Field label={draft.examTab === 'ozel' ? 'Deneme türü' : 'Kapsam'}>
+                          <Select
+                            value={examChoiceValue}
+                            onChange={(e) => setExamChoice(e.target.value)}
+                          >
+                            {examChoices.length === 0 && (
+                              <option value="">Bu sekmede seçenek yok</option>
+                            )}
+                            {examChoices.map((x) => (
+                              <option value={x.value} key={x.value}>{x.label}</option>
+                            ))}
+                          </Select>
+                        </Field>
+                      </>
                     )}
 
                     {showSubjectFields && (
@@ -2263,13 +2330,16 @@ function DayStack({ day, items, onRemove, onEditNote, onEditBlock, editingId, is
 function subjectRowKey(b) {
   if (b.kind === 'external') return 'ext';
   if (b.examScope) return `exam-${b.examScope}`;
+  // Özel denemenin dersi yok; kendi satırını türünden alır, yoksa hepsi
+  // "Dersi yok" satırında toplanırdı.
+  if (b.examType) return `examtype-${b.examType}`;
   return `sub-${b.subject || ''}`;
 }
 
 /** Satır başlığı — blok adı değil, satırın kendi adı (aynı satırda çok blok olur). */
 function subjectRowLabel(b) {
   if (b.kind === 'external') return 'Dış meşguliyet';
-  if (b.examScope) return blockLabel(b);
+  if (b.examScope || b.examType) return blockLabel(b);
   return b.subjectLabel || 'Dersi yok';
 }
 

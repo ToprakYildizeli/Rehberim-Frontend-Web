@@ -31,7 +31,9 @@ export function blockLabel(b) {
 /** Blok rengi: dış bloklar nötr, genel denemeler mor, çalışma blokları dersin rengi. */
 export function blockColor(b) {
   if (b.kind === 'external') return 'var(--text-muted)';
-  if (b.examScope) return 'var(--violet)';
+  /* Dersi olmayan denemeler mor: genel kapsam ve özel tür. Özel denemenin
+     ("Paragraf Denemesi") dersi yok, rengi dersten türetilemiyor. */
+  if (b.examScope || b.examTypeName) return 'var(--violet)';
   return subjectColor(b.subjectLabel || '');
 }
 
