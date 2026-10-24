@@ -89,8 +89,22 @@
   background: none;
   cursor: pointer;
 }
-.option:hover, .option[data-active='true'] { background: var(--bg-alt); }
-.option[data-selected='true'] { font-weight: 600; color: var(--accent); }
+/* Fare üzerindeki seçenek net görünmeli. `--bg-alt` yetmiyordu: koyu temada
+   kart zemininden (`--bg-card`) daha KOYU bir ton, açık temada da beyazın
+   üstünde çok soluk kalıyordu. `--accent-badge` on iki tema varyantının
+   hepsinde vurgu için tanımlı. */
+.option:hover, .option[data-active='true'] {
+  background: var(--accent-badge);
+  color: var(--accent-text);
+}
+
+/* Seçili olan, üzerine gelinenle karışmasın diye soldan çizgi alıyor:
+   vurgu zemin = fare nerede, çizgi = hangisi seçili. */
+.option[data-selected='true'] {
+  font-weight: 600;
+  color: var(--accent);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
 
 /* Şemsiye ANA konudur: alt konularından bir tık daha önde dursun. */
 .umbrella { font-weight: 600; }
@@ -110,8 +124,8 @@
   cursor: pointer;
 }
 .expander:hover, .expander[data-open='true'] {
-  color: var(--accent);
-  background: var(--bg-alt);
+  color: var(--accent-text);
+  background: var(--accent-badge);
 }
 
 /* Alt menü `fixed`: panelin kaydırılabilir listesi içinde `absolute` olsaydı

@@ -204,6 +204,9 @@ export default function TopicPicker({
                     role="option"
                     aria-selected={konu.name === value}
                     data-selected={konu.name === value}
+                    /* Alt menü açıkken şemsiye vurgulu kalsın: fare alt
+                       listeye geçtiğinde hangi başlığa ait olduğu kaybolmasın. */
+                    data-active={acik || undefined}
                     className={[s.option, cocuk ? s.child : '', cocuklu ? s.umbrella : '']
                       .filter(Boolean).join(' ')}
                     onClick={() => sec(konu.name)}
