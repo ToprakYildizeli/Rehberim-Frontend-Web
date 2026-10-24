@@ -323,8 +323,14 @@
 }
 
 /* Yığındaki blok: akışta durur, boyu içeriğine göredir. */
+/* Gün sütununda bloklar **eşit boyda**. Boy içeriğe bırakılınca notu olan blok
+   uzuyor, olmayan kısalıyordu ve sütunlar tırtıklı görünüyordu; süreye de
+   bağlanamaz (3 saatlik blok sütunu tek başına doldururdu). Taşan metin
+   kırpılıyor — not zaten blokta tooltip, düzenleme düğmesinde de tam hâliyle
+   duruyor. */
 .stackBlock {
   position: relative;
+  height: 62px;
   border-radius: var(--radius-sm);
   color: #fff;
   padding: 6px 7px;
@@ -332,6 +338,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  overflow: hidden;
   touch-action: none;
 }
 
@@ -339,6 +346,9 @@
 
 /* Onaylı görev: rehberin mührü. Kenardaki çizgi, rengi bozmadan ayırt ettiriyor. */
 .blockApproved { box-shadow: inset 3px 0 0 var(--success); }
+
+/* Sağdaki formda düzenlenen blok: hangisini düzenlediği belli olsun. */
+.blockEditing { outline: 2px solid var(--text); outline-offset: 1px; }
 
 .block:active { cursor: grabbing; }
 .blockDragging { opacity: 0.35; }
@@ -359,6 +369,9 @@
   align-items: baseline;
   gap: var(--space-2);
   white-space: normal;
+  /* Sabit boyda uzun ad bloğu taşırmasın: iki satırda kesilir. */
+  max-height: 2.4em;
+  overflow: hidden;
 }
 
 .stackBlock .blockTime {
@@ -367,8 +380,13 @@
   opacity: 0.85;
 }
 
+/* Meta ve not sabit boyda tek satır: ikisi de sarabilseydi blok taşardı. */
 .stackBlock .blockMeta,
-.stackBlock .blockNote { white-space: normal; }
+.stackBlock .blockNote {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .blockMeta {
   font-size: var(--fs-3xs);
@@ -384,6 +402,14 @@
   opacity: 0.9;
   margin-top: auto;
   font-weight: 600;
+}
+
+/* Düzenleme modunun kaydet/vazgeç ikilisi. */
+.editActions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
 /* ---------- Right rail ---------- */

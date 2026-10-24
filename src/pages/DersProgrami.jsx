@@ -113,6 +113,12 @@ const FORMAT_TO_TYPE = {
 };
 
 /** Bloğun süresi, blokta gösterilen kısa metin olarak. */
+/* Deneme bloğunun varsayılan süresi: gerçek sınav süreleri (kullanıcı kararı,
+   24 Eki 2026). TYT 165 dk, AYT 180 dk. Diğer bloklarda rehberin Tercihler'deki
+   "varsayılan blok süresi" geçerli (kendi varsayılanı 60 dk) — burada 60'ı
+   sabitlemek o ayarı sessizce işlevsiz bırakırdı. */
+const EXAM_DEFAULT_MINUTES = { tyt: 165, ayt: 180 };
+
 const durationText = (b) => (b.durationMin >= 60
   ? `${Math.floor(b.durationMin / 60)} sa${b.durationMin % 60 ? ` ${b.durationMin % 60} dk` : ''}`
   : `${b.durationMin} dk`);
@@ -188,6 +194,13 @@ export default function DersProgrami() {
   /* Branş denemeleri (22 Eki 2026): deneme bloğunun TÜRÜ. Bölüm
      denemeleri burada değil — onlar ders listesinde `isSection` satırı. */
   const [examTypes, setExamTypes] = useState([]);
+  /* Düzenlenen bloğun id'si. Dolu olduğunda sağdaki form "ekle" yerine
+     "kaydet" yapıyor ve gün seçici gizleniyor — blok zaten bir günde. */
+  const [editingId, setEditingId] = useState(null);
+  /* Düzenlemeye açarken süre efektini bir tur atlatır. Efekt ders/metod/konu
+     değişince süreyi varsayılana çekiyor; bloğu yüklerken de tetiklenir ve
+     bloğun GERÇEK süresini ezerdi. */
+  const skipDurationSync = useRef(false);
   const [topics, setTopics] = useState([]);
   /* Konu listesinin durumu: 'bos' | 'yukleniyor' | 'hazir' | 'hata'.
      Üçü de boş liste demek ama kullanıcıya söyleyecekleri farklı. */
@@ -757,6 +770,54 @@ export default function DersProgrami() {
     })));
   }
 
+  /** Bloğa tıklanınca sağdaki formu o bloğun değerleriyle doldurur.
+   *
+   *  Blok tahtada sürüklenebilir olduğu için tıklama ile sürükleme ayrışmalı;
+   *  ayrım `StackedBlock` içinde (sürükleme bittiyse tıklama sayılmaz).
+   */
+  const startEditing = useCallback((b) => {
+    const sub = b.subject ? subjectMap[String(b.subject)] : null;
+    skipDurationSync.current = true;     // bloğun gerçek süresi korunsun
+    setEditingId(b.id);
+    setDraft((d) => ({
+      ...d,
+      kind: b.kind || 'study',
+      examScope: b.examScope || '',
+      examType: b.examType || '',
+      externalTitle: b.kind === 'external' ? (b.topic || '') : '',
+      // Dış blokta ve genel denemede ders yok; kategoriyi olduğu gibi bırak.
+      category: sub?.category || d.category,
+      subject: b.subject ? String(b.subject) : '',
+      type: b.type ? String(b.type) : '',
+      topic: b.kind === 'external' ? '' : (b.topic || ''),
+      book: b.book != null ? String(b.book) : '',
+      note: b.note || '',
+      durationMin: b.durationMin,
+      days: [],                          // blok zaten bir günde
+    }));
+  }, [subjectMap]);
+
+  const cancelEditing = useCallback(() => setEditingId(null), []);
+
+  /* Düzenlenen blok ortadan kalkarsa mod kapanır: başka öğrenciye/haftaya
+     geçildiğinde ya da blok silindiğinde form yoksa bir bloğu düzenliyor
+     görünür ve "kaydet" hiçbir şey yapmazdı. */
+  useEffect(() => {
+    if (editingId && blocks && !blocks.some((b) => b.id === editingId)) {
+      setEditingId(null);
+    }
+  }, [editingId, blocks]);
+
+  /** Düzenlenen bloğu formdaki değerlerle günceller. Günü ve sırası değişmez —
+   *  taşımak sürükleyerek yapılıyor. */
+  function saveEditing() {
+    if (!editingId || !draftFields) return;
+    commit(blocks.map((b) => (b.id === editingId
+      ? { ...b, ...draftFields, durationMin: draft.durationMin }
+      : b)));
+    setEditingId(null);
+  }
+
   /** "Bu güne ekle": draft'ı seçili günlerin yığınına ekler.
    *  Gün ne kadar doluysa dolsun eklenir — sığmama diye bir durum yok. */
   function addToSelectedDays() {
@@ -850,9 +911,22 @@ export default function DersProgrami() {
     const remembered = showSubjectFields
       ? durationMemory.get(durationKey(draft.subject, draft.type, draft.topic))
       : null;
-    setDraft((d) => ({ ...d, durationMin: remembered || boardPrefs.blockMinutes }));
+    /* Denemede sınav süresi: kapsam seçiliyse ondan, ders bazlı denemede
+       dersin kategorisinden. Hafıza önce gelir — "ilk seçildiğinde" 165/180
+       demek, rehberin daha önce elle verdiği süreyi ezmek değil. */
+    const examDefault = isExam
+      ? EXAM_DEFAULT_MINUTES[draft.examScope || draft.category]
+      : null;
+    if (skipDurationSync.current) {
+      skipDurationSync.current = false;
+      return;
+    }
+    setDraft((d) => ({
+      ...d,
+      durationMin: remembered || examDefault || boardPrefs.blockMinutes,
+    }));
   }, [showSubjectFields, draft.subject, draft.type, draft.topic, durationMemory,
-    boardPrefs.blockMinutes]);
+    boardPrefs.blockMinutes, isExam, draft.examScope, draft.category]);
 
   // Kitap modu: öğrencinin ders-kitaplarındaki dersler + seçilen derse göre kitaplar.
   const bookSubjects = useMemo(() => {
@@ -1183,6 +1257,13 @@ export default function DersProgrami() {
                       blocksByDay={blocksByDay}
                       onRemove={removeBlock}
                       onEditNote={openNote}
+                      editingId={editingId}
+                      onEditBlock={(b) => {
+                        // Sürükleme biter bitmez gelen tıklama sayılmaz —
+                        // ders satırlı görünümdeki hücre açmayla aynı eşik.
+                        if (Date.now() - lastDragEnd.current < 300) return;
+                        startEditing(b);
+                      }}
                       overDay={overDay}
                     />
                   )
@@ -1450,13 +1531,19 @@ export default function DersProgrami() {
                     </Field>
                   </div>
 
-                  <p className={s.previewLabel}>Sürüklenebilir blok</p>
+                  {/* Düzenlerken önizleme "sürüklenebilir blok" değil, o anki
+                      bloğun hâli — sürükleme ipucu da yanıltıcı olurdu. */}
+                  <p className={s.previewLabel}>
+                    {editingId ? 'Düzenlenen blok' : 'Sürüklenebilir blok'}
+                  </p>
                   {draftFields ? (
                     <>
                       <DraftBlock fields={draftFields} durationMin={draft.durationMin} />
-                      <p className={s.previewHint}>
-                        Bu bloğu bir güne sürükle ya da aşağıdan gün seç
-                      </p>
+                      {!editingId && (
+                        <p className={s.previewHint}>
+                          Bu bloğu bir güne sürükle ya da aşağıdan gün seç
+                        </p>
+                      )}
                     </>
                   ) : (
                     <p className={s.previewHint}>
@@ -1466,6 +1553,10 @@ export default function DersProgrami() {
                     </p>
                   )}
 
+                  {/* Düzenleme modunda gün seçici ve "ekle" yok: blok zaten
+                      bir günde duruyor, başka güne taşımak sürükleyerek. */}
+                  {!editingId && (
+                  <>
                   <div
                     className={s.dayPills}
                     style={{ '--cols': days.length, marginTop: 'var(--space-3)' }}
@@ -1500,7 +1591,32 @@ export default function DersProgrami() {
                   >
                     Seçili {draft.days.length || ''} güne ekle
                   </Button>
+                  </>
+                  )}
                 </>
+              )}
+
+              {/* Düzenleme modu: blok zaten bir günde olduğu için gün seçici
+                  ve "ekle" düğmesi gizli, yerlerine kaydet/vazgeç geliyor. */}
+              {editingId && (
+                <div className={s.editActions}>
+                  <Button
+                    block
+                    size="sm"
+                    disabled={!draftFields}
+                    onClick={saveEditing}
+                  >
+                    Değişikliği kaydet
+                  </Button>
+                  <Button
+                    block
+                    size="sm"
+                    variant="subtle"
+                    onClick={cancelEditing}
+                  >
+                    Vazgeç
+                  </Button>
+                </div>
               )}
 
             </Card>
@@ -2091,7 +2207,8 @@ function blockFromPayload(payload) {
    ekleniyor. */
 
 /** Gün sütunlarının tek satırı: her sütun o günün görev yığını. */
-function DayStackRow({ days, blocksByDay, onRemove, onEditNote, overDay }) {
+function DayStackRow({ days, blocksByDay, onRemove, onEditNote, onEditBlock,
+                      editingId, overDay }) {
   return (
     <>
       <span className={s.corner} />
@@ -2102,6 +2219,8 @@ function DayStackRow({ days, blocksByDay, onRemove, onEditNote, overDay }) {
           items={blocksByDay.get(day.index) ?? []}
           onRemove={onRemove}
           onEditNote={onEditNote}
+          onEditBlock={onEditBlock}
+          editingId={editingId}
           isOverDay={overDay === day.index}
         />
       ))}
@@ -2109,7 +2228,7 @@ function DayStackRow({ days, blocksByDay, onRemove, onEditNote, overDay }) {
   );
 }
 
-function DayStack({ day, items, onRemove, onEditNote, isOverDay }) {
+function DayStack({ day, items, onRemove, onEditNote, onEditBlock, editingId, isOverDay }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(day) });
   return (
     <div
@@ -2117,7 +2236,14 @@ function DayStack({ day, items, onRemove, onEditNote, isOverDay }) {
       className={cx(s.dayStack, (isOver || isOverDay) && s.dayStackOver)}
     >
       {items.map((b) => (
-        <StackedBlock key={b.id} block={b} onRemove={onRemove} onEditNote={onEditNote} />
+        <StackedBlock
+          key={b.id}
+          block={b}
+          onRemove={onRemove}
+          onEditNote={onEditNote}
+          onEdit={onEditBlock}
+          isEditing={editingId === b.id}
+        />
       ))}
       {items.length === 0 && <span className={s.dayStackEmpty}>—</span>}
     </div>
@@ -2406,7 +2532,7 @@ function blockMetaText(b) {
  *  (`top`/`height`, 1 saat = 38px). Artık akışta duran normal bir kutu: boyu
  *  içeriğine göre, yeri yığındaki sırasına göre. Süre, bloğun boyu yerine
  *  üstünde yazıyor — 20 dakikalık bir görev de okunabilir kalsın. */
-function StackedBlock({ block, onRemove, onEditNote }) {
+function StackedBlock({ block, onRemove, onEditNote, onEdit, isEditing }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
     data: {
@@ -2430,9 +2556,14 @@ function StackedBlock({ block, onRemove, onEditNote }) {
         isDragging ? s.blockDragging : '',
         block.kind === 'external' ? s.blockExternal : '',
         block.isApproved ? s.blockApproved : '',
+        isEditing ? s.blockEditing : '',
       ].filter(Boolean).join(' ')}
       style={{ background: block.subjectColor }}
       title={block.note || undefined}
+      /* Tıklama sağdaki formu bu blokla doldurur. Sürükleme de aynı
+         elemandan başlıyor; ayrımı `onEdit` içindeki süre eşiği yapıyor
+         (sürükleme bittiyse tıklama sayılmaz). */
+      onClick={() => onEdit?.(block)}
       {...listeners}
       {...attributes}
     >
