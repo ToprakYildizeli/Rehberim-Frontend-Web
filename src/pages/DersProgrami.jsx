@@ -837,6 +837,17 @@ export default function DersProgrami() {
     setEditingId(null);
   }, [flushEditing]);
 
+  /* Düzenlemeden çıkış: aynı bloğa tekrar tıklamak ya da Esc. Ayrı bir
+     "bitir" düğmesi yok — değişiklikler zaten kendiliğinden kaydediliyor,
+     düğme yalnız formu kapatmaya yarıyordu. Çıkış yolu yine de şart:
+     düzenleme modunda sağdaki form yeni blok eklemeye kapalı. */
+  useEffect(() => {
+    if (!editingId) return undefined;
+    const tus = (e) => { if (e.key === 'Escape') cancelEditing(); };
+    window.addEventListener('keydown', tus);
+    return () => window.removeEventListener('keydown', tus);
+  }, [editingId, cancelEditing]);
+
   /* Düzenlenen blok ortadan kalkarsa mod kapanır: başka öğrenciye/haftaya
      geçildiğinde ya da blok silindiğinde form yoksa bir bloğu düzenliyor
      görünür ve "kaydet" hiçbir şey yapmazdı. */
@@ -1374,7 +1385,9 @@ export default function DersProgrami() {
                         // Sürükleme biter bitmez gelen tıklama sayılmaz —
                         // ders satırlı görünümdeki hücre açmayla aynı eşik.
                         if (Date.now() - lastDragEnd.current < 300) return;
-                        startEditing(b);
+                        // Açık olana tekrar tıklamak düzenlemeyi kapatır.
+                        if (editingId === b.id) cancelEditing();
+                        else startEditing(b);
                       }}
                       overDay={overDay}
                     />
@@ -1713,15 +1726,6 @@ export default function DersProgrami() {
 
               {/* Düzenleme modu: blok zaten bir günde olduğu için gün seçici
                   ve "ekle" düğmesi gizli, yerlerine kaydet/vazgeç geliyor. */}
-              {/* Tek düğme: değişiklikler zaten kendiliğinden kaydediliyor,
-                  "vazgeç" diye bir şey yok. */}
-              {editingId && (
-                <div className={s.editActions}>
-                  <Button block size="sm" variant="subtle" onClick={cancelEditing}>
-                    Düzenlemeyi bitir
-                  </Button>
-                </div>
-              )}
 
             </Card>
             </div>
