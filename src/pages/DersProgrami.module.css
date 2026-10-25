@@ -332,9 +332,13 @@
    duruyor. */
 .stackBlock {
   position: relative;
-  /* Üç satır: ders+sil · metot+süre · konu. Konu kırpılmadan sığsın diye
-     62px'den yükseltildi ("Hücre Bölünmeleri" üç nokta oluyordu). */
-  height: 78px;
+  /* Üç satır: ders+sil · metot+süre · konu.
+     Sabit boy DEĞİL, taban boy. Sütun genişliği ekran ve zoom ile değişiyor;
+     sabit boyda uzun konu adı dar sütunda kırpılıyordu (%85 zoom'da sığıyor,
+     %100'de sığmıyordu). Konu iki satıra sarabiliyor, blok da gerektiği
+     kadar uzuyor. Notsuz bloklarda içerik aynı olduğu için sütunlar yine
+     düzgün hizalı kalıyor. */
+  min-height: 78px;
   border-radius: var(--radius-sm);
   color: #fff;
   padding: 6px 7px;
@@ -342,7 +346,6 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  overflow: hidden;
   touch-action: none;
 }
 
@@ -388,15 +391,17 @@
   text-overflow: ellipsis;
 }
 
-/* Konu satırı: seçiliyse üçüncü satırda, tam hâliyle okunsun diye blok
-   boyu buna göre ayarlandı. */
+/* Konu satırı: dar sütunda kırpmak yerine İKİ satıra sarıyor. Üç nokta
+   ancak iki satıra da sığmazsa çıkıyor. */
 .blockTopic {
   font-size: var(--fs-xs);
   line-height: 1.25;
   opacity: 0.95;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* Sil düğmesi belirgin: blok renginin üstünde kendi zemini var. Önce
