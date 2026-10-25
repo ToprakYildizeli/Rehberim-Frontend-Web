@@ -4,7 +4,7 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core';
-import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil, Printer, StickyNote, Check } from 'lucide-react';
+import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil, Printer, StickyNote } from 'lucide-react';
 import {
   Card, Button, Field, Select, Input, Textarea, NumberInput, PillGroup, Spinner, Modal,
 } from '../components/ui';
@@ -122,14 +122,6 @@ const EXAM_DEFAULT_MINUTES = { tyt: 165, ayt: 180 };
 /* Deneme seçiminin üç sekmesi. TYT/AYT o sınavın dersleri ve bölümleri
    ("TYT Türkçe", "TYT Sosyal Bilimler"), Özel ise rehberin kendi kataloğu
    ("Paragraf Denemesi"). Rehberin istediği ayrım bu. */
-/* Düzenlerken karşılaştırılan alanlar: biri değiştiyse blok kaydedilir.
-   Tamamını karşılaştırmak yerine bunlar, çünkü `id`/`dayIndex`/`order` gibi
-   alanlar formdan gelmiyor ve her turda eşit kalıyor. */
-const EDITABLE_BLOCK_FIELDS = [
-  'kind', 'examScope', 'examType', 'examTypeName', 'subject', 'subjectLabel',
-  'type', 'typeName', 'topic', 'note', 'book', 'bookLabel', 'durationMin',
-];
-
 const EXAM_TABS = [
   { value: 'tyt', label: 'TYT' },
   { value: 'ayt', label: 'AYT' },
@@ -211,17 +203,6 @@ export default function DersProgrami() {
   /* Branş denemeleri (22 Eki 2026): deneme bloğunun TÜRÜ. Bölüm
      denemeleri burada değil — onlar ders listesinde `isSection` satırı. */
   const [examTypes, setExamTypes] = useState([]);
-  /* Düzenlenen bloğun id'si. Dolu olduğunda sağdaki form "ekle" yerine
-     "kaydet" yapıyor ve gün seçici gizleniyor — blok zaten bir günde. */
-  const [editingId, setEditingId] = useState(null);
-  /* Düzenlemeye açarken süre efektini bir tur atlatır. Efekt ders/metod/konu
-     değişince süreyi varsayılana çekiyor; bloğu yüklerken de tetiklenir ve
-     bloğun GERÇEK süresini ezerdi. */
-  const skipDurationSync = useRef(false);
-  /* Gecikmeli kayıt beklerken düzenlemeden çıkılırsa son değişiklik
-     kaybolurdu (temizlik zamanlayıcıyı iptal ediyor). Bekleyen kayıt burada
-     duruyor ve çıkışta boşaltılıyor. */
-  const pendingSave = useRef(null);
   const [topics, setTopics] = useState([]);
   /* Konu listesinin durumu: 'bos' | 'yukleniyor' | 'hazir' | 'hata'.
      Üçü de boş liste demek ama kullanıcıya söyleyecekleri farklı. */
@@ -797,67 +778,6 @@ export default function DersProgrami() {
    *  Blok tahtada sürüklenebilir olduğu için tıklama ile sürükleme ayrışmalı;
    *  ayrım `StackedBlock` içinde (sürükleme bittiyse tıklama sayılmaz).
    */
-  /** Bekleyen gecikmeli kaydı hemen uygular. */
-  const flushEditing = useCallback(() => {
-    const kaydet = pendingSave.current;
-    pendingSave.current = null;
-    if (kaydet) kaydet();
-  }, []);
-
-  const startEditing = useCallback((b) => {
-    flushEditing();            // önceki bloğun bekleyen kaydı kaybolmasın
-    const sub = b.subject ? subjectMap[String(b.subject)] : null;
-    skipDurationSync.current = true;     // bloğun gerçek süresi korunsun
-    setEditingId(b.id);
-    setDraft((d) => ({
-      ...d,
-      kind: b.kind || 'study',
-      examScope: b.examScope || '',
-      examType: b.examType || '',
-      /* Sekme bloğun kendisinden türetiliyor: branş türü varsa Özel, genel
-         kapsam varsa o sınav, ders bazlıysa dersin kategorisi. */
-      examTab: b.examType
-        ? 'ozel'
-        : b.examScope || sub?.category || d.examTab,
-      externalTitle: b.kind === 'external' ? (b.topic || '') : '',
-      // Dış blokta ve genel denemede ders yok; kategoriyi olduğu gibi bırak.
-      category: sub?.category || d.category,
-      subject: b.subject ? String(b.subject) : '',
-      type: b.type ? String(b.type) : '',
-      topic: b.kind === 'external' ? '' : (b.topic || ''),
-      book: b.book != null ? String(b.book) : '',
-      note: b.note || '',
-      durationMin: b.durationMin,
-      days: [],                          // blok zaten bir günde
-    }));
-  }, [subjectMap, flushEditing]);
-
-  const cancelEditing = useCallback(() => {
-    flushEditing();
-    setEditingId(null);
-  }, [flushEditing]);
-
-  /* Düzenlemeden çıkış: aynı bloğa tekrar tıklamak ya da Esc. Ayrı bir
-     "bitir" düğmesi yok — değişiklikler zaten kendiliğinden kaydediliyor,
-     düğme yalnız formu kapatmaya yarıyordu. Çıkış yolu yine de şart:
-     düzenleme modunda sağdaki form yeni blok eklemeye kapalı. */
-  useEffect(() => {
-    if (!editingId) return undefined;
-    const tus = (e) => { if (e.key === 'Escape') cancelEditing(); };
-    window.addEventListener('keydown', tus);
-    return () => window.removeEventListener('keydown', tus);
-  }, [editingId, cancelEditing]);
-
-  /* Düzenlenen blok ortadan kalkarsa mod kapanır: başka öğrenciye/haftaya
-     geçildiğinde ya da blok silindiğinde form yoksa bir bloğu düzenliyor
-     görünür ve "kaydet" hiçbir şey yapmazdı. */
-  useEffect(() => {
-    if (editingId && blocks && !blocks.some((b) => b.id === editingId)) {
-      setEditingId(null);
-    }
-  }, [editingId, blocks]);
-
-
   /** "Bu güne ekle": draft'ı seçili günlerin yığınına ekler.
    *  Gün ne kadar doluysa dolsun eklenir — sığmama diye bir durum yok. */
   function addToSelectedDays() {
@@ -1006,10 +926,6 @@ export default function DersProgrami() {
     // Sekmeden okunuyor: "Özel"de sınav süresi diye bir şey yok, oradaki
     // bloklar rehberin varsayılan blok süresiyle açılır.
     const examDefault = isExam ? EXAM_DEFAULT_MINUTES[draft.examTab] : null;
-    if (skipDurationSync.current) {
-      skipDurationSync.current = false;
-      return;
-    }
     setDraft((d) => ({
       ...d,
       durationMin: remembered || examDefault || boardPrefs.blockMinutes,
@@ -1041,35 +957,6 @@ export default function DersProgrami() {
   }, [isBookMode, activeBook, bookBlockFields, draft, subjectMap, taskTypeMap,
     examTypes]);
 
-  /* Düzenlenen blok formdaki değişiklikleri KENDİLİĞİNDEN alır; ayrı bir
-     "kaydet" adımı yok. Günü ve sırası değişmez — taşımak sürükleyerek.
-
-     Yazma gecikmeli: `commit` her çağrıda sunucuya yazıyor ve açıklama
-     kutusunda her tuş bir istek doğururdu. Tahtadaki blok yine anında
-     güncelleniyor, çünkü `commit` önce iyimser güncelleme yapıyor.
-
-     ⚠️ Bu etki `draftFields`'ın ALTINDA durmak zorunda: bağımlılık dizisi
-     render sırasında okunuyor ve `draftFields` bir `const`. Yukarıda
-     olduğunda sayfa "Cannot access before initialization" ile açılmıyordu. */
-  useEffect(() => {
-    if (!editingId || !draftFields || !blocks) return undefined;
-    const mevcut = blocks.find((b) => b.id === editingId);
-    if (!mevcut) return undefined;
-    const yeni = { ...mevcut, ...draftFields, durationMin: draft.durationMin };
-    // Değişiklik yoksa sunucuya gitme: blok forma yüklendiğinde de bu etki
-    // çalışıyor ve her açılış bir kayıt isteği doğururdu.
-    if (EDITABLE_BLOCK_FIELDS.every((k) => yeni[k] === mevcut[k])) {
-      pendingSave.current = null;
-      return undefined;
-    }
-    const uygula = () => commit(blocks.map((b) => (b.id === editingId ? yeni : b)));
-    pendingSave.current = uygula;
-    const zaman = setTimeout(() => {
-      pendingSave.current = null;
-      uygula();
-    }, 500);
-    return () => clearTimeout(zaman);
-  }, [editingId, draftFields, draft.durationMin, blocks, commit]);
 
   // Ders satırlı görünümün satırları. Kullanıcının yönettiği bir liste: varsayılanı
   // öğrencinin alanına düşen dersler (backend'den), üstüne ekleyip çıkarabiliyor.
@@ -1380,14 +1267,15 @@ export default function DersProgrami() {
                       blocksByDay={blocksByDay}
                       onRemove={removeBlock}
                       onEditNote={openNote}
-                      editingId={editingId}
                       onEditBlock={(b) => {
                         // Sürükleme biter bitmez gelen tıklama sayılmaz —
                         // ders satırlı görünümdeki hücre açmayla aynı eşik.
                         if (Date.now() - lastDragEnd.current < 300) return;
-                        // Açık olana tekrar tıklamak düzenlemeyi kapatır.
-                        if (editingId === b.id) cancelEditing();
-                        else startEditing(b);
+                        setCellEdit({
+                          dayIndex: b.dayIndex,
+                          rowKey: subjectRowKey(b),
+                          blockId: b.id,
+                        });
                       }}
                       overDay={overDay}
                     />
@@ -1659,19 +1547,13 @@ export default function DersProgrami() {
                     </Field>
                   </div>
 
-                  {/* Düzenlerken önizleme "sürüklenebilir blok" değil, o anki
-                      bloğun hâli — sürükleme ipucu da yanıltıcı olurdu. */}
-                  <p className={s.previewLabel}>
-                    {editingId ? 'Düzenlenen blok' : 'Sürüklenebilir blok'}
-                  </p>
+                  <p className={s.previewLabel}>Sürüklenebilir blok</p>
                   {draftFields ? (
                     <>
                       <DraftBlock fields={draftFields} durationMin={draft.durationMin} />
-                      {!editingId && (
-                        <p className={s.previewHint}>
-                          Bu bloğu bir güne sürükle ya da aşağıdan gün seç
-                        </p>
-                      )}
+                      <p className={s.previewHint}>
+                        Bu bloğu bir güne sürükle ya da aşağıdan gün seç
+                      </p>
                     </>
                   ) : (
                     <p className={s.previewHint}>
@@ -1681,23 +1563,6 @@ export default function DersProgrami() {
                     </p>
                   )}
 
-                  {/* Değişiklikler kendiliğinden kaydediliyor; bu düğme
-                      formu kapatıp yeni blok eklemeye döndürüyor. Belirgin
-                      duruyor çünkü düzenleme modundan çıkmanın görünür tek
-                      yolu bu (Esc ve bloğa tekrar tıklamak da çalışıyor ama
-                      ikisi de keşfedilebilir değil). */}
-                  {editingId && (
-                    <div className={s.editActions}>
-                      <Button block onClick={cancelEditing}>
-                        <Check size={15} /> Düzenlemeyi bitir
-                      </Button>
-                    </div>
-                  )}
-
-                  {/* Düzenleme modunda gün seçici ve "ekle" yok: blok zaten
-                      bir günde duruyor, başka güne taşımak sürükleyerek. */}
-                  {!editingId && (
-                  <>
                   <div
                     className={s.dayPills}
                     style={{ '--cols': days.length, marginTop: 'var(--space-3)' }}
@@ -1732,8 +1597,6 @@ export default function DersProgrami() {
                   >
                     Seçili {draft.days.length || ''} güne ekle
                   </Button>
-                  </>
-                  )}
                 </>
               )}
 
@@ -1765,14 +1628,19 @@ export default function DersProgrami() {
       />
 
       {cellEdit && (() => {
+        /* Gün sütunlu görünümde tek bloğa tıklanıyor; ders satırlıda hücrenin
+           tamamı açılıyor. İkisi de AYNI pop-up: tek fark hangi blokların
+           listeleneceği. */
         const items = (blocks || [])
-          .filter((b) => b.dayIndex === cellEdit.dayIndex && subjectRowKey(b) === cellEdit.rowKey)
+          .filter((b) => (cellEdit.blockId
+            ? b.id === cellEdit.blockId
+            : b.dayIndex === cellEdit.dayIndex && subjectRowKey(b) === cellEdit.rowKey))
           .sort(byOrder);
         if (!items.length) return null;
         const day = days.find((d) => d.index === cellEdit.dayIndex);
         return (
           <CellEditor
-            key={`${cellEdit.dayIndex}:${cellEdit.rowKey}`}
+            key={cellEdit.blockId || `${cellEdit.dayIndex}:${cellEdit.rowKey}`}
             items={items}
             dayText={day ? `${day.dayNum} ${day.monthShort} ${day.short}` : ''}
             taskTypes={taskTypes}
@@ -2333,7 +2201,7 @@ function blockFromPayload(payload) {
 
 /** Gün sütunlarının tek satırı: her sütun o günün görev yığını. */
 function DayStackRow({ days, blocksByDay, onRemove, onEditNote, onEditBlock,
-                      editingId, overDay }) {
+                      overDay }) {
   return (
     <>
       <span className={s.corner} />
@@ -2345,7 +2213,6 @@ function DayStackRow({ days, blocksByDay, onRemove, onEditNote, onEditBlock,
           onRemove={onRemove}
           onEditNote={onEditNote}
           onEditBlock={onEditBlock}
-          editingId={editingId}
           isOverDay={overDay === day.index}
         />
       ))}
@@ -2353,7 +2220,7 @@ function DayStackRow({ days, blocksByDay, onRemove, onEditNote, onEditBlock,
   );
 }
 
-function DayStack({ day, items, onRemove, onEditNote, onEditBlock, editingId, isOverDay }) {
+function DayStack({ day, items, onRemove, onEditNote, onEditBlock, isOverDay }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(day) });
   return (
     <div
@@ -2367,7 +2234,6 @@ function DayStack({ day, items, onRemove, onEditNote, onEditBlock, editingId, is
           onRemove={onRemove}
           onEditNote={onEditNote}
           onEdit={onEditBlock}
-          isEditing={editingId === b.id}
         />
       ))}
       {items.length === 0 && <span className={s.dayStackEmpty}>—</span>}
@@ -2660,7 +2526,7 @@ function blockMetaText(b) {
  *  (`top`/`height`, 1 saat = 38px). Artık akışta duran normal bir kutu: boyu
  *  içeriğine göre, yeri yığındaki sırasına göre. Süre, bloğun boyu yerine
  *  üstünde yazıyor — 20 dakikalık bir görev de okunabilir kalsın. */
-function StackedBlock({ block, onRemove, onEditNote, onEdit, isEditing }) {
+function StackedBlock({ block, onRemove, onEditNote, onEdit }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
     data: {
@@ -2674,20 +2540,36 @@ function StackedBlock({ block, onRemove, onEditNote, onEdit, isEditing }) {
   });
   const label = blockLabel(block);
   const meta = blockMetaText(block);
+  /* Açıklama balonu. Blok `overflow: hidden` olduğu için içine konan normal
+     bir balon kırpılırdı; konum bloğun dikdörtgeninden hesaplanıp `fixed`
+     veriliyor (alt menüdeki kalıbın aynısı). */
+  const [tip, setTip] = useState(null);
+  const not = (block.note || '').trim();
+
+  function tipAc(e) {
+    if (!not) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    setTip({
+      left: Math.max(8, Math.min(r.left, window.innerWidth - 280)),
+      // Bloğun üstünde; yer yoksa altına geçer.
+      top: r.top > 120 ? r.top - 8 : r.bottom + 8,
+      ustte: r.top > 120,
+    });
+  }
 
   return (
     <div
       ref={setNodeRef}
       data-block={block.id}
+      onMouseEnter={tipAc}
+      onMouseLeave={() => setTip(null)}
       className={[
         s.stackBlock,
         isDragging ? s.blockDragging : '',
         block.kind === 'external' ? s.blockExternal : '',
         block.isApproved ? s.blockApproved : '',
-        isEditing ? s.blockEditing : '',
       ].filter(Boolean).join(' ')}
       style={{ background: block.subjectColor }}
-      title={block.note || undefined}
       /* Tıklama sağdaki formu bu blokla doldurur. Sürükleme de aynı
          elemandan başlıyor; ayrımı `onEdit` içindeki süre eşiği yapıyor
          (sürükleme bittiyse tıklama sayılmaz). */
@@ -2702,7 +2584,9 @@ function StackedBlock({ block, onRemove, onEditNote, onEdit, isEditing }) {
       {/* Kutunun boyu artık süreye bağlı değil; meta ve yönerge her blokta
           görünebilir. Eskiden yalnız yeterince uzun bloklarda yer vardı. */}
       {meta && <span className={s.blockMeta}>{meta}</span>}
-      {block.note && <span className={s.blockNote}>{block.note}</span>}
+      {/* Açıklama blokta satır KAPLAMIYOR: üzerine gelince `title` ile
+          çıkıyor ve not düğmesinde tam hâliyle duruyor. Üç satır sabit boya
+          sığmıyordu ve ders/tür/süre okunmaz hâle gelmişti. */}
       <div className={s.blockActions}>
         <button
           type="button"
@@ -2724,6 +2608,16 @@ function StackedBlock({ block, onRemove, onEditNote, onEdit, isEditing }) {
           <X size={11} />
         </button>
       </div>
+
+      {tip && (
+        <span
+          className={s.blockTip}
+          data-ustte={tip.ustte || undefined}
+          style={{ left: tip.left, top: tip.top }}
+        >
+          {not}
+        </span>
+      )}
     </div>
   );
 }
