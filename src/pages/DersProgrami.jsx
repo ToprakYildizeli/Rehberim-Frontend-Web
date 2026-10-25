@@ -4,7 +4,7 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core';
-import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil, Printer, StickyNote } from 'lucide-react';
+import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil, Printer, StickyNote, Check } from 'lucide-react';
 import {
   Card, Button, Field, Select, Input, Textarea, NumberInput, PillGroup, Spinner, Modal,
 } from '../components/ui';
@@ -1679,6 +1679,19 @@ export default function DersProgrami() {
                         ? 'Dış meşguliyet bloğu için bir ad girin.'
                         : 'Önce bu öğrencinin kütüphanesinden bir kitap seçin.'}
                     </p>
+                  )}
+
+                  {/* Değişiklikler kendiliğinden kaydediliyor; bu düğme
+                      formu kapatıp yeni blok eklemeye döndürüyor. Belirgin
+                      duruyor çünkü düzenleme modundan çıkmanın görünür tek
+                      yolu bu (Esc ve bloğa tekrar tıklamak da çalışıyor ama
+                      ikisi de keşfedilebilir değil). */}
+                  {editingId && (
+                    <div className={s.editActions}>
+                      <Button block onClick={cancelEditing}>
+                        <Check size={15} /> Düzenlemeyi bitir
+                      </Button>
+                    </div>
                   )}
 
                   {/* Düzenleme modunda gün seçici ve "ekle" yok: blok zaten

@@ -406,6 +406,15 @@
   font-weight: 600;
 }
 
+/* Düzenleme modundan çıkış. Görünür tek yol olduğu için belirgin: üstünde
+   ayırıcı, tam genişlik ve dolu düğme. Önce `subtle` varyanttaydı
+   (şeffaf zemin, soluk yazı) ve forma karışıyordu. */
+.editActions {
+  margin-top: var(--space-4);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
 /* ---------- Right rail ---------- */
 /* Başlık kalkınca üstte boşluk kaldı; kart dolgusunu daraltıp içeriği yukarı çek. */
 .blockCard { padding-top: var(--space-3); }
