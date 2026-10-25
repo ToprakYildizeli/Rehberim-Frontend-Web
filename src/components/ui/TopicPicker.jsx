@@ -21,6 +21,16 @@ import s from './TopicPicker.module.css';
  *  aradaki fark kadar boşluk ya da örtüşme oluşur. */
 const SUBMENU_W = 220;
 
+/** Seçilen alt konunun saklanacak/gösterilecek adı: "Problemler (Yaş)".
+ *
+ *  Alt konu adları tek başına anlamsız olabiliyor — "Yaş", "Alan", "Hareket"
+ *  hangi konunun altı olduğunu söylemiyor. Değer `Task.title` olarak düz
+ *  metin saklandığı için nitelemeyi SEÇİM anında yapmak, üç istemcinin de
+ *  katalogla eşleştirme yapmasından basit ve sağlam. */
+function secimAdi(ad, ustAd) {
+  return ustAd ? `${ustAd} (${ad})` : ad;
+}
+
 export default function TopicPicker({
   value = '',
   onChange,
@@ -202,15 +212,14 @@ export default function TopicPicker({
                   <button
                     type="button"
                     role="option"
-                    aria-selected={konu.name === value}
-                    data-selected={konu.name === value}
+                    aria-selected={secimAdi(konu.name, cocuk ? ust : null) === value}
+                    data-selected={secimAdi(konu.name, cocuk ? ust : null) === value}
                     /* Alt menü açıkken şemsiye vurgulu kalsın: fare alt
                        listeye geçtiğinde hangi başlığa ait olduğu kaybolmasın. */
                     data-active={acik || undefined}
                     className={[s.option, cocuk ? s.child : '', cocuklu ? s.umbrella : '']
                       .filter(Boolean).join(' ')}
-                    onClick={() => sec(konu.name)}
-                    title={cocuk && ust ? `${ust} — ${konu.name}` : undefined}
+                    onClick={() => sec(secimAdi(konu.name, cocuk ? ust : null))}
                   >
                     {konu.name}
                   </button>
@@ -254,10 +263,10 @@ export default function TopicPicker({
               <button
                 type="button"
                 role="option"
-                aria-selected={c.name === value}
-                data-selected={c.name === value}
+                aria-selected={secimAdi(c.name, acikKonu.name) === value}
+                data-selected={secimAdi(c.name, acikKonu.name) === value}
                 className={s.option}
-                onClick={() => sec(c.name)}
+                onClick={() => sec(secimAdi(c.name, acikKonu.name))}
               >
                 {c.name}
               </button>
