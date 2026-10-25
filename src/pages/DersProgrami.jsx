@@ -846,31 +846,6 @@ export default function DersProgrami() {
     }
   }, [editingId, blocks]);
 
-  /* Düzenlenen blok formdaki değişiklikleri KENDİLİĞİNDEN alır; ayrı bir
-     "kaydet" adımı yok. Günü ve sırası değişmez — taşımak sürükleyerek.
-
-     Yazma gecikmeli: `commit` her çağrıda sunucuya yazıyor ve açıklama
-     kutusunda her tuş bir istek doğururdu. Tahtadaki blok yine anında
-     güncelleniyor, çünkü `commit` önce iyimser güncelleme yapıyor. */
-  useEffect(() => {
-    if (!editingId || !draftFields || !blocks) return undefined;
-    const mevcut = blocks.find((b) => b.id === editingId);
-    if (!mevcut) return undefined;
-    const yeni = { ...mevcut, ...draftFields, durationMin: draft.durationMin };
-    // Değişiklik yoksa sunucuya gitme: blok forma yüklendiğinde de bu etki
-    // çalışıyor ve her açılış bir kayıt isteği doğururdu.
-    if (EDITABLE_BLOCK_FIELDS.every((k) => yeni[k] === mevcut[k])) {
-      pendingSave.current = null;
-      return undefined;
-    }
-    const uygula = () => commit(blocks.map((b) => (b.id === editingId ? yeni : b)));
-    pendingSave.current = uygula;
-    const zaman = setTimeout(() => {
-      pendingSave.current = null;
-      uygula();
-    }, 500);
-    return () => clearTimeout(zaman);
-  }, [editingId, draftFields, draft.durationMin, blocks, commit]);
 
   /** "Bu güne ekle": draft'ı seçili günlerin yığınına ekler.
    *  Gün ne kadar doluysa dolsun eklenir — sığmama diye bir durum yok. */
@@ -1054,6 +1029,36 @@ export default function DersProgrami() {
     return draftBlockFields(draft, subjectMap, taskTypeMap, examTypes);
   }, [isBookMode, activeBook, bookBlockFields, draft, subjectMap, taskTypeMap,
     examTypes]);
+
+  /* Düzenlenen blok formdaki değişiklikleri KENDİLİĞİNDEN alır; ayrı bir
+     "kaydet" adımı yok. Günü ve sırası değişmez — taşımak sürükleyerek.
+
+     Yazma gecikmeli: `commit` her çağrıda sunucuya yazıyor ve açıklama
+     kutusunda her tuş bir istek doğururdu. Tahtadaki blok yine anında
+     güncelleniyor, çünkü `commit` önce iyimser güncelleme yapıyor.
+
+     ⚠️ Bu etki `draftFields`'ın ALTINDA durmak zorunda: bağımlılık dizisi
+     render sırasında okunuyor ve `draftFields` bir `const`. Yukarıda
+     olduğunda sayfa "Cannot access before initialization" ile açılmıyordu. */
+  useEffect(() => {
+    if (!editingId || !draftFields || !blocks) return undefined;
+    const mevcut = blocks.find((b) => b.id === editingId);
+    if (!mevcut) return undefined;
+    const yeni = { ...mevcut, ...draftFields, durationMin: draft.durationMin };
+    // Değişiklik yoksa sunucuya gitme: blok forma yüklendiğinde de bu etki
+    // çalışıyor ve her açılış bir kayıt isteği doğururdu.
+    if (EDITABLE_BLOCK_FIELDS.every((k) => yeni[k] === mevcut[k])) {
+      pendingSave.current = null;
+      return undefined;
+    }
+    const uygula = () => commit(blocks.map((b) => (b.id === editingId ? yeni : b)));
+    pendingSave.current = uygula;
+    const zaman = setTimeout(() => {
+      pendingSave.current = null;
+      uygula();
+    }, 500);
+    return () => clearTimeout(zaman);
+  }, [editingId, draftFields, draft.durationMin, blocks, commit]);
 
   // Ders satırlı görünümün satırları. Kullanıcının yönettiği bir liste: varsayılanı
   // öğrencinin alanına düşen dersler (backend'den), üstüne ekleyip çıkarabiliyor.
