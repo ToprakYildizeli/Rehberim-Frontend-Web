@@ -332,7 +332,9 @@
    duruyor. */
 .stackBlock {
   position: relative;
-  height: 62px;
+  /* Üç satır: ders+sil · metot+süre · konu. Konu kırpılmadan sığsın diye
+     62px'den yükseltildi ("Hücre Bölünmeleri" üç nokta oluyordu). */
+  height: 78px;
   border-radius: var(--radius-sm);
   color: #fff;
   padding: 6px 7px;
@@ -364,20 +366,59 @@
 }
 
 /* Yığındaki blokta ad ve süre aynı satırda; süre sağda, küçülmeden. */
-/* Gün sütunundaki blokta ders, tür ve süre bloğun kendisi kadar önemli:
-   açıklama satırı kalkınca açılan yer bunları büyütmeye verildi. Önce ad
-   11px, tür ve süre 10px'ti ve uzaktan okunmuyordu. */
-.stackBlock .blockSubject {
+/* Bloğun satırları: solda bilgi, sağda eylem/süre. */
+.blockRow {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-2);
-  white-space: normal;
+  min-width: 0;
+}
+
+/* Ders, tür ve süre bloğun kendisi kadar önemli: açıklama satırı kalkınca
+   açılan yer bunları büyütmeye verildi. Önce ad 11px, tür ve süre 10px'ti
+   ve uzaktan okunmuyordu. */
+.stackBlock .blockSubject {
+  flex: 1;
+  min-width: 0;
   font-size: var(--fs-sm);
   font-weight: 700;
-  /* Sabit boyda uzun ad bloğu taşırmasın: iki satırda kesilir. */
-  max-height: 2.4em;
+  line-height: 1.2;
+  white-space: nowrap;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
+
+/* Konu satırı: seçiliyse üçüncü satırda, tam hâliyle okunsun diye blok
+   boyu buna göre ayarlandı. */
+.blockTopic {
+  font-size: var(--fs-xs);
+  line-height: 1.25;
+  opacity: 0.95;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Sil düğmesi belirgin: blok renginin üstünde kendi zemini var. Önce
+   açıklama düğmesiyle yan yana duran soluk bir ikondu. */
+.blockRemove {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.blockRemove:hover { background: rgba(0, 0, 0, 0.45); }
+
+.stackBlock .blockMeta { flex: 1; min-width: 0; }
 
 .stackBlock .blockTime {
   margin: 0 0 0 auto;
@@ -997,44 +1038,6 @@
 /* Blok üzerindeki eylemler (açıklama + kaldır). Sağ üstte tek bir sıra;
    önceden yalnız kaldırma vardı ve mutlak konumluydu — ikinci düğme eklenince
    üst üste biniyordu. */
-.blockActions {
-  position: absolute;
-  top: 3px;
-  right: 3px;
-  display: flex;
-  gap: 1px;
-  z-index: 3;
-}
-
-.blockBtn {
-  background: transparent;
-  border: none;
-  color: #fff;
-  opacity: 0.7;
-  cursor: pointer;
-  padding: 1px;
-  display: flex;
-  border-radius: 3px;
-}
-
-.blockBtn:hover { opacity: 1; background: rgba(0, 0, 0, 0.2); }
-
-/* Yönergesi olan blokta simge sürekli görünür — tahtaya bakınca hangi bloğun
-   talimat taşıdığı anlaşılmalı. */
-.blockBtnOn { opacity: 1; background: rgba(0, 0, 0, 0.25); }
-
-/* Bloğun içinde okunan yönerge: en fazla iki satır, gerisi `title`da. */
-.blockNote {
-  font-size: var(--fs-3xs);
-  line-height: 1.25;
-  opacity: 0.9;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  padding-right: 12px;
-}
 
 /* Ders satırlı görünümdeki çipin karşılığı. */
 .chipActions {

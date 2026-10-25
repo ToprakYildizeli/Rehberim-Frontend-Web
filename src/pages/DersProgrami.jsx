@@ -1266,7 +1266,6 @@ export default function DersProgrami() {
                       days={days}
                       blocksByDay={blocksByDay}
                       onRemove={removeBlock}
-                      onEditNote={openNote}
                       onEditBlock={(b) => {
                         // Sürükleme biter bitmez gelen tıklama sayılmaz —
                         // ders satırlı görünümdeki hücre açmayla aynı eşik.
@@ -2200,8 +2199,7 @@ function blockFromPayload(payload) {
    ekleniyor. */
 
 /** Gün sütunlarının tek satırı: her sütun o günün görev yığını. */
-function DayStackRow({ days, blocksByDay, onRemove, onEditNote, onEditBlock,
-                      overDay }) {
+function DayStackRow({ days, blocksByDay, onRemove, onEditBlock, overDay }) {
   return (
     <>
       <span className={s.corner} />
@@ -2211,7 +2209,6 @@ function DayStackRow({ days, blocksByDay, onRemove, onEditNote, onEditBlock,
           day={day.index}
           items={blocksByDay.get(day.index) ?? []}
           onRemove={onRemove}
-          onEditNote={onEditNote}
           onEditBlock={onEditBlock}
           isOverDay={overDay === day.index}
         />
@@ -2220,7 +2217,7 @@ function DayStackRow({ days, blocksByDay, onRemove, onEditNote, onEditBlock,
   );
 }
 
-function DayStack({ day, items, onRemove, onEditNote, onEditBlock, isOverDay }) {
+function DayStack({ day, items, onRemove, onEditBlock, isOverDay }) {
   const { setNodeRef, isOver } = useDroppable({ id: String(day) });
   return (
     <div
@@ -2232,7 +2229,6 @@ function DayStack({ day, items, onRemove, onEditNote, onEditBlock, isOverDay }) 
           key={b.id}
           block={b}
           onRemove={onRemove}
-          onEditNote={onEditNote}
           onEdit={onEditBlock}
         />
       ))}
@@ -2513,6 +2509,19 @@ function CellEditor({ items, dayText, taskTypes, library, onSave, onRemove, onCl
 }
 
 /** Blok içeriğinin ikinci satırı: dış blokta yok, denemede kapsam, çalışmada kitap/metod. */
+/** Yığın bloğunun İKİNCİ satırı: metot ya da kitap; denemede "Deneme". */
+function blockTypeText(b) {
+  if (b.kind === 'external') return 'Çalışma saatine sayılmaz';
+  if (b.kind === 'exam') return 'Deneme';
+  return b.bookLabel || b.typeName || '';
+}
+
+/** Yığın bloğunun ÜÇÜNCÜ satırı: konu. Yalnız çalışma bloğunda var —
+ *  denemenin tek bir konusu yok, dış bloğun ne olduğu zaten adında. */
+function blockTopicText(b) {
+  return b.kind === 'study' ? (b.topic || '') : '';
+}
+
 function blockMetaText(b) {
   if (b.kind === 'external') return 'Çalışma saatine sayılmaz';
   // Ders bazlı deneme de deneme: çalışma türü ve konu taşımıyor.
@@ -2526,7 +2535,7 @@ function blockMetaText(b) {
  *  (`top`/`height`, 1 saat = 38px). Artık akışta duran normal bir kutu: boyu
  *  içeriğine göre, yeri yığındaki sırasına göre. Süre, bloğun boyu yerine
  *  üstünde yazıyor — 20 dakikalık bir görev de okunabilir kalsın. */
-function StackedBlock({ block, onRemove, onEditNote, onEdit }) {
+function StackedBlock({ block, onRemove, onEdit }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: block.id,
     data: {
@@ -2539,7 +2548,8 @@ function StackedBlock({ block, onRemove, onEditNote, onEdit }) {
     },
   });
   const label = blockLabel(block);
-  const meta = blockMetaText(block);
+  const typeText = blockTypeText(block);
+  const topicText = blockTopicText(block);
   /* Açıklama balonu. Blok `overflow: hidden` olduğu için içine konan normal
      bir balon kırpılırdı; konum bloğun dikdörtgeninden hesaplanıp `fixed`
      veriliyor (alt menüdeki kalıbın aynısı). */
@@ -2577,37 +2587,30 @@ function StackedBlock({ block, onRemove, onEditNote, onEdit }) {
       {...listeners}
       {...attributes}
     >
-      <span className={s.blockSubject}>
-        {block.kind === 'external' ? '🚫 ' : block.book ? '📖 ' : ''}{label}
-        <span className={s.blockTime}>{durationText(block)}</span>
-      </span>
-      {/* Kutunun boyu artık süreye bağlı değil; meta ve yönerge her blokta
-          görünebilir. Eskiden yalnız yeterince uzun bloklarda yer vardı. */}
-      {meta && <span className={s.blockMeta}>{meta}</span>}
-      {/* Açıklama blokta satır KAPLAMIYOR: üzerine gelince `title` ile
-          çıkıyor ve not düğmesinde tam hâliyle duruyor. Üç satır sabit boya
-          sığmıyordu ve ders/tür/süre okunmaz hâle gelmişti. */}
-      <div className={s.blockActions}>
+      {/* Üç satır: ders + sil · metot + süre · konu.
+          Açıklama düğmesi kalktı — açıklama artık düzenleme pop-up'ından
+          giriliyor ve bloğun üstüne gelince balon olarak çıkıyor. */}
+      <span className={s.blockRow}>
+        <span className={s.blockSubject}>
+          {block.book ? '📖 ' : ''}{label}
+        </span>
         <button
           type="button"
-          className={cx(s.blockBtn, block.note && s.blockBtnOn)}
-          onPointerDown={(e) => e.stopPropagation()}
-          onClick={() => onEditNote(block.id)}
-          title={block.note || 'Açıklama ekle'}
-          aria-label={`${label} bloğunun açıklamasını düzenle`}
-        >
-          <StickyNote size={11} />
-        </button>
-        <button
-          type="button"
-          className={s.blockBtn}
+          className={s.blockRemove}
           onPointerDown={(e) => e.stopPropagation()}
           onClick={() => onRemove(block.id)}
           aria-label={`${label} bloğunu kaldır`}
         >
-          <X size={11} />
+          <X size={14} />
         </button>
-      </div>
+      </span>
+
+      <span className={s.blockRow}>
+        <span className={s.blockMeta}>{typeText}</span>
+        <span className={s.blockTime}>{durationText(block)}</span>
+      </span>
+
+      {topicText && <span className={s.blockTopic}>{topicText}</span>}
 
       {tip && (
         <span
