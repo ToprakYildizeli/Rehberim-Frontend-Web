@@ -155,19 +155,26 @@ export async function deleteExamType(id) {
   await api.delete(`/exam-types/${id}/`);
 }
 
-/** GET /api/topics/?subject=<id>[&grade=&curriculum=] → dersin konu kataloğu.
- *  Ders Programı yalnızca `subjectId` verir ({ id, name } yeterli). Konu Takibi
- *  ayrıca grade/curriculum geçip sıralı tam objeyi kullanır.
+/** GET /api/topics/?subject=<id>[&grade=&curriculum=&student=] → konu kataloğu.
+ *  Konu Takibi grade/curriculum geçip sıralı tam objeyi kullanır; Ders Programı
+ *  `student` geçer ve müfredatı sunucuya türettirir.
+ *
+ *  **`student` geçmek önemli** (26 Eki 2026): müfredat verilmezse backend
+ *  rehbere iki müfredatı birden döndürüyor; 11. sınıfın tahtasında maarif
+ *  temalarının yanında eski müfredatın konuları da listeleniyordu. Öğrenciyi
+ *  söyleyince sunucu sınıfından türetiyor (12/mezun→eski, 9/10/11→maarif) ve
+ *  sınav derslerini (konuları yalnız `eski`de) süzgeçten muaf tutuyor.
  *
  *  **Katalog iki düzeyli** (topics-contract v1.3): uç yalnız üst düzey konuları
  *  satır olarak döndürür, alt konular her satırın `children` alanında gelir.
  *  Burada ağaç olduğu gibi korunuyor; listeye çevirmek isteyen
  *  `flattenTopics` kullanır. */
-export async function listTopics(subjectId, { grade, curriculum } = {}) {
+export async function listTopics(subjectId, { grade, curriculum, student } = {}) {
   if (!subjectId) return [];
   const params = { subject: subjectId };
   if (grade) params.grade = grade;
   if (curriculum) params.curriculum = curriculum;
+  if (student) params.student = student;
   const { data } = await api.get('/topics/', { params });
   return data.map((x) => ({
     id: x.id,

@@ -338,7 +338,12 @@ export default function DersProgrami() {
     setDraft((d) => (d.topic ? { ...d, topic: '' } : d));
     if (!draft.subject) { setTopicState('bos'); return undefined; }
     setTopicState('yukleniyor');
-    listTopics(draft.subject).then((list) => {
+    /* `scope` (öğrenci id) geçiliyor: müfredatı sunucu öğrencinin sınıfından
+       türetsin. Geçilmezse backend iki müfredatı birden döndürüyor ve 11'in
+       tahtasında maarif temalarının yanında eski müfredatın konuları da
+       çıkıyordu. Şablon ('genel') kipinde öğrenci yok — orada iki set birden
+       kaçınılmaz, şablon bir öğrenciye bağlı değil. */
+    listTopics(draft.subject, scope ? { student: scope } : undefined).then((list) => {
       if (!alive) return;
       setTopics(list);
       setTopicState(list.length ? 'hazir' : 'bos');
@@ -349,7 +354,7 @@ export default function DersProgrami() {
       setTopicState('hata');
     });
     return () => { alive = false; };
-  }, [draft.subject]);
+  }, [draft.subject, scope]);
 
   useEffect(() => {
     let alive = true;
@@ -1644,6 +1649,7 @@ export default function DersProgrami() {
             dayText={day ? `${day.dayNum} ${day.monthShort} ${day.short}` : ''}
             taskTypes={taskTypes}
             library={library}
+            studentId={scope}
             onSave={saveCell}
             onRemove={removeBlock}
             onClose={() => setCellEdit(null)}
@@ -2388,7 +2394,7 @@ function SubjectChip({ block, extra }) {
  * düzenlenir (çalışma türü, konu, kitap, süre, açıklama) ya da silinir.
  * Ders değiştirilemez — satır dersin kendisi; başka derse taşımak istenmiyor.
  */
-function CellEditor({ items, dayText, taskTypes, library, onSave, onRemove, onClose }) {
+function CellEditor({ items, dayText, taskTypes, library, studentId, onSave, onRemove, onClose }) {
   const [edits, setEdits] = useState(() => Object.fromEntries(items.map((b) => [b.id, {
     type: b.type ? String(b.type) : '',
     topic: b.topic || '',
@@ -2404,12 +2410,13 @@ function CellEditor({ items, dayText, taskTypes, library, onSave, onRemove, onCl
   useEffect(() => {
     let alive = true;
     subjectIds.split(',').filter(Boolean).forEach((id) => {
-      listTopics(id)
+      // Müfredat süzgeci için öğrenciyi söyle (bkz. listTopics notu).
+      listTopics(id, studentId ? { student: studentId } : undefined)
         .then((t) => { if (alive) setTopicsBySubject((m) => ({ ...m, [id]: t })); })
         .catch(() => {});
     });
     return () => { alive = false; };
-  }, [subjectIds]);
+  }, [subjectIds, studentId]);
 
   const set = (id, patch) => setEdits((e) => ({ ...e, [id]: { ...e[id], ...patch } }));
 
