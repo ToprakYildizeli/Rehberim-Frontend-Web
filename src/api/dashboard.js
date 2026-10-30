@@ -151,7 +151,10 @@ async function fetchDashboard() {
     // öğrenciyi tepeye çıkarıyordu (bkz. aşağıda `avgLevel`).
     // `slim=1`: yalnız gruplamaya yeten alanlar — adları ve `my_progress`'i
     // kullanmıyoruz (156 KB → 37 KB).
-    api.get('/topics/', { params: { slim: 1 } }),
+    // `flat=1`: alt konular da satır olarak gelmeli. Payda YAPRAK sayısıdır
+    // (aşağıda `curriculumTopicIds`); yalnız üst düzeyle kurulursa şemsiyeler
+    // paydada kalır ve seviyelenemedikleri için puanı tavana kilitler.
+    api.get('/topics/', { params: { slim: 1, flat: 1 } }),
     getPreferences(),        // hangi uyarı kartı görünecek + eşikleri (D3)
   ]);
   // Ders etiketi → sınavdaki soru sayısı (= o dersten çıkarılabilecek en yüksek net).
@@ -166,10 +169,20 @@ async function fetchDashboard() {
      kümenin aynısı: sınav öğrencisinde tüm TYT+AYT dersleri ve 'eski' müfredat,
      diğerlerinde okul dersleri ve öğrencinin sınıf/müfredatı. İki ekran aynı
      paydayı kullanmazsa aynı öğrenci için iki farklı "konu puanı" çıkıyor. */
+  /* Çocuğu olan şemsiyelerin id'si: `OgrenciDetay`'deki `levelableTopics`'in
+     düz liste karşılığı. Şemsiyeye `TopicProgress` yazılamıyor (sunucu
+     reddediyor), o yüzden paydada kalırsa sonsuza dek "seviye 1" sayılır:
+     11. sınıfta 32 üst düzey satırın 17'si şemsiyeydi ve konu puanı
+     2,9/5'i geçemiyordu (30 Eki 2026). */
+  const semsiyeIds = new Set(
+    topics.map((t) => t.parent).filter((x) => x != null)
+  );
+
   const curriculumTopicIds = (student) => {
     const cats = student.isExam ? ['tyt', 'ayt'] : ['okul'];
     return topics
       .filter((t) => {
+        if (semsiyeIds.has(t.id)) return false;    // yaprak değil
         if (!cats.includes(subjectCategory[t.subject])) return false;
         return student.isExam
           ? t.curriculum === 'eski'
