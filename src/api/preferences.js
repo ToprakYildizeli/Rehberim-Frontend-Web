@@ -13,12 +13,37 @@
    `clearPreferencesCache` ile boşaltılır. */
 import api from './client';
 
+/* Tahta düzeni iki adla anılıyor: backend SATIRLARA bakıp `hours`/`subjects`
+   diyor, ekran SÜTUNLARA bakıp `days`/`subjects`. İkisi aynı iki düzen — saat
+   satırlı tahtanın sütunları zaten gündür.
+
+   Çeviri burada, uçla ekran arasında duruyor (30 Eki 2026). Yoksa ayar iki
+   yönden birden kırılıyordu: ekran "Gün sütunlu"yu seçince uç
+   `{"default_board_layout": ["\"days\" geçerli bir seçim değil."]}` ile `400`
+   veriyor, geri dönen `hours` da hiçbir `<option>` değerine uymadığı için
+   seçim boş görünüyordu. */
+const DUZEN_SUNUCUDAN = { hours: 'days', subjects: 'subjects' };
+const DUZEN_SUNUCUYA = { days: 'hours', subjects: 'subjects' };
+
+function ekranaCevir(data = {}) {
+  const d = data.default_board_layout;
+  if (d == null) return data;
+  return { ...data, default_board_layout: DUZEN_SUNUCUDAN[d] ?? 'days' };
+}
+
+function sunucuyaCevir(fields = {}) {
+  const d = fields.default_board_layout;
+  if (d == null) return fields;
+  return { ...fields, default_board_layout: DUZEN_SUNUCUYA[d] ?? 'hours' };
+}
+
 /** Sunucu erişilemezse kullanılan varsayılanlar — backend'deki model
- *  varsayılanlarının birebir aynısı; Panel'in eski davranışını korur. */
+ *  varsayılanlarının karşılığı; Panel'in eski davranışını korur.
+ *  Tahta düzeni burada EKRAN adıyla duruyor (`days` = backend'in `hours`'u). */
 export const DEFAULT_PREFERENCES = {
   default_day_count: 7,
   default_schedule_type: 'timed',
-  default_board_layout: 'days',    // tahta gün sütunlu mu ders satırlı mı açılsın
+  default_board_layout: 'days',    // gün sütunlu mu ders satırlı mı (uçta 'hours')
   // Planlayıcı (20 Eyl 2026)
   board_start_hour: 7,             // saatli tahtanın ilk satırı
   board_end_hour: 23,              // son satırın bitişi (7–23 → 07:00–23:00)
@@ -46,7 +71,10 @@ export async function getPreferences() {
   if (cached) return cached;
   if (!inflight) {
     inflight = api.get('/preferences/')
-      .then(({ data }) => { cached = { ...DEFAULT_PREFERENCES, ...data }; return cached; })
+      .then(({ data }) => {
+        cached = { ...DEFAULT_PREFERENCES, ...ekranaCevir(data) };
+        return cached;
+      })
       .catch(() => ({ ...DEFAULT_PREFERENCES }))
       .finally(() => { inflight = null; });
   }
@@ -55,8 +83,8 @@ export async function getPreferences() {
 
 /** PATCH — yalnız değişen alanları gönderir, güncel tercihleri döndürür. */
 export async function updatePreferences(fields) {
-  const { data } = await api.patch('/preferences/', fields);
-  cached = { ...DEFAULT_PREFERENCES, ...data };
+  const { data } = await api.patch('/preferences/', sunucuyaCevir(fields));
+  cached = { ...DEFAULT_PREFERENCES, ...ekranaCevir(data) };
   return cached;
 }
 
