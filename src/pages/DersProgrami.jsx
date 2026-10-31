@@ -50,7 +50,7 @@ const CATEGORIES = [
 const SINIF_KAPSAMLARI = {
   9: [{ value: 'g9', label: '9. Sınıf' }],
   10: [{ value: 'g9', label: '9. Sınıf' }, { value: 'g10', label: '10. Sınıf' }],
-  11: [{ value: 'stage1', label: '1. Aşama (TYT)' },
+  11: [{ value: 'stage1', label: '1. Aşama' },
        { value: 'g11', label: '11. Sınıf' }],
 };
 
@@ -158,6 +158,24 @@ const EXAM_TABS = [
   { value: 'ayt', label: 'AYT' },
   { value: 'ozel', label: 'Özel' },
 ];
+
+/* Deneme sekmeleri de öğrencinin sınıfına bağlı (31 Eki 2026). 9/10/11 yeni
+   sistemin sınavına girecek: AYT diye bir şey yok, TYT'nin karşılığı
+   "1. Aşama". Branş denemeleri (TYT/AYT'nin içindeki dersler) ayrı sekme
+   DEĞİL — 1. Aşama'nın kapsam listesinde duruyorlar (kullanıcı kararı).
+   "Özel" her sınıfta rehberin kendi kataloğu (Paragraf Denemesi vb.).
+
+   `examTab` değeri `tyt` kalıyor: `Task.exam_scope` modelde `tyt`/`ayt`
+   ve 1. Aşama TYT'nin ardılı. Sadece ETİKET değişiyor, veri değil. */
+const MAARIF_EXAM_TABS = [
+  { value: 'tyt', label: '1. Aşama' },
+  { value: 'ozel', label: 'Özel' },
+];
+
+function denemeSekmeleri(student) {
+  if (!student || student.isExam) return EXAM_TABS;
+  return SINIF_KAPSAMLARI[student.gradeCode] ? MAARIF_EXAM_TABS : EXAM_TABS;
+}
 
 const durationText = (b) => (b.durationMin >= 60
   ? `${Math.floor(b.durationMin / 60)} sa${b.durationMin % 60 ? ` ${b.durationMin % 60} dk` : ''}`
@@ -378,9 +396,17 @@ export default function DersProgrami() {
        sunucu öğrencinin sınıfından türetsin. Geçilmezse backend iki müfredatı
        birden döndürüyor. Şablon ('genel') kipinde öğrenci yok — orada iki set
        birden kaçınılmaz, şablon bir öğrenciye bağlı değil. */
-    const konuSuzgeci = okulKapsami(draft.category)
-      ? { grade: KAPSAM_SINIFLARI[draft.category], curriculum: 'maarif' }
-      : (scope ? { student: scope } : undefined);
+    const kitapKipi = draft.kind === 'study' && draft.category === 'kitap';
+    if (kitapKipi && !draft.book) { setTopicState('bos'); return undefined; }
+    const konuSuzgeci = kitapKipi
+      /* Kitap kipinde konular KİTABIN kendi dersinden geliyor (31 Eki 2026,
+         rehberin isteği): ders zaten kitaptan otomatik seçiliyordu ama konu
+         hiç sorulmuyordu, "şu kitaptan şu konu" denemiyordu. `?book=` ucu
+         sınav dersini okul dersine çevirmeyi de üstleniyor. */
+      ? { book: draft.book }
+      : okulKapsami(draft.category)
+        ? { grade: KAPSAM_SINIFLARI[draft.category], curriculum: 'maarif' }
+        : (scope ? { student: scope } : undefined);
     listTopics(draft.subject, konuSuzgeci).then((list) => {
       if (!alive) return;
       setTopics(list);
@@ -392,7 +418,7 @@ export default function DersProgrami() {
       setTopicState('hata');
     });
     return () => { alive = false; };
-  }, [draft.subject, draft.category, scope]);
+  }, [draft.subject, draft.category, draft.kind, draft.book, scope]);
 
   useEffect(() => {
     let alive = true;
@@ -898,6 +924,47 @@ export default function DersProgrami() {
     }));
   }, [typeOptions, draft.category, subjects, aggregateSectionIds]);
 
+  /* Deneme sekmeleri de öğrencinin sınıfından (bkz. `denemeSekmeleri`).
+     Şablon kipinde öğrenci yok → TYT/AYT/Özel. */
+  const examTabs = useMemo(
+    () => denemeSekmeleri(mode === 'ogrenci' ? activeStudent : null),
+    [mode, activeStudent]
+  );
+
+  /* Seçili deneme sekmesi listede kalmayabilir: 12'den 11'e geçince "AYT"
+     diye bir sekme yok. Kalmıyorsa ilk sekmeye düşülüyor ve seçim
+     sıfırlanıyor — AYT kapsamı 1. Aşama'nın listesinde geçerli değil. */
+  useEffect(() => {
+    if (examTabs.some((o) => o.value === draft.examTab)) return;
+    const ilk = examTabs[0]?.value;
+    if (!ilk) return;
+    setDraft((d) => ({
+      ...d, examTab: ilk, examScope: '', examType: '', subject: '',
+    }));
+  }, [examTabs, draft.examTab]);
+
+  /* Konu alanı iki yerde birden çiziliyor: çalışma bloğunda ve kitap
+     bloğunda (31 Eki 2026). Kitapta ders zaten kitaptan geliyordu ama konu
+     hiç sorulmuyordu; rehber "şu kitaptan şu konu" diyemiyordu. */
+  const konuAlani = (
+    <Field label="Konu">
+      {/* İki düzeyli katalog: şemsiye konunun üzerine gelince alt konuları
+          solda açılır. Şemsiye de seçilebilir kalır. */}
+      <TopicPicker
+        topics={topics}
+        value={draft.topic}
+        onChange={(ad) => setDraft((d) => ({ ...d, topic: ad }))}
+        disabled={topicState !== 'hazir'}
+        placeholder={{
+          yukleniyor: 'Konular yükleniyor…',
+          hata: 'Konular yüklenemedi',
+          bos: 'Bu derse konu tanımlı değil',
+          hazir: 'Konu seçin (opsiyonel)',
+        }[topicState]}
+      />
+    </Field>
+  );
+
   // Ders alanı: dış blokta ve genel denemede gösterilmez.
   /* Denemede ders/tür alanları YOK: seçim artık deneme sekmesinin kendi
      listesinden yapılıyor. İkisi birden durduğunda çelişkili seçimler
@@ -911,14 +978,17 @@ export default function DersProgrami() {
     if (draft.examTab === 'ozel') {
       return examTypes.map((x) => ({ value: `t${x.id}`, label: x.name }));
     }
-    const genel = draft.examTab === 'tyt' ? 'Genel TYT Denemesi' : 'Genel AYT Denemesi';
+    const birinciAsama = examTabs === MAARIF_EXAM_TABS;
+    const genel = draft.examTab === 'tyt'
+      ? (birinciAsama ? 'Genel 1. Aşama Denemesi' : 'Genel TYT Denemesi')
+      : 'Genel AYT Denemesi';
     return [
       { value: `g${draft.examTab}`, label: genel },
       ...subjects
         .filter((x) => x.category === draft.examTab)
         .map((x) => ({ value: `s${x.id}`, label: x.label })),
     ];
-  }, [draft.examTab, examTypes, subjects]);
+  }, [draft.examTab, examTypes, subjects, examTabs]);
 
   /* Seçimin tek gösterimi: hangi alan doluysa ondan türetiliyor. Ayrı bir
      state tutulsaydı blok düzenlemeye açıldığında ikisi ayrışabilirdi. */
@@ -1017,7 +1087,13 @@ export default function DersProgrami() {
 
   // Önizleme ve "güne ekle"nin kullandığı blok alanları — moda göre üretilir.
   const draftFields = useMemo(() => {
-    if (isBookMode) return activeBook ? bookBlockFields(activeBook) : null;
+    // Kitap bloğunda da konu seçilebiliyor; `bookBlockFields` kitabın
+    // künyesini kuruyor, konu taslaktan geliyor.
+    if (isBookMode) {
+      return activeBook
+        ? { ...bookBlockFields(activeBook), topic: draft.topic }
+        : null;
+    }
     return draftBlockFields(draft, subjectMap, taskTypeMap, examTypes);
   }, [isBookMode, activeBook, bookBlockFields, draft, subjectMap, taskTypeMap,
     examTypes]);
@@ -1463,7 +1539,7 @@ export default function DersProgrami() {
                           <PillGroup
                             value={draft.examTab}
                             onChange={setExamTab}
-                            options={EXAM_TABS}
+                            options={examTabs}
                             ariaLabel="Deneme kapsamı"
                           />
                         </Field>
@@ -1540,6 +1616,7 @@ export default function DersProgrami() {
                     </Field>
 
                     {isBookMode ? (
+                      <>
                       <Field label="Kitap">
                         <Select
                           value={draft.book}
@@ -1551,6 +1628,8 @@ export default function DersProgrami() {
                           ))}
                         </Select>
                       </Field>
+                      {konuAlani}
+                      </>
                     ) : showMethodFields ? (
                       <>
                         <Field label="Çalışma Türü">
@@ -1564,23 +1643,7 @@ export default function DersProgrami() {
                           </Select>
                         </Field>
 
-                        <Field label="Konu">
-                          {/* İki düzeyli katalog: şemsiye konunun üzerine
-                              gelince alt konuları solda açılır. Şemsiye de
-                              seçilebilir kalır. */}
-                          <TopicPicker
-                            topics={topics}
-                            value={draft.topic}
-                            onChange={(ad) => setDraft((d) => ({ ...d, topic: ad }))}
-                            disabled={topicState !== 'hazir'}
-                            placeholder={{
-                              yukleniyor: 'Konular yükleniyor…',
-                              hata: 'Konular yüklenemedi',
-                              bos: 'Bu derse konu tanımlı değil',
-                              hazir: 'Konu seçin (opsiyonel)',
-                            }[topicState]}
-                          />
-                        </Field>
+                        {konuAlani}
                       </>
                     ) : null}
                     </>

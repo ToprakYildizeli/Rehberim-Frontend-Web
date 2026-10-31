@@ -213,6 +213,8 @@ function KitaplarTab({ studentId }) {
   const ders = visible.filter((b) => b.kind === 'ders');
   const okuma = visible.filter((b) => b.kind === 'okuma');
 
+  const mevcutKategoriler = new Set((books || []).map(bookCat));
+
   return (
     <TabState
       loading={!books}
@@ -223,7 +225,17 @@ function KitaplarTab({ studentId }) {
     >
       <div className={s.stack}>
         <div className={s.bookFilters}>
-          <PillGroup options={BOOK_CAT_FILTERS} value={cat} onChange={(v) => { setCat(v); setSubj('all'); }} />
+          {/* Süzgeç öğrencinin GERÇEKTEN sahip olduğu kategorilerle sınırlı
+              (31 Eki 2026): 9/10/11'in kitapları okul dersi kitabı, TYT ve
+              AYT düğmeleri her zaman boş sonuç veriyordu. Aynı kalıp deneme
+              süzgecinde de var (`availableTypes`). */}
+          <PillGroup
+            options={BOOK_CAT_FILTERS.filter(
+              (o) => o.value === 'all' || mevcutKategoriler.has(o.value)
+            )}
+            value={cat}
+            onChange={(v) => { setCat(v); setSubj('all'); }}
+          />
           <Select className={s.bookSubjSelect} value={subj} onChange={(e) => setSubj(e.target.value)} aria-label="Ders">
             <option value="all">Tüm dersler</option>
             {subjectOptions.map((n) => <option key={n} value={n}>{n}</option>)}

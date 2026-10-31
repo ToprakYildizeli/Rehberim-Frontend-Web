@@ -197,7 +197,10 @@
 
 /* TYT/AYT toggle: alanı tam kaplasın, iki pill eşit genişlikte */
 .catToggle { width: 100%; }
-.catToggle button { flex: 1; text-align: center; }
+/* `1 1 auto`: sığdığında eşit bölünür, sığmadığında alt satıra iner
+   (bkz. ui.module.css `.pillGroup` wrap notu). `flex: 1` (= temel 0)
+   sarmayı da bozuyordu. */
+.catToggle button { flex: 1 1 auto; min-width: 0; text-align: center; }
 
 /* ---------- Program ağırlığı özeti ---------- */
 .wSection { margin-top: var(--space-3); }

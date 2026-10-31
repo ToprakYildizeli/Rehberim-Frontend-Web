@@ -169,12 +169,15 @@ export async function deleteExamType(id) {
  *  satır olarak döndürür, alt konular her satırın `children` alanında gelir.
  *  Burada ağaç olduğu gibi korunuyor; listeye çevirmek isteyen
  *  `flattenTopics` kullanır. */
-export async function listTopics(subjectId, { grade, curriculum, student } = {}) {
+export async function listTopics(subjectId, { grade, curriculum, student, book } = {}) {
   if (!subjectId) return [];
   const params = { subject: subjectId };
   if (grade) params.grade = grade;
   if (curriculum) params.curriculum = curriculum;
   if (student) params.student = student;
+  /* `book`: o kitaba eklenebilecek konular — kitabın dersi + öğrencinin
+     müfredatı, sınıf sınırı olmadan. Uç diğer süzgeçleri yok sayıyor. */
+  if (book) params.book = book;
   const { data } = await api.get('/topics/', { params });
   return data.map((x) => ({
     id: x.id,

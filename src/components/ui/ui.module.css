@@ -347,6 +347,12 @@ select.control:focus { background-color: var(--bg-input); }
   background: var(--bg-alt);
   border-radius: var(--radius-pill);
   padding: 3px;
+  /* Dar panelde taşmasın (31 Eki 2026): sınıf kapsamları gelince etiketler
+     uzadı ("1. Aşama", "11. Sınıf", "Kitap") ve grup yan paneli aşıyordu.
+     `inline-flex` içeriğe göre büyüyor; `max-width` onu kutuya hapsediyor,
+     `wrap` da sığmayanı alt satıra indiriyor. */
+  flex-wrap: wrap;
+  max-width: 100%;
 }
 
 .pill {
@@ -356,10 +362,13 @@ select.control:focus { background-color: var(--bg-input); }
   font-family: inherit;
   font-size: var(--fs-xs);
   font-weight: 500;
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: var(--radius-pill);
   cursor: pointer;
   white-space: nowrap;
+  /* `flex: 1` ile birlikte küçülebilsin: varsayılan `min-width: auto`
+     esnek öğeyi içeriğinin altına indirmiyor, grup da taşıyordu. */
+  min-width: 0;
   transition: background 0.15s, color 0.15s;
 }
 
