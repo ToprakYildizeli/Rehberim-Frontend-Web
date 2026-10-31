@@ -37,6 +37,37 @@ const CATEGORIES = [
   { value: 'tyt', label: 'TYT' },
   { value: 'ayt', label: 'AYT' },
 ];
+
+/* Tahtanın "Tür" ayracı öğrencinin SINIFINA bağlı (31 Eki 2026, rehberin
+   isteği). 12 ve mezun bu yılki sınava giriyor; onlarda TYT/AYT devam.
+   9/10/11 maarif müfredatını okuyor — onlara sınav ayracı göstermek yanlış
+   konuyu veriyordu (11. sınıfın tahtasında AYT seçilince İntegral, Türev
+   çıkıyordu; ikisi de eski müfredatın 12. sınıf konusu).
+
+   11'de 9 ve 10 ayrı ayrı değil, "1. Aşama (TYT)" adıyla BİRLİKTE geliyor:
+   o sınıfta rehber artık alt sınıfların içeriğini sınavın ilk aşaması diye
+   düşünüyor (kullanıcı kararı, 31 Eki 2026). */
+const SINIF_KAPSAMLARI = {
+  9: [{ value: 'g9', label: '9. Sınıf' }],
+  10: [{ value: 'g9', label: '9. Sınıf' }, { value: 'g10', label: '10. Sınıf' }],
+  11: [{ value: 'stage1', label: '1. Aşama (TYT)' },
+       { value: 'g11', label: '11. Sınıf' }],
+};
+
+/** Kapsam → `?grade=` değeri. Virgüllü liste uçta destekleniyor. */
+const KAPSAM_SINIFLARI = { g9: '9', g10: '10', g11: '11', stage1: '9,10' };
+
+/** Bir kapsamın okul dersi (maarif) olup olmadığı. */
+function okulKapsami(kapsam) {
+  return Object.hasOwn(KAPSAM_SINIFLARI, kapsam);
+}
+
+/** Öğrencinin sınıfına düşen "Tür" seçenekleri. Öğrenci yoksa (şablon kipi)
+ *  ya da sınava giriyorsa eski TYT/AYT ayracı. */
+function kapsamSecenekleri(student) {
+  if (!student || student.isExam) return CATEGORIES;
+  return SINIF_KAPSAMLARI[student.gradeCode] ?? CATEGORIES;
+}
 /** Program uzunluğu: en az 1, en çok 7 gün. */
 const MIN_DAYS = 1;
 const MAX_DAYS = 7;
@@ -254,7 +285,8 @@ export default function DersProgrami() {
    * yazdırabilsin diye. Çalışma bloğunda listelenmez. */
   const filteredSubjects = useMemo(
     () => subjects.filter(
-      (x) => x.category === draft.category
+      (x) => (okulKapsami(draft.category) ? x.category === 'okul'
+        : x.category === draft.category)
         && (draft.kind === 'exam' || !aggregateSectionIds.has(x.id))
     ),
     [subjects, draft.category, draft.kind, aggregateSectionIds]
@@ -338,12 +370,18 @@ export default function DersProgrami() {
     setDraft((d) => (d.topic ? { ...d, topic: '' } : d));
     if (!draft.subject) { setTopicState('bos'); return undefined; }
     setTopicState('yukleniyor');
-    /* `scope` (öğrenci id) geçiliyor: müfredatı sunucu öğrencinin sınıfından
-       türetsin. Geçilmezse backend iki müfredatı birden döndürüyor ve 11'in
-       tahtasında maarif temalarının yanında eski müfredatın konuları da
-       çıkıyordu. Şablon ('genel') kipinde öğrenci yok — orada iki set birden
-       kaçınılmaz, şablon bir öğrenciye bağlı değil. */
-    listTopics(draft.subject, scope ? { student: scope } : undefined).then((list) => {
+    /* Okul kapsamında (9/10/11) süzgeç AÇIKÇA sınıf + maarif: kapsamın
+       tanımı zaten o. "1. Aşama (TYT)" iki sınıf birden istiyor, uç virgüllü
+       liste kabul ediyor.
+
+       Sınav kapsamında (12/mezun) `scope` (öğrenci id) geçiliyor: müfredatı
+       sunucu öğrencinin sınıfından türetsin. Geçilmezse backend iki müfredatı
+       birden döndürüyor. Şablon ('genel') kipinde öğrenci yok — orada iki set
+       birden kaçınılmaz, şablon bir öğrenciye bağlı değil. */
+    const konuSuzgeci = okulKapsami(draft.category)
+      ? { grade: KAPSAM_SINIFLARI[draft.category], curriculum: 'maarif' }
+      : (scope ? { student: scope } : undefined);
+    listTopics(draft.subject, konuSuzgeci).then((list) => {
       if (!alive) return;
       setTopics(list);
       setTopicState(list.length ? 'hazir' : 'bos');
@@ -354,7 +392,7 @@ export default function DersProgrami() {
       setTopicState('hata');
     });
     return () => { alive = false; };
-  }, [draft.subject, scope]);
+  }, [draft.subject, draft.category, scope]);
 
   useEffect(() => {
     let alive = true;
@@ -829,14 +867,36 @@ export default function DersProgrami() {
   const isExternal = draft.kind === 'external';
   const isExam = draft.kind === 'exam';
 
-  // Tür toggle: TYT/AYT her zaman; Kitap yalnız öğrenci modunda (kitap
-  // öğrenciye bağlı) ve yalnız çalışma bloğunda — denemenin kaynak kitabı olmaz.
+  // Tür toggle: kapsamlar öğrencinin sınıfından (bkz. `kapsamSecenekleri`);
+  // Kitap yalnız öğrenci modunda (kitap öğrenciye bağlı) ve yalnız çalışma
+  // bloğunda — denemenin kaynak kitabı olmaz.
   const typeOptions = useMemo(
-    () => (mode === 'ogrenci' && !isExam
-      ? [...CATEGORIES, { value: 'kitap', label: 'Kitap' }]
-      : CATEGORIES),
-    [mode, isExam]
+    () => {
+      const kapsamlar = kapsamSecenekleri(mode === 'ogrenci' ? activeStudent : null);
+      return (mode === 'ogrenci' && !isExam
+        ? [...kapsamlar, { value: 'kitap', label: 'Kitap' }]
+        : kapsamlar);
+    },
+    [mode, isExam, activeStudent]
   );
+
+  /* Öğrenci değişince seçili kapsam listede kalmayabilir (11'den 9'a geçince
+     "11. Sınıf" diye bir seçenek yok). Kalmıyorsa ilk kapsama ve onun ilk
+     dersine düşülüyor; yoksa tahta hiçbir derse uymayan bir türde kalıyor ve
+     Ders listesi boşalıyordu. */
+  useEffect(() => {
+    const gecerli = typeOptions.map((o) => o.value);
+    if (gecerli.includes(draft.category)) return;
+    const ilk = gecerli[0];
+    if (!ilk) return;
+    const dersler = subjects.filter(
+      (x) => (okulKapsami(ilk) ? x.category === 'okul' : x.category === ilk)
+        && !aggregateSectionIds.has(x.id)
+    );
+    setDraft((d) => ({
+      ...d, category: ilk, subject: String(dersler[0]?.id ?? ''), topic: '', book: '',
+    }));
+  }, [typeOptions, draft.category, subjects, aggregateSectionIds]);
 
   // Ders alanı: dış blokta ve genel denemede gösterilmez.
   /* Denemede ders/tür alanları YOK: seçim artık deneme sekmesinin kendi
@@ -1445,7 +1505,8 @@ export default function DersProgrami() {
                                bloğunda gösterilmeyen bir sınav bölümü
                                ("TYT Fen Bilimleri") seçili kalabiliyordu. */
                             const gorunur = subjects.filter(
-                              (x) => x.category === val
+                              (x) => (okulKapsami(val) ? x.category === 'okul'
+                                : x.category === val)
                                 && (draft.kind === 'exam' || !aggregateSectionIds.has(x.id))
                             );
                             setDraft((d) => ({
