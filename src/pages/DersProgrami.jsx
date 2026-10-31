@@ -4,7 +4,7 @@ import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   useDraggable, useDroppable,
 } from '@dnd-kit/core';
-import { X, Trash2, RotateCcw, Bookmark, FolderOpen, Send, ChevronDown, Repeat, Pencil, Printer, StickyNote } from 'lucide-react';
+import { X, Trash2, RotateCcw, Bookmark, Send, ChevronDown, Repeat, Pencil, Printer, StickyNote } from 'lucide-react';
 import {
   Card, Button, Field, Select, Input, Textarea, NumberInput, PillGroup, Spinner, Modal,
 } from '../components/ui';
@@ -20,7 +20,7 @@ import {
 } from '../api/programs';
 import {
   listTemplates, createTemplate, updateTemplate, deleteTemplate, templateToBlocks,
-  assignBoard, assignTemplate, setRoutine, clearRoutine,
+  assignBoard,
 } from '../api/templates';
 import {
   listSubjects, listFieldSubjects, listTaskTypes, listExamTypes, listTopics, listBooks,
@@ -242,7 +242,10 @@ export default function DersProgrami() {
 
   // Şablonlar + atama
   const [templates, setTemplates] = useState([]);
-  const [assignSource, setAssignSource] = useState(null); // {type:'board'} | {type:'template',id,name}
+  /* Atanan şey artık her zaman TAHTA (31 Eki 2026): şablonu doğrudan atama
+     yolu kalktı, rehber şablonu önce tahtaya yüklüyor sonra atıyor. Ayrı bir
+     "kaynak" nesnesi tutmaya gerek kalmadı, açık/kapalı yetiyor. */
+  const [assignOpen, setAssignOpen] = useState(false)
   const [loadedTemplate, setLoadedTemplate] = useState(null); // {id,name} — düzenlenen şablon
   const [history, setHistory] = useState([]); // öğrencinin tüm programları (geçen hafta + toplam özeti)
 
@@ -676,6 +679,13 @@ export default function DersProgrami() {
     }
   }
 
+  /* Öğrencinin rutini = ona bağlı ve `auto_apply` açık şablon. Tahta
+     açılışındaki ön dolgu da aynı ölçütü kullanıyor (bkz. yukarıdaki
+     `routinePrefill`); ikisi ayrışmasın diye buradan okunuyor. */
+  const ogrenciRutini = scope
+    ? templates.find((t) => t.auto_apply && String(t.student) === String(scope))
+    : null;
+
   async function handleDeleteTemplate(id) {
     if (!window.confirm('Şablon silinsin mi?')) return;
     await deleteTemplate(id);
@@ -683,20 +693,15 @@ export default function DersProgrami() {
     reloadTemplates();
   }
 
-  /** Şablonu seçili öğrencinin rutini yapar / rutini kapatır.
-   *  Hata TemplateMenu'de yakalanır (ör. öğrencinin zaten rutini varsa). */
-  async function handleToggleRoutine(tpl) {
-    if (tpl.auto_apply) {
-      await clearRoutine(tpl.id);
-    } else {
-      if (!activeStudent) return;
-      await setRoutine(tpl.id, activeStudent.id);
-      // Boş taslaktayken rutin açıldıysa hemen görünsün.
-      if (mode === 'ogrenci' && programId == null && !(blocks || []).length) {
-        setBlocks(templateToBlocks(tpl, win.startDate, win.dayCount).blocks);
-      }
-    }
-    await reloadTemplates();
+  /** Seçili öğrencinin rutinini tahtaya aktarır.
+   *
+   *  Rutin öğrencinin KENDİ uygulamasında kurduğu plandır (rehber rutin
+   *  kurmaz, 31 Eki 2026 kullanıcı kararı); burada yalnız okunup yükleniyor.
+   *  Tahta açılırken `routinePrefill` açıksa zaten bir kez dolduruluyor — bu
+   *  düğme tahtayı temizledikten sonra geri getirmeye yarıyor. */
+  function handleLoadRoutine() {
+    if (!ogrenciRutini) return;
+    handleLoadTemplate(ogrenciRutini);
   }
 
   /* Gün sütunu başına o günün blokları, gösterim sırasında.
@@ -1314,16 +1319,15 @@ export default function DersProgrami() {
             {/* Eylem düğmeleri tek tip: aynı boyut, aynı görünüm. Yalnız "Ata"
                 birincil eylem olduğu için dolgulu. */}
             <div className={s.actions}>
-              <Button className={s.action} variant="soft" size="sm" onClick={handleSaveTemplate} title="Bu programı isimli şablon olarak kaydet">
-                <Bookmark size={13} /> Şablon
-              </Button>
-              <TemplateMenu
+              <TemplatePanel
                 templates={templates}
+                mode={mode}
                 activeStudent={activeStudent}
+                routine={ogrenciRutini}
+                onSave={handleSaveTemplate}
                 onLoad={handleLoadTemplate}
-                onAssign={(tpl) => setAssignSource({ type: 'template', id: tpl.id, name: tpl.name })}
+                onLoadRoutine={handleLoadRoutine}
                 onDelete={handleDeleteTemplate}
-                onToggleRoutine={handleToggleRoutine}
               />
               {mode === 'ogrenci' && (
                 <Button className={s.action} variant="soft" size="sm" onClick={loadLastWeek} title="Geçen haftanın programını yükle">
@@ -1347,7 +1351,7 @@ export default function DersProgrami() {
                 <Trash2 size={13} /> Temizle
               </Button>
               {!(mode === 'ogrenci' && programId != null) && (
-                <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignSource({ type: 'board' })}>
+                <Button className={s.action} variant="primary" size="sm" onClick={() => setAssignOpen(true)}>
                   <Send size={13} /> Ata
                 </Button>
               )}
@@ -1827,9 +1831,8 @@ export default function DersProgrami() {
         );
       })()}
 
-      {assignSource && mode === 'ogrenci' && activeStudent && (
+      {assignOpen && mode === 'ogrenci' && activeStudent && (
         <AssignConfirm
-          source={assignSource}
           student={activeStudent}
           win={win}
           blocks={blocks || []}
@@ -1844,17 +1847,16 @@ export default function DersProgrami() {
               setRanges(r);
             }).catch(() => {});
           }}
-          onClose={() => setAssignSource(null)}
+          onClose={() => setAssignOpen(false)}
         />
       )}
-      {assignSource && mode !== 'ogrenci' && (
+      {assignOpen && mode !== 'ogrenci' && (
         <AssignModal
-          source={assignSource}
           students={students}
           blocks={blocks || []}
           boardStart={win.startDate}
           boardDayCount={win.dayCount}
-          onClose={() => setAssignSource(null)}
+          onClose={() => setAssignOpen(false)}
         />
       )}
 
@@ -1884,10 +1886,39 @@ export default function DersProgrami() {
   );
 }
 
-/** Kayıtlı şablonlar dropdown'ı — yükle / ata / sil. */
-function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, onToggleRoutine }) {
+/* Türkçe tamlayan eki: "Burak" → "Burak'ın", "Merve" → "Merve'nin".
+   Kesme işareti özel ada bitişik yazıldığı için ünsüz yumuşaması yok
+   ("Burak'ın", "Burağın" değil) — ek yalnız son ünlüye bakıyor. */
+const UNLULER = 'aeıioöuüAEIİOÖUÜ';
+function tamlayanEki(ad) {
+  const harfler = [...ad].filter((h) => UNLULER.includes(h));
+  if (!harfler.length) return `${ad}'in`;
+  const son = harfler[harfler.length - 1].toLocaleLowerCase('tr-TR');
+  const ek = 'aı'.includes(son) ? 'ın'
+    : 'ei'.includes(son) ? 'in'
+      : 'ou'.includes(son) ? 'un'
+        : 'ün';
+  // Ünlüyle bitiyorsa araya kaynaştırma 'n'si girer: "Merve'nin".
+  const kaynastirma = UNLULER.includes(ad[ad.length - 1]) ? 'n' : '';
+  return `${ad}'${kaynastirma}${ek}`;
+}
+
+/** Şablon paneli — tek düğme, kipe göre iki farklı üst eylem.
+ *
+ *  Eskiden iki ayrı düğme vardı ("Şablon" kaydeder, "Şablonlar" listeler) ve
+ *  listedeki her satırda dört işlem duruyordu (rutin / yükle / ata / sil).
+ *  Rehberin isteği (31 Eki 2026): tek düğme, satırda yalnız yükle.
+ *
+ *  - **Genel programda** üstte "Şablonu kaydet": öğrenci seçili değil, rutin
+ *    diye bir şey yok ("kimin rutini?"), atama da yok.
+ *  - **Öğrenciye özelde** üstte "X'in rutinini aktar". Rutin öğrencinin KENDİ
+ *    uygulamasında kurduğu plandır; rehber rutin kurmaz, yalnız aktarır.
+ *    Bu yüzden şablon kaydetme burada yok.
+ */
+function TemplatePanel({
+  templates, mode, activeStudent, routine, onSave, onLoad, onLoadRoutine, onDelete,
+}) {
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState('');
   const ref = useRef(null);
   useEffect(() => {
     if (!open) return undefined;
@@ -1895,62 +1926,71 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
-  useEffect(() => { if (!open) setError(''); }, [open]);
 
-  async function toggleRoutine(tpl) {
-    setError('');
-    try {
-      await onToggleRoutine(tpl);
-    } catch (err) {
-      const data = err?.response?.data;
-      const first = data && typeof data === 'object' ? Object.values(data)[0] : null;
-      setError(Array.isArray(first) ? first[0] : 'Rutin ayarlanamadı.');
-    }
+  const ogrenciKipi = mode === 'ogrenci';
+  const ilkAd = activeStudent?.name?.split(' ')[0] || '';
+  const rutinEtiketi = ilkAd ? `${tamlayanEki(ilkAd)} rutinini aktar` : 'Rutini aktar';
+
+  function calistir(fn) {
+    setOpen(false);
+    fn();
   }
 
   return (
     <div className={s.tplMenu} ref={ref}>
       <Button className={s.action} variant="soft" size="sm" onClick={() => setOpen((o) => !o)}>
-        <FolderOpen size={13} /> Şablonlar <ChevronDown size={12} />
+        <Bookmark size={13} /> Şablon <ChevronDown size={12} />
       </Button>
       {open && (
         <div className={s.tplList} role="menu">
+          {ogrenciKipi ? (
+            <>
+              <button
+                type="button"
+                className={s.tplPrimary}
+                disabled={!routine}
+                onClick={() => calistir(onLoadRoutine)}
+              >
+                <Repeat size={14} /> {rutinEtiketi}
+              </button>
+              {!routine && (
+                <p className={s.tplNote}>
+                  {ilkAd || 'Öğrenci'} uygulamasında henüz rutin oluşturmamış.
+                </p>
+              )}
+            </>
+          ) : (
+            <button type="button" className={s.tplPrimary} onClick={() => calistir(onSave)}>
+              <Bookmark size={14} /> Şablonu kaydet
+            </button>
+          )}
+
+          <div className={s.tplSep} />
+
           {templates.length === 0 ? (
             <p className={s.tplEmpty}>Kayıtlı şablon yok.</p>
-          ) : templates.map((tpl) => {
-            const isRoutine = tpl.auto_apply;
-            // Rutin bir öğrenciye bağlanır; kapatmak için seçim gerekmez.
-            const canToggle = isRoutine || Boolean(activeStudent);
-            const title = isRoutine
-              ? `${tpl.student_name} rutini — kapatmak için tıkla`
-              : activeStudent
-                ? `${activeStudent.name} için rutin yap`
-                : 'Rutin yapmak için önce bir öğrenci seç';
-            return (
-              <div className={s.tplItem} key={tpl.id}>
-                <span className={s.tplNameWrap}>
-                  <span className={s.tplName} title={tpl.name}>{tpl.name}</span>
-                  {isRoutine && <span className={s.tplRoutineTag}>{tpl.student_name} rutini</span>}
-                </span>
-                <span className={s.tplActions}>
-                  <button
-                    type="button"
-                    className={isRoutine ? s.tplRoutineOn : s.tplBtn}
-                    disabled={!canToggle}
-                    title={title}
-                    aria-pressed={isRoutine}
-                    onClick={() => toggleRoutine(tpl)}
-                  >
-                    <Repeat size={12} />
-                  </button>
-                  <button type="button" className={s.tplBtn} onClick={() => { onLoad(tpl); setOpen(false); }}>Yükle</button>
-                  <button type="button" className={s.tplBtn} onClick={() => { onAssign(tpl); setOpen(false); }}>Ata</button>
-                  <button type="button" className={s.tplDel} onClick={() => onDelete(tpl.id)} aria-label="Sil"><X size={12} /></button>
-                </span>
-              </div>
-            );
-          })}
-          {error && <p className={s.tplError}>{error}</p>}
+          ) : templates.map((tpl) => (
+            <div className={s.tplItem} key={tpl.id}>
+              <span className={s.tplName} title={tpl.name}>{tpl.name}</span>
+              <span className={s.tplActions}>
+                <button
+                  type="button"
+                  className={s.tplBtn}
+                  onClick={() => calistir(() => onLoad(tpl))}
+                >
+                  Yükle
+                </button>
+                <button
+                  type="button"
+                  className={s.tplDel}
+                  onClick={() => onDelete(tpl.id)}
+                  aria-label="Sil"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1963,24 +2003,21 @@ function TemplateMenu({ templates, activeStudent, onLoad, onAssign, onDelete, on
  * Pencere yalnız özet gösterip onay ister; burada hiçbir şey değiştirilmez
  * (kullanıcı kararı, 19 Eyl 2026). Her zaman yeni program açar.
  */
-function AssignConfirm({ source, student, win, blocks, onAssigned, onClose }) {
+function AssignConfirm({ student, win, blocks, onAssigned, onClose }) {
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
 
   /* Çakışma uyarısı kalktı: pencereler üst üste binebiliyor (kontrat v5.0),
      dolu bir aralığa atamak artık normal bir iş. */
-  const isTemplate = source.type === 'template';
-  const noBoard = !isTemplate && blocks.length === 0;
+  const noBoard = blocks.length === 0;
   const range = win.startDate ? windowRangeText(win.startDate, win.dayCount) : '—';
 
   async function confirm() {
     setBusy(true); setError('');
     const target = { startDate: win.startDate, dayCount: win.dayCount };
     try {
-      const prog = isTemplate
-        ? await assignTemplate(source.id, student.id, target)
-        : await assignBoard(student.id, blocks, win.startDate, target);
+      const prog = await assignBoard(student.id, blocks, win.startDate, target);
       onAssigned?.(prog);
       setResult(prog);
     } catch (err) {
@@ -1993,7 +2030,7 @@ function AssignConfirm({ source, student, win, blocks, onAssigned, onClose }) {
   return (
     <Modal open onClose={onClose} width={480} labelledBy="assign-title">
       <h2 id="assign-title" className={s.modalTitle}>
-        {isTemplate ? 'Şablonu ata' : 'Programı ata'}
+        Programı ata
       </h2>
       {result ? (
         <div className={s.assignForm}>
@@ -2009,9 +2046,7 @@ function AssignConfirm({ source, student, win, blocks, onAssigned, onClose }) {
           <dl className={s.assignSummary}>
             <dt>Öğrenci</dt><dd>{student.name}{student.grade ? ` · ${student.grade}` : ''}</dd>
             <dt>Tarih</dt><dd>{range} · {win.dayCount} gün</dd>
-            {isTemplate
-              ? <><dt>Şablon</dt><dd>{source.name}</dd></>
-              : <><dt>Görev</dt><dd>{blocks.length} blok</dd></>}
+            <dt>Görev</dt><dd>{blocks.length} blok</dd>
           </dl>
           {noBoard && <p className={s.assignError}>Tahta boş — önce blok ekleyin.</p>}
           {error && <p className={s.assignError}>{error}</p>}
@@ -2032,7 +2067,7 @@ function AssignConfirm({ source, student, win, blocks, onAssigned, onClose }) {
  * program açar**; öğrencinin mevcut programlarına dokunmaz, hepsi dolu gün sayılır.
  */
 function AssignModal({
-  source, students, onAssigned, blocks, boardStart, boardDayCount, onClose,
+  students, onAssigned, blocks, boardStart, boardDayCount, onClose,
 }) {
   const [studentId, setStudentId] = useState('');
   const [date, setDate] = useState('');
@@ -2058,8 +2093,7 @@ function AssignModal({
         const rr = r.map((x) => ({ start: x.start, end: x.end }));
         setRanges(rr);
         // Tahtada seçili gün varsa o, yoksa bugün. Dolu olması engel değil.
-        const preferred = source.type === 'board' && boardStart && boardStart >= today()
-          ? boardStart : null;
+        const preferred = boardStart && boardStart >= today() ? boardStart : null;
         setDate(preferred ?? today());
       })
       .catch(() => { if (alive) setError('Öğrencinin programları yüklenemedi.'); })
@@ -2075,9 +2109,7 @@ function AssignModal({
     setBusy(true); setError('');
     const win = { startDate: date, dayCount };
     try {
-      const prog = source.type === 'template'
-        ? await assignTemplate(source.id, studentId, win)
-        : await assignBoard(studentId, blocks, boardStart, win);
+      const prog = await assignBoard(studentId, blocks, boardStart, win);
       onAssigned?.(prog);
       setResult(prog);
     } catch (err) {
@@ -2087,8 +2119,8 @@ function AssignModal({
     }
   }
 
-  const title = source.type === 'template' ? `Şablonu ata: ${source.name}` : 'Programı ata';
-  const noBoard = source.type === 'board' && blocks.length === 0;
+  const title = 'Programı ata';
+  const noBoard = blocks.length === 0;
 
   return (
     <Modal open onClose={onClose} width={560} labelledBy="assign-title" className={s.assignModal}>

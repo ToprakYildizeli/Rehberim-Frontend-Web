@@ -88,7 +88,12 @@ export async function deleteTemplate(id) {
 }
 
 /** Şablonu bir öğrencinin rutini yapar: yeni hafta açıldığında görevleri
- *  kendiliğinden o haftaya düşer. Öğrenci başına tek rutin olabilir. */
+ *  kendiliğinden o haftaya düşer. Öğrenci başına tek rutin olabilir.
+ *
+ *  ⚠️ **Rehber web'i bu ikisini ÇAĞIRMIYOR** (31 Eki 2026, kullanıcı kararı):
+ *  rutini öğrenci kendi uygulamasında kuruyor, rehber yalnız okuyup tahtaya
+ *  aktarıyor (`DersProgrami` → "X'in rutinini aktar"). Uç durduğu için
+ *  sarmalayıcılar da duruyor; buradan rutin kuran bir ekran ekleme. */
 export async function setRoutine(id, studentId) {
   const { data } = await api.patch(`/program-templates/${id}/`, {
     student: Number(studentId),
