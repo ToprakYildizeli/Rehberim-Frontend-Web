@@ -610,27 +610,9 @@
   box-shadow: var(--shadow-lg);
   padding: 5px;
 }
-/* Panelin üst eylemi: kipe göre "Şablonu kaydet" ya da rutini aktar.
-   Satırdaki küçük tuşlardan ayrı dursun diye tam genişlikte ve dolgulu
-   (rehberin isteği, 31 Eki 2026). */
-.tplPrimary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 9px 12px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--accent-contrast);
-  font-family: inherit;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  cursor: pointer;
-}
-.tplPrimary:hover:not(:disabled) { filter: brightness(1.06); }
-.tplPrimary:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Panelin üst eylemi tasarım sistemindeki `primary` + `block` düğmesi —
+   elle boyanmıyor. Önce elle boyanmıştı ve var olmayan bir değişkene
+   (`--accent-contrast`) dayandığı için yazı koyu kalıyordu. */
 .tplNote {
   margin: 6px 2px 0;
   font-size: var(--fs-2xs);

@@ -1945,14 +1945,15 @@ function TemplatePanel({
         <div className={s.tplList} role="menu">
           {ogrenciKipi ? (
             <>
-              <button
-                type="button"
-                className={s.tplPrimary}
+              <Button
+                variant="primary"
+                size="sm"
+                block
                 disabled={!routine}
                 onClick={() => calistir(onLoadRoutine)}
               >
                 <Repeat size={14} /> {rutinEtiketi}
-              </button>
+              </Button>
               {!routine && (
                 <p className={s.tplNote}>
                   {ilkAd || 'Öğrenci'} uygulamasında henüz rutin oluşturmamış.
@@ -1960,9 +1961,9 @@ function TemplatePanel({
               )}
             </>
           ) : (
-            <button type="button" className={s.tplPrimary} onClick={() => calistir(onSave)}>
+            <Button variant="primary" size="sm" block onClick={() => calistir(onSave)}>
               <Bookmark size={14} /> Şablonu kaydet
-            </button>
+            </Button>
           )}
 
           <div className={s.tplSep} />
